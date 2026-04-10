@@ -21,17 +21,18 @@ function makeCard(
 }
 
 // ────────────────────────────────────────────────────────────
-// python:t1:hello-world  (4 cards)
+// Tier 1: Python Basics (7 nodes, ~25 cards)
 // ────────────────────────────────────────────────────────────
 
-const helloWorld: ReviewCard[] = [
+export const tier1Cards: ReviewCard[] = [
+  // ── python:t1:hello-world ──────────────────────────────────
   makeCard({
     id: "card:python:t1:hello-world:1",
     nodeId: "python:t1:hello-world",
     branchId: "python",
     type: "concept",
     front: "What does the print() function do in Python, and what happens if you call it with no arguments?",
-    back: "print() writes its arguments to standard output as text. When called with no arguments, it outputs an empty line (a bare newline character). This is useful for adding vertical spacing in console output.",
+    back: "print() writes text to standard output (the console). When called with no arguments, it outputs an empty line — equivalent to printing an empty string followed by a newline character.",
   }),
   makeCard({
     id: "card:python:t1:hello-world:2",
@@ -41,40 +42,34 @@ const helloWorld: ReviewCard[] = [
     front: "What does this code print?",
     code: 'print("Hello")\nprint()\nprint("World")',
     expectedOutput: "Hello\n\nWorld",
-    back: "Each print() call outputs on a new line. The middle print() with no arguments prints an empty line, creating a blank line between 'Hello' and 'World'.",
+    back: "The first print outputs 'Hello', the second print() with no arguments outputs a blank line, and the third outputs 'World'. Each print() adds a newline by default.",
   }),
   makeCard({
     id: "card:python:t1:hello-world:3",
     nodeId: "python:t1:hello-world",
     branchId: "python",
-    type: "fill_blank",
-    front: "Fill in the blank to print a greeting.",
-    code: '__BLANK__("Hello, World!")',
-    blanks: ["print"],
-    back: "print() is the built-in function used to display output to the console. It converts its arguments to strings and writes them to stdout.",
+    type: "bug_spot",
+    front: "Find the bug in this code.",
+    code: 'Print("Hello, World!")',
+    back: "Python is case-sensitive. 'Print' should be 'print' (lowercase). Built-in functions in Python are always lowercase. This raises a NameError because 'Print' is not defined.",
   }),
   makeCard({
     id: "card:python:t1:hello-world:4",
     nodeId: "python:t1:hello-world",
     branchId: "python",
     type: "explain",
-    front: "Explain the difference between running Python code in the REPL vs running a .py script file.",
-    back: "The REPL (Read-Eval-Print Loop) executes code interactively line by line and automatically displays the result of each expression. A .py script runs all code top-to-bottom without displaying expression results unless you explicitly use print(). The REPL is great for experimenting; scripts are for reusable programs.",
+    front: "Explain what the Python REPL is and why it is useful for beginners.",
+    back: "The REPL (Read-Eval-Print Loop) is an interactive Python shell that reads an expression, evaluates it, prints the result, and loops back. It is useful for quickly testing small snippets of code, exploring functions, and getting immediate feedback without creating a file.",
   }),
-];
 
-// ────────────────────────────────────────────────────────────
-// python:t1:variables  (4 cards)
-// ────────────────────────────────────────────────────────────
-
-const variables: ReviewCard[] = [
+  // ── python:t1:variables ────────────────────────────────────
   makeCard({
     id: "card:python:t1:variables:1",
     nodeId: "python:t1:variables",
     branchId: "python",
     type: "concept",
     front: "What does 'dynamically typed' mean in Python?",
-    back: "In a dynamically typed language, you do not declare variable types explicitly. The type is attached to the value, not the variable name. A variable can be reassigned to a value of a different type at any time: x = 5 (int), then x = 'hello' (str) is perfectly valid.",
+    back: "In a dynamically typed language, variables do not have a fixed type. A variable is simply a name that refers to an object, and you can reassign it to a value of a different type at any time. For example, x can be an int and later become a str — Python determines the type at runtime, not at compile time.",
   }),
   makeCard({
     id: "card:python:t1:variables:2",
@@ -82,9 +77,9 @@ const variables: ReviewCard[] = [
     branchId: "python",
     type: "code_output",
     front: "What does this code print?",
-    code: 'x = 10\ny = x\nx = 20\nprint(y)',
-    expectedOutput: "10",
-    back: "y = x copies the value 10 to y. Reassigning x to 20 does not affect y because integers are immutable. y still holds the original value 10.",
+    code: 'x = 10\nx = "hello"\nprint(type(x).__name__)',
+    expectedOutput: "str",
+    back: "x is first assigned the integer 10, then reassigned to the string 'hello'. Because Python is dynamically typed, this is allowed. type(x).__name__ returns the name of the current type, which is 'str'.",
   }),
   makeCard({
     id: "card:python:t1:variables:3",
@@ -92,33 +87,28 @@ const variables: ReviewCard[] = [
     branchId: "python",
     type: "bug_spot",
     front: "Find the bug in this code.",
-    code: 'my-variable = 42\nprint(my-variable)',
-    back: "Hyphens are not allowed in Python variable names because Python interprets the - as the subtraction operator. Use underscores instead: my_variable = 42. Valid names contain letters, digits, and underscores, and cannot start with a digit.",
+    code: '2nd_place = "Silver"\nprint(2nd_place)',
+    back: "Variable names in Python cannot start with a digit. '2nd_place' is an invalid identifier and causes a SyntaxError. A valid alternative would be 'second_place' or 'place_2nd'.",
   }),
   makeCard({
     id: "card:python:t1:variables:4",
     nodeId: "python:t1:variables",
     branchId: "python",
-    type: "code_output",
-    front: "What does this code print?",
-    code: 'a = 5\nb = 3\na, b = b, a\nprint(a, b)',
-    expectedOutput: "3 5",
-    back: "Python supports tuple unpacking for simultaneous assignment. a, b = b, a swaps the values in a single statement without needing a temporary variable.",
+    type: "fill_blank",
+    front: "Fill in the blanks to swap the values of a and b without a temporary variable.",
+    code: 'a = 5\nb = 10\na, b = __BLANK__, __BLANK__\nprint(a, b)',
+    blanks: ["b", "a"],
+    back: "Python supports tuple unpacking, so 'a, b = b, a' swaps the values in a single statement. After the swap, a is 10 and b is 5.",
   }),
-];
 
-// ────────────────────────────────────────────────────────────
-// python:t1:data-types  (4 cards)
-// ────────────────────────────────────────────────────────────
-
-const dataTypes: ReviewCard[] = [
+  // ── python:t1:data-types ───────────────────────────────────
   makeCard({
     id: "card:python:t1:data-types:1",
     nodeId: "python:t1:data-types",
     branchId: "python",
     type: "concept",
-    front: "What are the four primitive data types in Python and what kind of values does each hold?",
-    back: "int — whole numbers (42, -7). float — decimal numbers (3.14, -0.001). str — text sequences ('hello'). bool — logical values (True, False). Python also treats bool as a subclass of int, so True == 1 and False == 0.",
+    front: "What are the four primitive (scalar) data types in Python and what kind of values does each hold?",
+    back: "int — whole numbers (42, -7). float — decimal numbers (3.14, -0.5). str — text strings ('hello'). bool — Boolean values (True, False). bool is actually a subclass of int in Python, where True == 1 and False == 0.",
   }),
   makeCard({
     id: "card:python:t1:data-types:2",
@@ -126,65 +116,57 @@ const dataTypes: ReviewCard[] = [
     branchId: "python",
     type: "code_output",
     front: "What does this code print?",
-    code: 'print(type(3.0) == type(3))\nprint(isinstance(True, int))',
-    expectedOutput: "False\nTrue",
-    back: "type(3.0) is <class 'float'> and type(3) is <class 'int'>, so they are not equal. However, bool is a subclass of int in Python, so isinstance(True, int) returns True.",
+    code: "print(type(True).__name__)\nprint(isinstance(True, int))\nprint(True + True)",
+    expectedOutput: "bool\nTrue\n2",
+    back: "bool is a subclass of int in Python. type(True).__name__ is 'bool', isinstance(True, int) is True because of the subclass relationship, and True + True evaluates to 2 because True equals 1 in numeric contexts.",
   }),
   makeCard({
     id: "card:python:t1:data-types:3",
     nodeId: "python:t1:data-types",
     branchId: "python",
-    type: "fill_blank",
-    front: "Fill in the blank to convert a string to an integer.",
-    code: 'age_str = "25"\nage = __BLANK__(age_str)\nprint(age + 1)',
-    blanks: ["int"],
-    back: "int() converts a string containing a valid integer literal into an int. Without this conversion, age_str + 1 would raise a TypeError because you cannot add a string and an integer.",
+    type: "code_output",
+    front: "What does this code print?",
+    code: 'x = 7 / 2\ny = 7 // 2\nprint(x, type(x).__name__)\nprint(y, type(y).__name__)',
+    expectedOutput: "3.5 float\n3 int",
+    back: "The / operator always returns a float (even for exact divisions like 4/2 = 2.0). The // operator performs floor division and returns an int when both operands are ints. 7 // 2 = 3.",
   }),
   makeCard({
     id: "card:python:t1:data-types:4",
     nodeId: "python:t1:data-types",
     branchId: "python",
-    type: "code_output",
-    front: "What does this code print?",
-    code: 'print(int(3.9))\nprint(int("10"))\nprint(float(7))',
-    expectedOutput: "3\n10\n7.0",
-    back: "int() truncates a float toward zero (does not round). int() parses a string as a whole number. float() converts an integer to its floating-point equivalent, displayed with a decimal point.",
+    type: "explain",
+    front: "Explain the difference between implicit and explicit type conversion in Python.",
+    back: "Implicit conversion (coercion) happens automatically — for example, adding an int to a float promotes the int to float (2 + 3.0 = 5.0). Explicit conversion (casting) requires calling a function like int(), float(), str(), or bool() — for example, int('42') converts the string '42' to the integer 42. Explicit conversion can raise a ValueError if the value cannot be converted.",
   }),
-];
 
-// ────────────────────────────────────────────────────────────
-// python:t1:strings  (4 cards)
-// ────────────────────────────────────────────────────────────
-
-const strings: ReviewCard[] = [
+  // ── python:t1:strings ─────────────────────────────────────
   makeCard({
     id: "card:python:t1:strings:1",
     nodeId: "python:t1:strings",
     branchId: "python",
     type: "code_output",
     front: "What does this code print?",
-    code: 's = "Python"\nprint(s[0], s[-1], s[1:4])',
-    expectedOutput: "P n yth",
-    back: "s[0] is the first character 'P'. s[-1] is the last character 'n'. s[1:4] slices from index 1 up to (not including) 4, giving 'yth'. print() separates arguments with spaces by default.",
+    code: 's = "Python"\nprint(s[0], s[-1])\nprint(s[1:4])',
+    expectedOutput: "P n\nyth",
+    back: "s[0] is 'P' (first character), s[-1] is 'n' (last character). s[1:4] slices from index 1 up to but not including index 4, giving 'yth'.",
   }),
   makeCard({
     id: "card:python:t1:strings:2",
     nodeId: "python:t1:strings",
     branchId: "python",
     type: "fill_blank",
-    front: "Fill in the blank to create a formatted string.",
-    code: 'name = "Alice"\nage = 30\ngreeting = __BLANK__"Hello, {name}! You are {age}."\nprint(greeting)',
+    front: "Fill in the blank to create a formatted string that says 'Hello, Alice! You are 30 years old.'",
+    code: 'name = "Alice"\nage = 30\nresult = __BLANK__"Hello, {name}! You are {age} years old."\nprint(result)',
     blanks: ["f"],
-    back: "The f prefix creates an f-string (formatted string literal), introduced in Python 3.6. Expressions inside curly braces {} are evaluated at runtime and inserted into the string.",
+    back: "The f prefix before a string literal creates an f-string (formatted string literal). Expressions inside {} are evaluated at runtime and inserted into the string. f-strings were introduced in Python 3.6.",
   }),
   makeCard({
     id: "card:python:t1:strings:3",
     nodeId: "python:t1:strings",
     branchId: "python",
-    type: "bug_spot",
-    front: "Find the bug in this code.",
-    code: 'message = "Hello"\nmessage[0] = "h"\nprint(message)',
-    back: "Strings in Python are immutable — you cannot change individual characters via index assignment. This raises a TypeError. To get 'hello', create a new string: message = 'h' + message[1:] or message = message.replace('H', 'h').",
+    type: "concept",
+    front: "Are strings mutable or immutable in Python? What happens if you try to change a character?",
+    back: "Strings are immutable in Python. You cannot change individual characters — s[0] = 'x' raises a TypeError. To modify a string, you must create a new one, for example using concatenation, slicing, or the replace() method.",
   }),
   makeCard({
     id: "card:python:t1:strings:4",
@@ -192,34 +174,29 @@ const strings: ReviewCard[] = [
     branchId: "python",
     type: "code_output",
     front: "What does this code print?",
-    code: 'words = "  hello world  "\nprint(words.strip().split())\nprint("_".join(["a", "b", "c"]))',
-    expectedOutput: "['hello', 'world']\na_b_c",
-    back: "strip() removes leading and trailing whitespace. split() with no arguments splits on any whitespace and removes empty strings. join() concatenates list elements using the string as a separator.",
+    code: 'msg = "  hello world  "\nprint(msg.strip().title())',
+    expectedOutput: "Hello World",
+    back: "strip() removes leading and trailing whitespace, giving 'hello world'. title() capitalizes the first letter of each word, producing 'Hello World'. String methods are chained left to right.",
   }),
-];
 
-// ────────────────────────────────────────────────────────────
-// python:t1:operators  (3 cards)
-// ────────────────────────────────────────────────────────────
-
-const operators: ReviewCard[] = [
+  // ── python:t1:operators ────────────────────────────────────
   makeCard({
     id: "card:python:t1:operators:1",
     nodeId: "python:t1:operators",
     branchId: "python",
-    type: "concept",
-    front: "What is the difference between / and // in Python?",
-    back: "/ is true division — it always returns a float (e.g., 7 / 2 = 3.5). // is floor division — it rounds down to the nearest integer toward negative infinity (e.g., 7 // 2 = 3, -7 // 2 = -4). When used with floats, // still rounds down but returns a float (7.0 // 2 = 3.0).",
+    type: "code_output",
+    front: "What does this code print?",
+    code: "print(17 % 5)\nprint(2 ** 10)\nprint(17 // 5)",
+    expectedOutput: "2\n1024\n3",
+    back: "% is modulo (17 mod 5 = 2, the remainder). ** is exponentiation (2^10 = 1024). // is floor division (17 divided by 5 = 3.4, floored to 3).",
   }),
   makeCard({
     id: "card:python:t1:operators:2",
     nodeId: "python:t1:operators",
     branchId: "python",
-    type: "code_output",
-    front: "What does this code print?",
-    code: 'print(2 ** 3)\nprint(17 % 5)\nprint(-7 // 2)',
-    expectedOutput: "8\n2\n-4",
-    back: "** is exponentiation: 2^3 = 8. % is modulo (remainder): 17 = 5*3 + 2. // is floor division that rounds toward negative infinity: -7/2 = -3.5, floored to -4.",
+    type: "concept",
+    front: "What is short-circuit evaluation and how do 'and' and 'or' use it in Python?",
+    back: "'and' returns the first falsy value or the last value if all are truthy — it stops as soon as it finds a falsy value. 'or' returns the first truthy value or the last value if all are falsy — it stops as soon as it finds a truthy value. This avoids unnecessary evaluation. For example, 'x and y' will not evaluate y if x is falsy.",
   }),
   makeCard({
     id: "card:python:t1:operators:3",
@@ -227,24 +204,19 @@ const operators: ReviewCard[] = [
     branchId: "python",
     type: "code_output",
     front: "What does this code print?",
-    code: 'x = 5\nprint(x > 3 and x < 10)\nprint(not (x == 5))\nprint(x != 5 or x > 4)',
-    expectedOutput: "True\nFalse\nTrue",
-    back: "x > 3 and x < 10: both conditions are True, so result is True. not (x == 5): x is 5, so x == 5 is True, negated to False. x != 5 or x > 4: first is False, but second is True, so or yields True.",
+    code: 'print(0 or "" or [] or "found" or "extra")\nprint(1 and 2 and 3)\nprint(1 and 0 and 3)',
+    expectedOutput: "found\n3\n0",
+    back: "'or' returns the first truthy value: 0, '', and [] are all falsy, so it returns 'found'. 'and' returns the last value if all are truthy (3), or the first falsy value (0). This is short-circuit evaluation in action.",
   }),
-];
 
-// ────────────────────────────────────────────────────────────
-// python:t1:input-output  (3 cards)
-// ────────────────────────────────────────────────────────────
-
-const inputOutput: ReviewCard[] = [
+  // ── python:t1:input-output ─────────────────────────────────
   makeCard({
     id: "card:python:t1:input-output:1",
     nodeId: "python:t1:input-output",
     branchId: "python",
     type: "concept",
-    front: "What type does input() always return, and why does this matter?",
-    back: "input() always returns a str (string), even if the user types a number. This matters because attempting arithmetic on the result without converting it will either fail (str + int raises TypeError) or produce unexpected results (str + str concatenates). Always cast with int() or float() when you need a number.",
+    front: "What type does input() always return in Python, and why does this matter?",
+    back: "input() always returns a str, even if the user types a number. This matters because operations like addition will concatenate strings instead of adding numbers. You must explicitly cast the result — for example, int(input()) or float(input()) — to do arithmetic.",
   }),
   makeCard({
     id: "card:python:t1:input-output:2",
@@ -254,58 +226,43 @@ const inputOutput: ReviewCard[] = [
     front: "What does this code print?",
     code: 'print("A", "B", "C", sep="-")\nprint("Hello", end=" ")\nprint("World")',
     expectedOutput: "A-B-C\nHello World",
-    back: "The sep parameter changes the separator between arguments (default is a space). The end parameter changes what is printed after all arguments (default is a newline). Setting end=' ' means the next print continues on the same line.",
+    back: "The sep parameter changes the separator between arguments (default is a space). The end parameter changes what is printed after the last argument (default is a newline). Setting end=' ' causes the next print to continue on the same line.",
   }),
   makeCard({
     id: "card:python:t1:input-output:3",
     nodeId: "python:t1:input-output",
     branchId: "python",
-    type: "fill_blank",
-    front: "Fill in the blanks to read a number from the user and print its double.",
-    code: 'num = __BLANK__(__BLANK__("Enter a number: "))\nprint(num * 2)',
-    blanks: ["int", "input"],
-    back: "input() reads a string from the user, and int() converts it to an integer. The nesting int(input(...)) is a common pattern for reading numeric input in Python.",
+    type: "bug_spot",
+    front: "Find the bug in this code.",
+    code: 'age = input("Enter age: ")\nnext_year = age + 1\nprint(f"Next year you will be {next_year}")',
+    back: "input() returns a string, so 'age + 1' tries to add an int to a str, raising a TypeError. The fix is to cast the input: age = int(input('Enter age: ')). This is one of the most common beginner mistakes in Python.",
   }),
-];
 
-// ────────────────────────────────────────────────────────────
-// python:t1:comments  (3 cards)
-// ────────────────────────────────────────────────────────────
-
-const comments: ReviewCard[] = [
+  // ── python:t1:comments ─────────────────────────────────────
   makeCard({
     id: "card:python:t1:comments:1",
     nodeId: "python:t1:comments",
     branchId: "python",
     type: "concept",
-    front: "What is the difference between a # comment and a triple-quoted docstring in Python?",
-    back: "A # comment is ignored by the interpreter entirely — it is for humans reading the source code. A triple-quoted string (\"\"\"...\"\"\") placed as the first statement in a module, class, or function becomes a docstring — it is stored as the __doc__ attribute and can be accessed at runtime via help(). Docstrings serve as documentation that tools and users can inspect programmatically.",
+    front: "What is the difference between a comment (#) and a docstring (triple quotes) in Python?",
+    back: "Comments (# ...) are ignored by the interpreter and are for human readers only. Docstrings (\"\"\"...\"\"\") are string literals placed as the first statement in a module, class, or function. Unlike comments, docstrings are stored as the __doc__ attribute and can be accessed at runtime via help() or .__doc__.",
   }),
   makeCard({
     id: "card:python:t1:comments:2",
     nodeId: "python:t1:comments",
     branchId: "python",
-    type: "bug_spot",
-    front: "Find the style issue in this code (PEP 8).",
-    code: 'x=10 #set x to ten\ny = x+5\nMyVariable = "hello"',
-    back: "Multiple PEP 8 issues: (1) Missing spaces around = and + operators: use x = 10 and y = x + 5. (2) Missing space after #: use # set x to ten. (3) Variable names should be snake_case, not PascalCase: my_variable instead of MyVariable. PEP 8 conventions keep code readable and consistent.",
+    type: "fill_blank",
+    front: "Fill in the blank to write a proper docstring for this function.",
+    code: 'def add(a, b):\n    __BLANK__\n    return a + b',
+    blanks: ['"""Return the sum of a and b."""'],
+    back: 'A docstring is a triple-quoted string on the first line of a function body. It describes what the function does. PEP 257 recommends a one-line docstring for simple functions: """Return the sum of a and b."""',
   }),
   makeCard({
     id: "card:python:t1:comments:3",
     nodeId: "python:t1:comments",
     branchId: "python",
     type: "explain",
-    front: "Explain when you should and should not write comments in your code.",
-    back: "Write comments to explain WHY something is done, not WHAT. Good code is self-documenting through clear variable names and small functions. Comments are valuable for: non-obvious business logic, workarounds for known bugs, performance choices, and TODO notes. Avoid comments that restate the code (e.g., # increment x by 1 above x += 1) — they add noise and can become outdated.",
+    front: "Explain two key rules from PEP 8 that improve code readability.",
+    back: "1. Use 4 spaces per indentation level (never tabs mixed with spaces). This ensures consistent visual structure across all Python code. 2. Limit lines to 79 characters (or 99 in some style guides). Long lines are hard to read, especially in side-by-side diffs. Other important PEP 8 rules include using snake_case for variables and functions, and adding blank lines between top-level definitions.",
   }),
-];
-
-export const tier1Cards: ReviewCard[] = [
-  ...helloWorld,
-  ...variables,
-  ...dataTypes,
-  ...strings,
-  ...operators,
-  ...inputOutput,
-  ...comments,
 ];

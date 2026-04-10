@@ -1,0 +1,275 @@
+import type { ReviewCard } from "@/lib/types";
+
+function makeCard(
+  partial: Omit<ReviewCard, "fsrs" | "state" | "dueDate" | "createdAt">
+): ReviewCard {
+  return {
+    ...partial,
+    fsrs: {
+      stability: 1.0,
+      difficulty: 5.0,
+      elapsedDays: 0,
+      scheduledDays: 0,
+      reps: 0,
+      lapses: 0,
+      state: "new",
+    },
+    state: "new",
+    dueDate: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+  };
+}
+
+// ────────────────────────────────────────────────────────────
+// Tier 4: Functions (7 nodes, ~25 cards)
+// ────────────────────────────────────────────────────────────
+
+export const tier4Cards: ReviewCard[] = [
+  // ── python:t4:defining-functions ───────────────────────────
+  makeCard({
+    id: "card:python:t4:defining-functions:1",
+    nodeId: "python:t4:defining-functions",
+    branchId: "python",
+    type: "concept",
+    front: "What does a Python function return if it has no return statement?",
+    back: "It implicitly returns None. Every Python function returns a value — if no return statement is reached (or a bare 'return' with no value is used), the function returns None. This is important to know when debugging: if you forget to return a computed result, you will get None instead.",
+  }),
+  makeCard({
+    id: "card:python:t4:defining-functions:2",
+    nodeId: "python:t4:defining-functions",
+    branchId: "python",
+    type: "code_output",
+    front: "What does this code print?",
+    code: "def greet(name):\n    msg = f\"Hello, {name}\"\n\nresult = greet(\"Alice\")\nprint(result)",
+    expectedOutput: "None",
+    back: "The function creates msg but never returns it. Without a return statement, the function returns None. The fix would be to add 'return msg' at the end of the function body.",
+  }),
+  makeCard({
+    id: "card:python:t4:defining-functions:3",
+    nodeId: "python:t4:defining-functions",
+    branchId: "python",
+    type: "code_output",
+    front: "What does this code print?",
+    code: "def minmax(nums):\n    return min(nums), max(nums)\n\nresult = minmax([3, 1, 4, 1, 5])\nprint(result)\nprint(type(result).__name__)",
+    expectedOutput: "(1, 5)\ntuple",
+    back: "Returning multiple values separated by commas automatically packs them into a tuple. result is the tuple (1, 5). You can unpack the return value: lo, hi = minmax([3,1,4,1,5]).",
+  }),
+  makeCard({
+    id: "card:python:t4:defining-functions:4",
+    nodeId: "python:t4:defining-functions",
+    branchId: "python",
+    type: "fill_blank",
+    front: "Fill in the blank to define a function that takes any number of positional arguments and returns their sum.",
+    code: "def add_all(__BLANK__numbers):\n    return sum(numbers)\n\nprint(add_all(1, 2, 3, 4))",
+    blanks: ["*"],
+    back: "The * prefix collects all positional arguments into a tuple called 'numbers'. add_all(1, 2, 3, 4) receives numbers = (1, 2, 3, 4), and sum() returns 10. This is called *args syntax.",
+  }),
+
+  // ── python:t4:arguments ────────────────────────────────────
+  makeCard({
+    id: "card:python:t4:arguments:1",
+    nodeId: "python:t4:arguments",
+    branchId: "python",
+    type: "bug_spot",
+    front: "Find the bug in this code.",
+    code: "def add_item(item, lst=[]):\n    lst.append(item)\n    return lst\n\nprint(add_item(1))\nprint(add_item(2))",
+    back: "The mutable default argument [] is created once when the function is defined, not on each call. Both calls share the same list, so the output is [1] then [1, 2] instead of [1] and [2]. The fix is to use None as the default and create the list inside: 'def add_item(item, lst=None): if lst is None: lst = []; ...'",
+  }),
+  makeCard({
+    id: "card:python:t4:arguments:2",
+    nodeId: "python:t4:arguments",
+    branchId: "python",
+    type: "code_output",
+    front: "What does this code print?",
+    code: "def f(a, b, *, c):\n    print(a, b, c)\n\nf(1, 2, c=3)",
+    expectedOutput: "1 2 3",
+    back: "The bare * in the parameter list means everything after it must be passed as keyword arguments. c=3 must be explicit — calling f(1, 2, 3) would raise a TypeError because c is keyword-only. This pattern forces callers to be explicit about certain arguments.",
+  }),
+  makeCard({
+    id: "card:python:t4:arguments:3",
+    nodeId: "python:t4:arguments",
+    branchId: "python",
+    type: "code_output",
+    front: "What does this code print?",
+    code: "def info(**kwargs):\n    for k, v in kwargs.items():\n        print(f\"{k}={v}\")\n\ninfo(name=\"Alice\", age=30)",
+    expectedOutput: "name=Alice\nage=30",
+    back: "**kwargs collects all keyword arguments into a dictionary. The keys are the argument names (strings) and the values are the argument values. This is useful for functions that accept flexible named parameters, like configuration functions or wrappers.",
+  }),
+  makeCard({
+    id: "card:python:t4:arguments:4",
+    nodeId: "python:t4:arguments",
+    branchId: "python",
+    type: "concept",
+    front: "In what order must Python function parameters appear in a definition?",
+    back: "The required order is: 1) regular positional parameters, 2) *args (variable positional), 3) keyword-only parameters (after * or *args), 4) **kwargs (variable keyword). For example: def f(a, b, *args, key=True, **kwargs). Default-valued parameters must come after non-default ones within the positional group.",
+  }),
+
+  // ── python:t4:scope ────────────────────────────────────────
+  makeCard({
+    id: "card:python:t4:scope:1",
+    nodeId: "python:t4:scope",
+    branchId: "python",
+    type: "code_output",
+    front: "What does this code print?",
+    code: "x = 10\n\ndef foo():\n    x = 20\n    print(x)\n\nfoo()\nprint(x)",
+    expectedOutput: "20\n10",
+    back: "Inside foo(), x = 20 creates a new local variable that shadows the global x. The global x remains 10. Python uses the LEGB rule: Local, Enclosing, Global, Built-in. Assignment creates a new variable in the local scope unless global or nonlocal is declared.",
+  }),
+  makeCard({
+    id: "card:python:t4:scope:2",
+    nodeId: "python:t4:scope",
+    branchId: "python",
+    type: "code_output",
+    front: "What does this code print?",
+    code: "x = 10\n\ndef foo():\n    global x\n    x = 20\n\nfoo()\nprint(x)",
+    expectedOutput: "20",
+    back: "The 'global' keyword tells Python that x inside foo() refers to the module-level variable, not a new local. After foo() runs, the global x has been changed to 20. Use global sparingly — it makes code harder to reason about.",
+  }),
+  makeCard({
+    id: "card:python:t4:scope:3",
+    nodeId: "python:t4:scope",
+    branchId: "python",
+    type: "explain",
+    front: "Explain the LEGB scope resolution rule in Python.",
+    back: "When Python encounters a name, it searches in this order: Local (current function), Enclosing (any outer functions in a nested context), Global (module-level), Built-in (Python's built-in names like len, print). The first match wins. Writing to a name creates it in the Local scope unless 'global' or 'nonlocal' is declared. This is why you can read a global inside a function but assigning to it creates a local shadow.",
+  }),
+
+  // ── python:t4:higher-order ─────────────────────────────────
+  makeCard({
+    id: "card:python:t4:higher-order:1",
+    nodeId: "python:t4:higher-order",
+    branchId: "python",
+    type: "concept",
+    front: "What is a higher-order function? Name two built-in examples in Python.",
+    back: "A higher-order function is a function that takes another function as an argument or returns a function. Built-in examples include map() (applies a function to every item in an iterable) and filter() (keeps items where the function returns True). sorted() with a key parameter is another common example.",
+  }),
+  makeCard({
+    id: "card:python:t4:higher-order:2",
+    nodeId: "python:t4:higher-order",
+    branchId: "python",
+    type: "code_output",
+    front: "What does this code print?",
+    code: 'words = ["banana", "cherry", "apple"]\nresult = sorted(words, key=len)\nprint(result)',
+    expectedOutput: "['apple', 'banana', 'cherry']",
+    back: "sorted() with key=len sorts by the length of each string: 'apple' (5), 'banana' (6), 'cherry' (6). Strings with equal length keep their original relative order (stable sort). The key function is called once per element to extract a comparison value.",
+  }),
+  makeCard({
+    id: "card:python:t4:higher-order:3",
+    nodeId: "python:t4:higher-order",
+    branchId: "python",
+    type: "code_output",
+    front: "What does this code print?",
+    code: "nums = [1, 2, 3, 4, 5, 6]\nevens = list(filter(lambda x: x % 2 == 0, nums))\ndoubled = list(map(lambda x: x * 2, evens))\nprint(doubled)",
+    expectedOutput: "[4, 8, 12]",
+    back: "filter() keeps only even numbers [2, 4, 6]. map() doubles each: [4, 8, 12]. Both return lazy iterators, so list() is needed to materialize the results. The Pythonic alternative is a list comprehension: [x * 2 for x in nums if x % 2 == 0].",
+  }),
+  makeCard({
+    id: "card:python:t4:higher-order:4",
+    nodeId: "python:t4:higher-order",
+    branchId: "python",
+    type: "fill_blank",
+    front: "Fill in the blank to apply a function to each element of a list.",
+    code: "def double(x):\n    return x * 2\n\nnums = [1, 2, 3]\nresult = list(__BLANK__(double, nums))\nprint(result)",
+    blanks: ["map"],
+    back: "map(function, iterable) applies the function to each item and returns an iterator of results. list() converts it to a list. Here, each number is doubled: [2, 4, 6].",
+  }),
+
+  // ── python:t4:lambda ───────────────────────────────────────
+  makeCard({
+    id: "card:python:t4:lambda:1",
+    nodeId: "python:t4:lambda",
+    branchId: "python",
+    type: "concept",
+    front: "What is a lambda function in Python and what are its limitations?",
+    back: "A lambda is an anonymous, single-expression function: lambda args: expression. It can only contain one expression (no statements, no assignments, no multiple lines). It is most useful as a short callback passed to higher-order functions like sorted(), map(), or filter(). If the logic is complex, use a regular def function instead.",
+  }),
+  makeCard({
+    id: "card:python:t4:lambda:2",
+    nodeId: "python:t4:lambda",
+    branchId: "python",
+    type: "code_output",
+    front: "What does this code print?",
+    code: "pairs = [(1, 'b'), (3, 'a'), (2, 'c')]\npairs.sort(key=lambda p: p[1])\nprint(pairs)",
+    expectedOutput: "[(3, 'a'), (1, 'b'), (2, 'c')]",
+    back: "The lambda extracts the second element (index 1) of each tuple for comparison. Sorting by those characters alphabetically: 'a' < 'b' < 'c', so (3,'a') comes first, then (1,'b'), then (2,'c').",
+  }),
+  makeCard({
+    id: "card:python:t4:lambda:3",
+    nodeId: "python:t4:lambda",
+    branchId: "python",
+    type: "code_output",
+    front: "What does this code print?",
+    code: "funcs = [lambda x, i=i: x + i for i in range(3)]\nprint([f(10) for f in funcs])",
+    expectedOutput: "[10, 11, 12]",
+    back: "The i=i default argument captures the current value of i at each iteration. Without it (lambda x: x + i), all lambdas would close over the same variable i, and all would use i=2. The default argument trick creates a separate binding for each lambda.",
+  }),
+
+  // ── python:t4:closures ─────────────────────────────────────
+  makeCard({
+    id: "card:python:t4:closures:1",
+    nodeId: "python:t4:closures",
+    branchId: "python",
+    type: "code_output",
+    front: "What does this code print?",
+    code: "def make_counter():\n    count = 0\n    def increment():\n        nonlocal count\n        count += 1\n        return count\n    return increment\n\nc = make_counter()\nprint(c(), c(), c())",
+    expectedOutput: "1 2 3",
+    back: "make_counter returns the inner function increment, which closes over the variable count. The nonlocal keyword allows increment to modify count in the enclosing scope. Each call to c() increments and returns the shared count. This is a closure — a function that remembers its enclosing scope even after that scope has finished executing.",
+  }),
+  makeCard({
+    id: "card:python:t4:closures:2",
+    nodeId: "python:t4:closures",
+    branchId: "python",
+    type: "explain",
+    front: "Explain what a closure is and give a practical use case.",
+    back: "A closure is a function object that remembers values from its enclosing lexical scope, even when called outside that scope. The inner function 'closes over' the free variables. Practical use cases include: factory functions (make_multiplier(3) returns a function that triples), private state (counters, accumulators without classes), and callback configuration (pre-configuring behavior for event handlers).",
+  }),
+  makeCard({
+    id: "card:python:t4:closures:3",
+    nodeId: "python:t4:closures",
+    branchId: "python",
+    type: "bug_spot",
+    front: "Find the bug in this code.",
+    code: "def make_counter():\n    count = 0\n    def increment():\n        count += 1\n        return count\n    return increment\n\nc = make_counter()\nprint(c())",
+    back: "Without the 'nonlocal count' declaration, the line 'count += 1' tries to read count before assigning it, causing an UnboundLocalError. Python sees the assignment and treats count as local, but it has no local value yet. The fix is to add 'nonlocal count' at the top of increment().",
+  }),
+
+  // ── python:t4:decorators ───────────────────────────────────
+  makeCard({
+    id: "card:python:t4:decorators:1",
+    nodeId: "python:t4:decorators",
+    branchId: "python",
+    type: "concept",
+    front: "What is a decorator in Python and what does the @decorator syntax do?",
+    back: "A decorator is a function that takes another function as input and returns a new function (usually wrapping the original with extra behavior). Writing @decorator above a function definition is syntactic sugar for: func = decorator(func). Common uses include logging, timing, authentication, caching, and input validation.",
+  }),
+  makeCard({
+    id: "card:python:t4:decorators:2",
+    nodeId: "python:t4:decorators",
+    branchId: "python",
+    type: "code_output",
+    front: "What does this code print?",
+    code: "def shout(func):\n    def wrapper(*args, **kwargs):\n        result = func(*args, **kwargs)\n        return result.upper()\n    return wrapper\n\n@shout\ndef greet(name):\n    return f\"hello, {name}\"\n\nprint(greet(\"alice\"))",
+    expectedOutput: "HELLO, ALICE",
+    back: "The @shout decorator wraps greet. When greet('alice') is called, it actually calls wrapper('alice'), which calls the original greet('alice') to get 'hello, alice', then calls .upper() on the result, returning 'HELLO, ALICE'.",
+  }),
+  makeCard({
+    id: "card:python:t4:decorators:3",
+    nodeId: "python:t4:decorators",
+    branchId: "python",
+    type: "fill_blank",
+    front: "Fill in the blanks to create a decorator that prints the execution time of a function.",
+    code: "import time\n\ndef timer(func):\n    def wrapper(*args, **kwargs):\n        start = time.time()\n        result = __BLANK__(*args, **kwargs)\n        elapsed = time.time() - start\n        print(f\"{func.__name__} took {elapsed:.4f}s\")\n        return __BLANK__\n    return wrapper",
+    blanks: ["func", "result"],
+    back: "Inside the wrapper, func(*args, **kwargs) calls the original decorated function and captures its return value. After timing, the wrapper returns result so the decorator is transparent — callers get the same return value as the original function.",
+  }),
+  makeCard({
+    id: "card:python:t4:decorators:4",
+    nodeId: "python:t4:decorators",
+    branchId: "python",
+    type: "code_output",
+    front: "What does this code print?",
+    code: "def repeat(n):\n    def decorator(func):\n        def wrapper(*args, **kwargs):\n            for _ in range(n):\n                func(*args, **kwargs)\n        return wrapper\n    return decorator\n\n@repeat(3)\ndef say_hi():\n    print(\"hi\")\n\nsay_hi()",
+    expectedOutput: "hi\nhi\nhi",
+    back: "repeat(3) is a decorator factory — it returns the actual decorator. The decorator wraps say_hi so that calling it runs the original function n times. This three-layer nesting (factory -> decorator -> wrapper) is the standard pattern for decorators that accept arguments.",
+  }),
+];

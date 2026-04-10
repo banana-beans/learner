@@ -93,14 +93,14 @@ export function NodeDetail({
   const meta = BRANCH_META[currentNode.branchId];
   const variant = branchBadgeVariant(meta.color);
 
-  const hardPrereqs = node.hardPrereqs.map((id) => {
+  const hardPrereqs = currentNode.hardPrereqs.map((id) => {
     const prereqNode = curriculum.nodeMap[id];
     const prereqState = prereqNode ? getNodeState(id, progress, curriculum) : "locked";
     const completed = prereqState === "completed" || prereqState === "mastered";
     return { id, title: prereqNode?.title ?? id, completed, required: true };
   });
 
-  const softPrereqs = node.softPrereqs.map((id) => {
+  const softPrereqs = currentNode.softPrereqs.map((id) => {
     const prereqNode = curriculum.nodeMap[id];
     const prereqState = prereqNode ? getNodeState(id, progress, curriculum) : "locked";
     const completed = prereqState === "completed" || prereqState === "mastered";
@@ -111,7 +111,7 @@ export function NodeDetail({
 
   /** CTA configuration based on state */
   function getCTA(): { label: string; variant: "primary" | "secondary" | "ghost" | "success"; disabled: boolean; href?: string } {
-    switch (state) {
+    switch (currentState) {
       case "locked":
         return { label: "Prerequisites needed", variant: "ghost", disabled: true };
       case "available":
@@ -119,21 +119,21 @@ export function NodeDetail({
           label: "Start Learning",
           variant: "primary",
           disabled: false,
-          href: `/learn/${node.branchId}/${node.id}`,
+          href: `/learn/${currentNode.branchId}/${currentNode.id}`,
         };
       case "in_progress":
         return {
           label: "Continue Learning",
           variant: "primary",
           disabled: false,
-          href: `/learn/${node.branchId}/${node.id}`,
+          href: `/learn/${currentNode.branchId}/${currentNode.id}`,
         };
       case "completed":
         return {
           label: "Review",
           variant: "secondary",
           disabled: false,
-          href: `/learn/${node.branchId}/${node.id}`,
+          href: `/learn/${currentNode.branchId}/${currentNode.id}`,
         };
       case "mastered":
         return { label: "Mastered!", variant: "success", disabled: true };
@@ -146,7 +146,7 @@ export function NodeDetail({
 
   /** State label styling */
   function getStateBadge() {
-    switch (state) {
+    switch (currentState) {
       case "locked":
         return <Badge variant="default" size="sm">Locked</Badge>;
       case "available":
@@ -161,7 +161,7 @@ export function NodeDetail({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={node.title} maxWidth="max-w-md">
+    <Modal open={open} onClose={onClose} title={currentNode.title} maxWidth="max-w-md">
       <div className="space-y-5">
         {/* Meta badges */}
         <div className="flex flex-wrap items-center gap-2">
@@ -170,24 +170,24 @@ export function NodeDetail({
             {meta.title}
           </Badge>
           <Badge variant="default" size="sm">
-            Tier {node.tier} - {TIER_LABELS[node.tier] ?? `Tier ${node.tier}`}
+            Tier {currentNode.tier} - {TIER_LABELS[currentNode.tier] ?? `Tier ${currentNode.tier}`}
           </Badge>
         </div>
 
         {/* Description */}
         <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
-          {node.description}
+          {currentNode.description}
         </p>
 
         {/* Stats row */}
         <div className="flex items-center gap-4 text-sm">
           <div className="flex items-center gap-1.5 text-[var(--text-muted)]">
             <ClockIcon />
-            <span>{node.estimatedMinutes} min</span>
+            <span>{currentNode.estimatedMinutes} min</span>
           </div>
           <div className="flex items-center gap-1.5 text-[var(--xp-gold)]">
             <XPIcon />
-            <span className="font-medium">+{node.xpReward} XP</span>
+            <span className="font-medium">+{currentNode.xpReward} XP</span>
           </div>
         </div>
 
@@ -220,13 +220,13 @@ export function NodeDetail({
         )}
 
         {/* Concepts */}
-        {node.concepts.length > 0 && (
+        {currentNode.concepts.length > 0 && (
           <div>
             <h4 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-2">
               Concepts Covered
             </h4>
             <div className="flex flex-wrap gap-1.5">
-              {node.concepts.map((concept) => (
+              {currentNode.concepts.map((concept) => (
                 <Badge key={concept} variant="default" size="xs">
                   {concept}
                 </Badge>
@@ -249,8 +249,8 @@ export function NodeDetail({
             </Button>
           )}
 
-          {(state === "completed" || state === "in_progress" || state === "available") && (
-            <Link href={`/challenges?node=${node.id}`}>
+          {(currentState === "completed" || currentState === "in_progress" || currentState === "available") && (
+            <Link href={`/challenges?node=${currentNode.id}`}>
               <Button variant="ghost" size="md">
                 View Challenges
               </Button>

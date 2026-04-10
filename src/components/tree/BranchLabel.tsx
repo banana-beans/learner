@@ -43,7 +43,21 @@ export function BranchLabel({
   const [expanded, setExpanded] = useState(defaultExpanded);
   const meta = BRANCH_META[branchId];
 
-  const badgeVariant = meta.color as "blue" | "cyan" | "teal" | "purple" | "orange" | "green" | "yellow" | "red" | "gold";
+  /** Map branch color string to a valid Badge variant */
+  const colorToBadgeVariant: Record<string, "blue" | "cyan" | "teal" | "purple" | "orange" | "green" | "yellow" | "red" | "gold"> = {
+    blue: "blue",
+    cyan: "cyan",
+    teal: "teal",
+    purple: "purple",
+    orange: "orange",
+    green: "green",
+    yellow: "yellow",
+    red: "red",
+    gold: "gold",
+    sky: "cyan",
+    indigo: "purple",
+  };
+  const badgeVariant = colorToBadgeVariant[meta.color] ?? "blue";
 
   return (
     <div className="mb-6">

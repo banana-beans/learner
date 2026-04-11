@@ -39,8 +39,6 @@ export function SkillNode({ node, state, branchColor }: SkillNodeProps) {
       ? { borderColor: branchColor, borderWidth: "2px" }
       : state === "mastered"
       ? { boxShadow: "0 0 16px #facc1540" }
-      : state === "available"
-      ? { boxShadow: `0 0 14px ${branchColor}40` }
       : undefined;
 
   return (

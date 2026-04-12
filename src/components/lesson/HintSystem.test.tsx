@@ -9,7 +9,7 @@ const hints = [
 ];
 
 describe("HintSystem", () => {
-  let onHintRevealed: ReturnType<typeof vi.fn>;
+  let onHintRevealed: (hintIndex: number, penaltyXP: number) => void;
 
   beforeEach(() => {
     onHintRevealed = vi.fn();

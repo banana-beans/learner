@@ -294,7 +294,7 @@ export const HINT_XP_PENALTIES = {
 
 export const ROUTES = {
   HOME: "/",
-  TREE: "/tree",
+  TREE: "/skill-tree",
   REVIEW: "/review",
   CHALLENGES: "/challenges",
   PROFILE: "/profile",

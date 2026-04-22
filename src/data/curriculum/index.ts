@@ -25,6 +25,19 @@ const pythonNodes: SkillNode[] = [
   ...tier6Advanced,
 ];
 
+// C# branch nodes
+import { tier1Syntax } from "./csharp/tier1-syntax";
+import { tier2OOP } from "./csharp/tier2-oop";
+import { tier3Intermediate } from "./csharp/tier3-intermediate";
+import { tier4Advanced as csharpTier4 } from "./csharp/tier4-advanced";
+
+const csharpNodesAll: SkillNode[] = [
+  ...tier1Syntax,
+  ...tier2OOP,
+  ...tier3Intermediate,
+  ...csharpTier4,
+];
+
 // ────────────────────────────────────────────────────────────
 // Branch Stubs (other 9 branches — nodes TBD in Phase 2)
 // Each branch has at least one entry node so the tree renders.
@@ -60,20 +73,7 @@ const reactNodes: SkillNode[] = [
   },
 ];
 
-const csharpNodes: SkillNode[] = [
-  {
-    id: "csharp:t1:intro",
-    branchId: "csharp",
-    tier: 1,
-    title: "C# Fundamentals",
-    description: "C# syntax, types, and .NET CLI basics.",
-    hardPrereqs: [],
-    softPrereqs: [],
-    estimatedMinutes: 25,
-    xpReward: 100,
-    concepts: ["C# syntax", "strong typing", "dotnet CLI", "namespaces"],
-  },
-];
+// C# stub replaced by full imports above
 
 const dsaNodes: SkillNode[] = [
   {
@@ -190,7 +190,7 @@ export const branches: Branch[] = [
   makeBranch("python", pythonNodes),
   makeBranch("typescript", typescriptNodes),
   makeBranch("react", reactNodes),
-  makeBranch("csharp", csharpNodes),
+  makeBranch("csharp", csharpNodesAll),
   makeBranch("dsa", dsaNodes),
   makeBranch("databases", databasesNodes),
   makeBranch("systems-design", systemsDesignNodes),

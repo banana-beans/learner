@@ -22,6 +22,16 @@ import { tier2OOP } from "./csharp/tier2-oop";
 import { tier3Intermediate } from "./csharp/tier3-intermediate";
 import { tier4Advanced } from "./csharp/tier4-advanced";
 
+// TypeScript branch nodes
+import { tsTier1Basics } from "./typescript/tier1-basics";
+import { tsTier2Intermediate } from "./typescript/tier2-intermediate";
+import { tsTier3Advanced } from "./typescript/tier3-advanced";
+
+// DSA branch nodes
+import { dsaTier1Foundations } from "./dsa/tier1-foundations";
+import { dsaTier2Structures } from "./dsa/tier2-structures";
+import { dsaTier3Algorithms } from "./dsa/tier3-algorithms";
+
 const pythonNodes: SkillNode[] = [
   ...tier1Basics,
   ...tier2ControlFlow,
@@ -37,18 +47,9 @@ const pythonNodes: SkillNode[] = [
 // ────────────────────────────────────────────────────────────
 
 const typescriptNodes: SkillNode[] = [
-  {
-    id: "typescript:t1:intro",
-    branchId: "typescript",
-    tier: 1,
-    title: "TypeScript Intro",
-    description: "Type annotations, compilation, tsconfig basics.",
-    hardPrereqs: [],
-    softPrereqs: [],
-    estimatedMinutes: 20,
-    xpReward: 100,
-    concepts: ["type annotations", "tsc", "tsconfig.json", "primitive types"],
-  },
+  ...tsTier1Basics,
+  ...tsTier2Intermediate,
+  ...tsTier3Advanced,
 ];
 
 const reactNodes: SkillNode[] = [
@@ -74,18 +75,9 @@ const csharpNodes: SkillNode[] = [
 ];
 
 const dsaNodes: SkillNode[] = [
-  {
-    id: "dsa:t1:complexity",
-    branchId: "dsa",
-    tier: 1,
-    title: "Big-O Complexity",
-    description: "Time and space complexity analysis, common complexities.",
-    hardPrereqs: [],
-    softPrereqs: [],
-    estimatedMinutes: 30,
-    xpReward: 125,
-    concepts: ["Big-O", "time complexity", "space complexity", "O(1)", "O(n)", "O(n²)", "O(log n)"],
-  },
+  ...dsaTier1Foundations,
+  ...dsaTier2Structures,
+  ...dsaTier3Algorithms,
 ];
 
 const databasesNodes: SkillNode[] = [

@@ -16,6 +16,12 @@ import { tier4Functions } from "./python/tier4-functions";
 import { tier5OOP } from "./python/tier5-oop";
 import { tier6Advanced } from "./python/tier6-advanced";
 
+// C# branch nodes
+import { tier1Syntax } from "./csharp/tier1-syntax";
+import { tier2OOP } from "./csharp/tier2-oop";
+import { tier3Intermediate } from "./csharp/tier3-intermediate";
+import { tier4Advanced } from "./csharp/tier4-advanced";
+
 const pythonNodes: SkillNode[] = [
   ...tier1Basics,
   ...tier2ControlFlow,
@@ -61,18 +67,10 @@ const reactNodes: SkillNode[] = [
 ];
 
 const csharpNodes: SkillNode[] = [
-  {
-    id: "csharp:t1:intro",
-    branchId: "csharp",
-    tier: 1,
-    title: "C# Fundamentals",
-    description: "C# syntax, types, and .NET CLI basics.",
-    hardPrereqs: [],
-    softPrereqs: [],
-    estimatedMinutes: 25,
-    xpReward: 100,
-    concepts: ["C# syntax", "strong typing", "dotnet CLI", "namespaces"],
-  },
+  ...tier1Syntax,
+  ...tier2OOP,
+  ...tier3Intermediate,
+  ...tier4Advanced,
 ];
 
 const dsaNodes: SkillNode[] = [

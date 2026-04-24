@@ -297,6 +297,7 @@ export const ROUTES = {
   TREE: "/skill-tree",
   REVIEW: "/review",
   CHALLENGES: "/challenges",
+  SCROLL: "/scroll",
   PROFILE: "/profile",
   SETTINGS: "/settings",
 } as const;

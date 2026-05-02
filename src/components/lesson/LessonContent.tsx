@@ -2,13 +2,15 @@
 
 import { useState } from "react";
 import { AnimatePresence } from "framer-motion";
-import { pythonBasicsLessons } from "@/data/lessons/python-basics";
+import { getLesson } from "@/data/lessons";
 import { Button } from "@/components/common/Button";
 import { Card } from "@/components/common/Card";
 import { XPRewardToast, XPRewardToastContainer } from "@/components/common/XPRewardToast";
 import { useProgressStore } from "@/store/progress-store";
 import { useUserStore } from "@/store/user-store";
-import type { LessonResult } from "@/lib/types";
+import { useReviewStore } from "@/store/review-store";
+import { createCardsForLesson } from "@/lib/review-cards";
+import type { BranchId, LessonResult } from "@/lib/types";
 
 interface LessonContentProps {
   nodeId: string;
@@ -23,13 +25,14 @@ interface ToastState {
 }
 
 export function LessonContent({ nodeId, xpReward }: LessonContentProps) {
-  const lesson = pythonBasicsLessons[nodeId];
+  const lesson = getLesson(nodeId);
   const [completed, setCompleted] = useState(false);
   const [toasts, setToasts] = useState<ToastState[]>([]);
 
   const completeLesson = useProgressStore((s) => s.completeLesson);
   const addXP = useUserStore((s) => s.addXP);
   const streak = useUserStore((s) => s.streak);
+  const addCards = useReviewStore((s) => s.addCards);
 
   function dismissToast(id: string) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -53,6 +56,11 @@ export function LessonContent({ nodeId, xpReward }: LessonContentProps) {
       referenceId: nodeId,
       multipliers: {},
     });
+
+    if (lesson) {
+      const branchId = nodeId.split(":")[0] as BranchId;
+      addCards(createCardsForLesson(lesson, branchId));
+    }
 
     // Compute streak multiplier for display
     const streakDays = streak.currentStreak;

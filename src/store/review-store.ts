@@ -25,7 +25,7 @@ interface ReviewState {
 }
 
 /** Compute next FSRS state after a review rating */
-function computeNextState(card: ReviewCard, rating: Rating, now: Date): FSRSState {
+export function computeNextState(card: ReviewCard, rating: Rating, now: Date): FSRSState {
   const fsrs = card.fsrs;
   const elapsedDays = card.lastReviewedAt
     ? (now.getTime() - new Date(card.lastReviewedAt).getTime()) / 86_400_000

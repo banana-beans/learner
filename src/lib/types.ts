@@ -149,6 +149,14 @@ export interface Challenge {
   baseXP: number;
   /** Tags for related concepts */
   tags: string[];
+  /**
+   * Execution runtime for the challenge.
+   * - "python": run in Pyodide (default for python:* nodes)
+   * - "javascript": run via Function(...) (default for typescript:* nodes)
+   * - "manual": no auto-grade, show solution + manual "I got it" XP
+   * If omitted, inferred from the nodeId prefix.
+   */
+  lang?: "python" | "javascript" | "manual";
 }
 
 // ────────────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
 import type { Challenge } from "@/lib/types";
 import { Button } from "@/components/common/Button";
@@ -11,7 +11,21 @@ import { TestResults } from "@/components/lesson/TestResults";
 import { XPRewardToast, XPRewardToastContainer } from "@/components/common/XPRewardToast";
 import { useProgressStore } from "@/store/progress-store";
 import { useUserStore } from "@/store/user-store";
+import { loadPyodideOnce, runPython } from "@/lib/pyodide";
+import { runJavaScript } from "@/lib/js-runner";
 import type { ChallengeResult } from "@/lib/types";
+
+type PyState = "idle" | "loading" | "ready" | "error";
+
+type Lang = "python" | "javascript" | "manual";
+
+function resolveLang(challenge: Challenge): Lang {
+  if (challenge.lang) return challenge.lang;
+  const branch = challenge.nodeId.split(":")[0];
+  if (branch === "python" || branch === "dsa") return "python";
+  if (branch === "typescript") return "javascript";
+  return "manual";
+}
 
 interface TestResultItem {
   passed: boolean;
@@ -43,6 +57,27 @@ export function ChallengeView({ challenge }: ChallengeViewProps) {
   const [xpPenaltyMultiplier, setXpPenaltyMultiplier] = useState(1.0);
   const [startTime] = useState(() => Date.now());
   const [toasts, setToasts] = useState<ToastState[]>([]);
+  const [pyState, setPyState] = useState<PyState>("idle");
+  const [running, setRunning] = useState(false);
+
+  const lang = resolveLang(challenge);
+
+  // Preload Pyodide on mount only if this challenge actually runs Python.
+  useEffect(() => {
+    if (lang !== "python") return;
+    let cancelled = false;
+    setPyState("loading");
+    loadPyodideOnce()
+      .then(() => {
+        if (!cancelled) setPyState("ready");
+      })
+      .catch(() => {
+        if (!cancelled) setPyState("error");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [lang]);
 
   const completeChallenge = useProgressStore((s) => s.completeChallenge);
   const addXP = useUserStore((s) => s.addXP);
@@ -63,50 +98,70 @@ export function ChallengeView({ challenge }: ChallengeViewProps) {
     []
   );
 
-  function runTests() {
+  async function runTests() {
     const testCases = challenge.testCases ?? [];
-    if (testCases.length === 0) {
-      setResults([{ passed: true, description: "No test cases — solution accepted." }]);
-      setHasRun(true);
-      setAllPassed(true);
-      handleSuccess();
+
+    if (lang === "manual") {
+      // No auto-grade for manual challenges. The user marks them done after
+      // reading the solution; XP is awarded through the "I got it" button.
+      setRunning(false);
       return;
     }
 
-    const userOutput = extractOutput(code);
-    const newResults: TestResultItem[] = testCases
-      .filter((tc) => tc.visible)
-      .map((tc) => {
-        const actual = userOutput.trim();
+    setRunning(true);
+    try {
+      const { stdout, error } =
+        lang === "javascript" ? await runJavaScript(code) : await runPython(code);
+
+      if (testCases.length === 0) {
+        // No test cases configured: any successful run accepts.
+        if (error) {
+          setResults([{ passed: false, description: "Runtime error", expected: undefined, actual: error }]);
+          setHasRun(true);
+          setAllPassed(false);
+        } else {
+          setResults([{ passed: true, description: "No test cases — solution accepted.", actual: stdout }]);
+          setHasRun(true);
+          setAllPassed(true);
+          handleSuccess();
+        }
+        return;
+      }
+
+      const actual = error ? "" : stdout.trim();
+      const errMsg = error;
+
+      const newResults: TestResultItem[] = [];
+      for (const tc of testCases) {
         const expected = tc.expectedOutput.trim();
-        return {
-          passed: actual === expected,
-          description: tc.description ?? `Test case`,
-          expected,
-          actual,
-        };
-      });
+        const passed = !errMsg && actual === expected;
+        if (tc.visible) {
+          newResults.push({
+            passed,
+            description: tc.description ?? "Test case",
+            expected,
+            actual: errMsg ? `Error: ${errMsg}` : actual,
+          });
+        } else {
+          newResults.push({
+            passed,
+            description: "Hidden test",
+            expected: undefined,
+            actual: undefined,
+          });
+        }
+      }
 
-    // Include hidden tests — just show pass/fail without expected
-    const hiddenCases = testCases.filter((tc) => !tc.visible);
-    hiddenCases.forEach((tc) => {
-      const actual = userOutput.trim();
-      const expected = tc.expectedOutput.trim();
-      newResults.push({
-        passed: actual === expected,
-        description: "Hidden test",
-        expected: undefined, // don't reveal hidden expected
-        actual: undefined,
-      });
-    });
+      const passed = newResults.every((r) => r.passed);
+      setResults(newResults);
+      setHasRun(true);
+      setAllPassed(passed);
 
-    const passed = newResults.every((r) => r.passed);
-    setResults(newResults);
-    setHasRun(true);
-    setAllPassed(passed);
-
-    if (passed) {
-      handleSuccess();
+      if (passed) {
+        handleSuccess();
+      }
+    } finally {
+      setRunning(false);
     }
   }
 
@@ -187,8 +242,12 @@ export function ChallengeView({ challenge }: ChallengeViewProps) {
               <span className="w-2.5 h-2.5 rounded-full bg-yellow-500/70" />
               <span className="w-2.5 h-2.5 rounded-full bg-green-500/70" />
             </div>
-            <span className="text-[11px] text-zinc-500 font-mono">solution.py</span>
-            <span className="text-[11px] text-zinc-500">Python 3</span>
+            <span className="text-[11px] text-zinc-500 font-mono">
+              solution.{lang === "javascript" ? "ts" : lang === "manual" ? "txt" : "py"}
+            </span>
+            <span className="text-[11px] text-zinc-500">
+              {lang === "javascript" ? "TypeScript" : lang === "manual" ? "Reference" : "Python 3"}
+            </span>
           </div>
 
           {/* Textarea editor */}
@@ -202,29 +261,72 @@ export function ChallengeView({ challenge }: ChallengeViewProps) {
               "px-4 py-3 resize-y outline-none",
               "placeholder-zinc-600",
             ].join(" ")}
-            placeholder="# Write your Python solution here..."
+            placeholder={
+              lang === "javascript"
+                ? "// Write your TS/JS solution here..."
+                : lang === "manual"
+                  ? "// Notes / scratch — this challenge is reference-only"
+                  : "# Write your Python solution here..."
+            }
             aria-label="Code editor"
           />
         </div>
 
-        {/* Run Tests button */}
+        {/* Run Tests / Got It button */}
         <div className="flex items-center gap-3">
-          <Button
-            variant="primary"
-            size="md"
-            onClick={runTests}
-            disabled={allPassed}
-            leftIcon={
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polygon points="5 3 19 12 5 21 5 3" />
-              </svg>
-            }
-          >
-            {allPassed ? "Tests Passed!" : "Run Tests"}
-          </Button>
+          {lang === "manual" ? (
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => {
+                if (allPassed) return;
+                setHasRun(true);
+                setAllPassed(true);
+                handleSuccess();
+              }}
+              disabled={allPassed}
+              leftIcon={
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              }
+            >
+              {allPassed ? "Marked complete" : "I got it"}
+            </Button>
+          ) : (
+            <Button
+              variant="primary"
+              size="md"
+              onClick={runTests}
+              disabled={allPassed || running || pyState === "loading"}
+              loading={running}
+              leftIcon={
+                !running ? (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polygon points="5 3 19 12 5 21 5 3" />
+                  </svg>
+                ) : undefined
+              }
+            >
+              {allPassed
+                ? "Tests Passed!"
+                : pyState === "loading"
+                  ? "Loading Python…"
+                  : pyState === "error"
+                    ? "Python failed to load"
+                    : running
+                      ? "Running…"
+                      : "Run Tests"}
+            </Button>
+          )}
           {allPassed && (
             <span className="text-sm text-green-400 font-medium">
               +{Math.round(challenge.baseXP * xpPenaltyMultiplier)} XP earned
+            </span>
+          )}
+          {pyState === "loading" && !allPassed && (
+            <span className="text-xs text-[var(--text-muted)]">
+              First run downloads the Python runtime (~10s)
             </span>
           )}
         </div>
@@ -241,6 +343,31 @@ export function ChallengeView({ challenge }: ChallengeViewProps) {
           <Card padding="md">
             <HintSystem hints={hintTexts} onHintRevealed={handleHintRevealed} />
           </Card>
+        )}
+
+        {/* Solution (always available, no XP penalty) */}
+        {challenge.hints.find((h) => h.tier === "reveal") && (
+          <details className="rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden group">
+            <summary className="cursor-pointer select-none flex items-center justify-between px-4 py-3 hover:bg-[var(--surface-2)] transition-colors">
+              <span className="text-sm font-medium text-[var(--foreground)]">
+                Show solution
+              </span>
+              <span className="text-xs text-[var(--text-muted)] group-open:hidden">
+                Click to reveal · no XP penalty
+              </span>
+              <span className="text-xs text-[var(--text-muted)] hidden group-open:inline">
+                Hide
+              </span>
+            </summary>
+            <pre className="text-xs font-mono bg-zinc-900 text-zinc-200 p-4 overflow-x-auto whitespace-pre border-t border-[var(--border)]">
+              <code>
+                {challenge.hints.find((h) => h.tier === "reveal")?.text ?? ""}
+              </code>
+            </pre>
+            <div className="px-4 py-2 text-[11px] text-[var(--text-muted)] border-t border-[var(--border)]">
+              Try writing it yourself first. Pasting and running won&apos;t award XP twice — the editor still has to produce the right output.
+            </div>
+          </details>
         )}
       </div>
 
@@ -260,102 +387,6 @@ export function ChallengeView({ challenge }: ChallengeViewProps) {
       </XPRewardToastContainer>
     </>
   );
-}
-
-// ── Helpers ──────────────────────────────────────────────────
-
-/**
- * Very simple output extractor: looks for print("...") or print(...) calls
- * and collects what they would print. This is a placeholder until Pyodide
- * is integrated. It handles string literals and basic variable references.
- */
-function extractOutput(code: string): string {
-  const lines = code.split("\n");
-  const outputs: string[] = [];
-  // Simple variable store for single-assignment variables
-  const vars: Record<string, string> = {};
-
-  for (const rawLine of lines) {
-    const line = rawLine.trim();
-
-    // Variable assignment: x = <literal>
-    const assignMatch = line.match(/^([a-zA-Z_]\w*)\s*=\s*(.+)$/);
-    if (assignMatch) {
-      const [, varName, rawValue] = assignMatch;
-      vars[varName] = evalLiteral(rawValue.trim(), vars);
-      continue;
-    }
-
-    // print(...) call
-    const printMatch = line.match(/^print\((.*)?\)$/);
-    if (printMatch) {
-      const args = printMatch[1] ?? "";
-      outputs.push(evalPrintArgs(args.trim(), vars));
-    }
-  }
-
-  return outputs.join("\n");
-}
-
-function evalLiteral(expr: string, vars: Record<string, string>): string {
-  // String literal
-  if ((expr.startsWith('"') && expr.endsWith('"')) ||
-      (expr.startsWith("'") && expr.endsWith("'"))) {
-    return expr.slice(1, -1);
-  }
-  // Number literal
-  if (/^-?[\d.]+$/.test(expr)) return expr;
-  // Boolean
-  if (expr === "True") return "True";
-  if (expr === "False") return "False";
-  // Variable reference
-  if (vars[expr] !== undefined) return vars[expr];
-  return expr;
-}
-
-function evalPrintArgs(args: string, vars: Record<string, string>): string {
-  if (!args) return "";
-
-  // Handle sep= and end= kwargs (strip them for now)
-  const cleanArgs = args.replace(/,?\s*(sep|end)=.*$/, "").trim();
-  if (!cleanArgs) return "";
-
-  // Split by comma (simple — doesn't handle nested parens or strings with commas)
-  const parts = splitArgs(cleanArgs);
-  return parts
-    .map((p) => evalLiteral(p.trim(), vars))
-    .join(" ");
-}
-
-function splitArgs(args: string): string[] {
-  const result: string[] = [];
-  let depth = 0;
-  let inStr: string | null = null;
-  let current = "";
-
-  for (let i = 0; i < args.length; i++) {
-    const ch = args[i];
-    if (!inStr && (ch === '"' || ch === "'")) {
-      inStr = ch;
-      current += ch;
-    } else if (inStr && ch === inStr && args[i - 1] !== "\\") {
-      inStr = null;
-      current += ch;
-    } else if (!inStr && (ch === "(" || ch === "[" || ch === "{")) {
-      depth++;
-      current += ch;
-    } else if (!inStr && (ch === ")" || ch === "]" || ch === "}")) {
-      depth--;
-      current += ch;
-    } else if (!inStr && depth === 0 && ch === ",") {
-      result.push(current);
-      current = "";
-    } else {
-      current += ch;
-    }
-  }
-  if (current.trim()) result.push(current);
-  return result;
 }
 
 function getStreakMultiplier(streakDays: number): number {

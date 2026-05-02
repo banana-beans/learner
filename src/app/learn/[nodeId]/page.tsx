@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import curriculum from "@/data/curriculum";
-import { pythonTier1Challenges } from "@/data/challenges/python-tier1";
+import { getChallengesForNode } from "@/data/challenges";
 import { LearnPageClient } from "./LearnPageClient";
 
 // Next.js 16: params is a Promise — must be awaited
@@ -18,9 +18,7 @@ export default async function LearnPage({
   if (!node) notFound();
 
   // Find challenges for this node
-  const challenges = pythonTier1Challenges.filter(
-    (c) => c.nodeId === decodedNodeId
-  );
+  const challenges = getChallengesForNode(decodedNodeId);
 
   return (
     <LearnPageClient node={node} challenges={challenges} />

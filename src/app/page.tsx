@@ -146,7 +146,7 @@ export default function DashboardPage() {
               <span className="text-[var(--xp-gold)]">~{sessionXP} XP</span>
             </p>
           </div>
-          <Link href={session.mode === "review" ? "/review" : "/tree"}>
+          <Link href={session.mode === "review" ? "/review" : "/skill-tree"}>
             <Button variant="primary" size="sm">
               Start
             </Button>
@@ -182,7 +182,7 @@ export default function DashboardPage() {
           title="Branch Progress"
           subtitle="Your journey across the learning branches"
           right={
-            <Link href="/tree">
+            <Link href="/skill-tree">
               <Button variant="ghost" size="sm">
                 View All
               </Button>
@@ -260,7 +260,7 @@ export default function DashboardPage() {
           </Card>
         </Link>
 
-        <Link href="/tree" className="block">
+        <Link href="/skill-tree" className="block">
           <Card interactive accent="var(--accent-blue)" className="h-full">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-[var(--accent-blue)]/10 flex items-center justify-center shrink-0">

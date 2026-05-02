@@ -247,17 +247,19 @@ GET /readyz  → 200 {"status":"ready", "checks":{"db":"ok"}}
 //
 // Result: most of your traffic absorbed by the CDN; small percent
 // hits origin to check freshness (304s, no body).`, explanation: "Public dynamic content — news headlines, popular product pages — is a great fit. CDN absorbs the load." },
-      { title: "Cache tag invalidation", code: `// Vercel example
-const res = NextResponse.json(post);
-res.headers.set("Cache-Tag", \`post-\${post.id}\`);
-return res;
-
-// On update:
-// revalidateTag(\`post-\${post.id}\`)
-//   → CDN purges all responses tagged with that key,
-//     across every PoP, in seconds.
+      { title: "Cache tag invalidation", code: `// Tag-based invalidation by provider:
 //
-// Same idea: Fastly surrogate keys, Cloudflare cache tags.`, explanation: "Tag-based purging beats path-based for fine-grained invalidation, especially when one logical entity appears at many URLs." },
+// Next.js (App Router): tag fetches, then revalidate by tag.
+const post = await fetch(url, { next: { tags: [\`post-\${id}\`] } });
+// Later:
+import { revalidateTag } from "next/cache";
+revalidateTag(\`post-\${id}\`);
+//
+// Fastly: response header → Surrogate-Key: post-123 user-7
+//         then PURGE by surrogate key.
+//
+// Cloudflare (Enterprise): response header → Cache-Tag: post-123
+//         then purge by tag via API.`, explanation: "Each provider uses a different mechanism, but the idea is the same: attach tags to responses, then invalidate by tag. Beats path-based purging when one entity appears at many URLs." },
     ],
     keyTakeaways: ["CDN caches near users — milliseconds, not cross-continent", "Cache-Control public + max-age + immutable for static assets", "s-maxage for CDN-only TTL; max-age for browser", "Cache tags / surrogate keys enable fine-grained purging", "Edge compute moves logic to the PoP — auth, A/B, geo-routing"],
   },
@@ -385,7 +387,7 @@ def worker():
     sections: [
       { heading: "CAP Theorem", body: "In a distributed system that must tolerate network partitions, you can have either Consistency or Availability — not both during a partition. Most real systems are CP (relational DBs with single primary) or AP (Dynamo, Cassandra). The 'pick 2' framing is misleading: partitions WILL happen, so what you're really choosing is how you respond when they do — refuse writes (CP) or accept potentially-conflicting writes (AP)." },
       { heading: "Beyond Strong vs Eventual", body: "Strong consistency: every read sees the most recent write. Eventual consistency: replicas converge given no new writes — but at any moment, reads may diverge. Between them: causal consistency (preserves cause-effect order), read-your-writes (a client's own writes are visible immediately), monotonic reads (you never see time go backward). Pick the weakest model that your UX tolerates — stronger costs more." },
-      { heading: "Quorums Tune CAP", body: "Many AP systems are tunable. With N replicas, write quorum W and read quorum R: if W + R > N, every read sees the latest write (strong consistency). If W + R ≤ N, you may read stale (eventual). Cassandra, DynamoDB, Riak all expose this knob. Common settings: N=3, W=2, R=2 (strong, slower) or N=3, W=1, R=1 (fast, eventual)." },
+      { heading: "Quorums Tune CAP", body: "Many AP systems are tunable. With N replicas, write quorum W and read quorum R: if W + R > N, every read sees the latest write (strong consistency). If W + R ≤ N, you may read stale (eventual). Cassandra and Riak expose W/R per call directly. DynamoDB takes a simpler form — a per-read ConsistentRead flag (eventual by default; opt-in strong) — replication itself isn't user-tuned. Common Cassandra settings: N=3, W=2, R=2 (strong, slower) or N=3, W=1, R=1 (fast, eventual)." },
     ],
     codeExamples: [
       { title: "AP (Cassandra-flavor)", code: `// Tunable quorum

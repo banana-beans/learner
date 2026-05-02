@@ -1,8 +1,9 @@
 {
   "name": "Learner — Developer Learning Platform",
   "short_name": "Learner",
-  "description": "A gamified developer learning platform with skill trees, challenges, and spaced repetition.",
+  "description": "A gamified, offline-capable developer learning platform with skill trees, challenges, and spaced repetition.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#0d0d14",
   "theme_color": "#4f8ef7",
@@ -10,28 +11,42 @@
   "categories": ["education", "productivity"],
   "icons": [
     {
-      "src": "/icons/icon-192.png",
+      "src": "/icon",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "/icons/icon-512.png",
-      "sizes": "512x512",
+      "src": "/icon",
+      "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "maskable"
+    },
+    {
+      "src": "/apple-icon",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
     }
   ],
   "shortcuts": [
     {
       "name": "Daily Review",
+      "short_name": "Review",
       "url": "/review",
       "description": "Start your daily spaced repetition review"
     },
     {
       "name": "Skill Tree",
-      "url": "/tree",
+      "short_name": "Tree",
+      "url": "/skill-tree",
       "description": "Browse your skill tree"
+    },
+    {
+      "name": "Scroll",
+      "short_name": "Scroll",
+      "url": "/scroll",
+      "description": "Browse code snippets"
     }
   ]
 }

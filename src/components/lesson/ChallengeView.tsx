@@ -255,11 +255,15 @@ export function ChallengeView({ challenge }: ChallengeViewProps) {
             value={code}
             onChange={(e) => setCode(e.target.value)}
             spellCheck={false}
+            autoCapitalize="off"
+            autoCorrect="off"
             className={[
               "w-full min-h-[220px] bg-zinc-900 text-zinc-200",
-              "font-mono text-sm leading-relaxed",
+              "font-mono leading-relaxed",
               "px-4 py-3 resize-y outline-none",
               "placeholder-zinc-600",
+              // 16px on mobile prevents iOS auto-zoom on focus; 14px on desktop
+              "ios-no-zoom",
             ].join(" ")}
             placeholder={
               lang === "javascript"

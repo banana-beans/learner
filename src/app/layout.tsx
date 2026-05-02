@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { BottomNav } from "@/components/layout/BottomNav";
+import { ServiceWorkerRegister } from "@/components/layout/ServiceWorkerRegister";
+import { IOSInstallHint } from "@/components/layout/IOSInstallHint";
 
 export const metadata: Metadata = {
   title: "Learner — Gamified Developer Learning",
@@ -13,6 +15,9 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     title: "Learner",
   },
+  formatDetection: {
+    telephone: false,
+  },
 };
 
 export const viewport: Viewport = {
@@ -20,6 +25,9 @@ export const viewport: Viewport = {
   colorScheme: "dark",
   width: "device-width",
   initialScale: 1,
+  // Allow content to extend into safe areas; we inset per-section.
+  viewportFit: "cover",
+  // Don't disable scaling — that's an a11y violation on iOS.
 };
 
 export default function RootLayout({
@@ -36,8 +44,14 @@ export default function RootLayout({
 
           {/* Main content */}
           <main className="flex-1 min-w-0 overflow-y-auto">
-            {/* Top header (mobile) */}
-            <header className="md:hidden sticky top-0 z-20 flex items-center justify-between px-4 h-14 border-b border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-sm">
+            {/* Top header (mobile) — sits below the Dynamic Island / notch */}
+            <header
+              className="md:hidden sticky top-0 z-20 flex items-center justify-between px-4 border-b border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-sm"
+              style={{
+                paddingTop: "env(safe-area-inset-top)",
+                height: "calc(3.5rem + env(safe-area-inset-top))",
+              }}
+            >
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 rounded-md bg-[var(--accent-blue)] flex items-center justify-center">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
@@ -48,8 +62,8 @@ export default function RootLayout({
               </div>
             </header>
 
-            {/* Page content with bottom padding for mobile nav */}
-            <div className="pb-20 md:pb-0">
+            {/* Page content; padding-bottom clears BottomNav + home indicator on mobile */}
+            <div className="pb-nav-safe md:pb-0">
               {children}
             </div>
           </main>
@@ -57,6 +71,12 @@ export default function RootLayout({
 
         {/* Mobile bottom navigation */}
         <BottomNav />
+
+        {/* iOS-only Add-to-Home-Screen hint (dismissible) */}
+        <IOSInstallHint />
+
+        {/* Service worker registration (production only) */}
+        <ServiceWorkerRegister />
       </body>
     </html>
   );

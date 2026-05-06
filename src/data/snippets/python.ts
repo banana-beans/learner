@@ -5900,7 +5900,1435 @@ c = Config("localhost", 8080, timeout=10.0)
 # Config("localhost", 8080, 10.0)  # TypeError — timeout is kw-only`,
     explanation: "KW_ONLY sentinel (3.10+) makes all subsequent fields keyword-only in __init__, preventing accidental positional binding of optional parameters in large dataclasses.",
   },
+  {
+    id: "py-descriptor-protocol",
+    language: "python",
+    title: "Descriptor protocol — __get__ / __set__",
+    tag: "classes",
+    code: `class Validated:
+    """Descriptor that enforces a minimum value."""
+    def __set_name__(self, owner, name: str) -> None:
+        self._name = name
+
+    def __get__(self, obj, objtype=None):
+        if obj is None:
+            return self
+        return obj.__dict__.get(self._name, 0)
+
+    def __set__(self, obj, value: int) -> None:
+        if value < 0:
+            raise ValueError(f"{self._name} must be >= 0")
+        obj.__dict__[self._name] = value
+
+class Account:
+    balance = Validated()
+
+a = Account()
+a.balance = 100
+print(a.balance)   # 100
+# a.balance = -1  # ValueError`,
+    explanation: "Descriptors implement __get__/__set__/__delete__ and are used to add managed attribute behavior to classes. They power Python's property, classmethod, and staticmethod under the hood.",
+  },
+  {
+    id: "py-metaclass-basics",
+    language: "python",
+    title: "Metaclass basics",
+    tag: "classes",
+    code: `class SingletonMeta(type):
+    _instances: dict = {}
+
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super().__call__(*args, **kwargs)
+        return cls._instances[cls]
+
+class Config(metaclass=SingletonMeta):
+    def __init__(self):
+        self.value = 42
+
+c1 = Config()
+c2 = Config()
+print(c1 is c2)  # True — same instance`,
+    explanation: "Metaclasses are the 'class of a class'. They intercept class creation and instantiation. Use them for framework-level concerns like ORMs, plugin registries, and singleton enforcement.",
+  },
+  {
+    id: "py-abstract-property",
+    language: "python",
+    title: "Abstract property with ABC",
+    tag: "classes",
+    code: `from abc import ABC, abstractmethod
+
+class Shape(ABC):
+    @property
+    @abstractmethod
+    def area(self) -> float: ...
+
+    @property
+    @abstractmethod
+    def perimeter(self) -> float: ...
+
+class Circle(Shape):
+    def __init__(self, r: float):
+        self.r = r
+
+    @property
+    def area(self) -> float:
+        return 3.14159 * self.r ** 2
+
+    @property
+    def perimeter(self) -> float:
+        return 2 * 3.14159 * self.r
+
+print(Circle(5).area)  # 78.53...`,
+    explanation: "Combining @property with @abstractmethod requires subclasses to provide both getter behavior and the property descriptor — preventing accidental attribute access on the base class.",
+  },
+  {
+    id: "py-classmethod-factory",
+    language: "python",
+    title: "classmethod as alternative constructor",
+    tag: "classes",
+    code: `class Date:
+    def __init__(self, year: int, month: int, day: int):
+        self.year, self.month, self.day = year, month, day
+
+    @classmethod
+    def from_iso(cls, s: str) -> "Date":
+        parts = s.split("-")
+        return cls(int(parts[0]), int(parts[1]), int(parts[2]))
+
+    @classmethod
+    def today(cls) -> "Date":
+        import datetime
+        d = datetime.date.today()
+        return cls(d.year, d.month, d.day)
+
+    def __repr__(self) -> str:
+        return f"Date({self.year}, {self.month}, {self.day})"
+
+print(Date.from_iso("2024-05-06"))  # Date(2024, 5, 6)`,
+    explanation: "classmethod receives the class (not the instance) as the first argument, making it the idiomatic way to create alternative constructors that work correctly with subclasses.",
+  },
+  {
+    id: "py-slots-vs-dict-bench",
+    language: "python",
+    title: "__slots__ vs __dict__ — practical comparison",
+    tag: "understanding",
+    code: `import sys
+
+class WithDict:
+    def __init__(self, x, y, z):
+        self.x, self.y, self.z = x, y, z
+
+class WithSlots:
+    __slots__ = ("x", "y", "z")
+    def __init__(self, x, y, z):
+        self.x, self.y, self.z = x, y, z
+
+d = WithDict(1, 2, 3)
+s = WithSlots(1, 2, 3)
+
+# On CPython: d takes ~184 + 232 bytes = ~416 bytes
+# s takes ~72 bytes — no __dict__
+print(sys.getsizeof(d) + sys.getsizeof(d.__dict__))
+print(sys.getsizeof(s))`,
+    explanation: "Slots eliminate the per-instance __dict__ dictionary, reducing memory by ~5x for objects with a fixed attribute set. The trade-off: no dynamic attribute assignment and trickier multiple inheritance.",
+  },
+  {
+    id: "py-mixin-composition",
+    language: "python",
+    title: "Mixin composition pattern",
+    tag: "classes",
+    code: `class LogMixin:
+    def log(self, msg: str) -> None:
+        print(f"[{self.__class__.__name__}] {msg}")
+
+class SerializeMixin:
+    def to_dict(self) -> dict:
+        return {k: v for k, v in self.__dict__.items()
+                if not k.startswith("_")}
+
+class User(LogMixin, SerializeMixin):
+    def __init__(self, name: str, age: int):
+        self.name, self.age = name, age
+
+    def greet(self) -> None:
+        self.log(f"Hello, I am {self.name}")
+
+u = User("Ada", 36)
+u.greet()
+print(u.to_dict())   # {'name': 'Ada', 'age': 36}`,
+    explanation: "Mixins are small classes that add a specific behavior without being intended for standalone use. They rely on cooperative multiple inheritance — the target class must provide any attributes the mixin references.",
+  },
+  {
+    id: "py-super-cooperative",
+    language: "python",
+    title: "super() in cooperative multiple inheritance",
+    tag: "classes",
+    code: `class A:
+    def greet(self) -> str:
+        return "A"
+
+class B(A):
+    def greet(self) -> str:
+        return "B->" + super().greet()
+
+class C(A):
+    def greet(self) -> str:
+        return "C->" + super().greet()
+
+class D(B, C):
+    def greet(self) -> str:
+        return "D->" + super().greet()
+
+print(D().greet())      # D->B->C->A
+print(D.__mro__)        # D, B, C, A, object`,
+    explanation: "super() uses the MRO (Method Resolution Order) to find the next class in the chain. This ensures each class in a diamond hierarchy is called exactly once — the foundation of cooperative multiple inheritance.",
+  },
+  {
+    id: "py-dunder-comparison",
+    language: "python",
+    title: "__lt__ and total_ordering",
+    tag: "classes",
+    code: `from functools import total_ordering
+
+@total_ordering
+class Temperature:
+    def __init__(self, celsius: float):
+        self.celsius = celsius
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Temperature):
+            return NotImplemented
+        return self.celsius == other.celsius
+
+    def __lt__(self, other: "Temperature") -> bool:
+        return self.celsius < other.celsius
+
+temps = [Temperature(100), Temperature(0), Temperature(37)]
+print(sorted(temps)[0].celsius)  # 0
+print(Temperature(20) <= Temperature(30))  # True`,
+    explanation: "@total_ordering generates __le__, __gt__, __ge__ from __eq__ and __lt__ alone. Return NotImplemented (not False) for unsupported types so Python can try the reflected operation.",
+  },
+  {
+    id: "py-dunder-hash",
+    language: "python",
+    title: "__hash__ and equality contract",
+    tag: "caveats",
+    code: `class Point:
+    def __init__(self, x: int, y: int):
+        self.x, self.y = x, y
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Point):
+            return NotImplemented
+        return (self.x, self.y) == (other.x, other.y)
+
+    # Must define __hash__ when __eq__ is defined.
+    def __hash__(self) -> int:
+        return hash((self.x, self.y))
+
+# Without __hash__, Point cannot be used in sets or as dict keys.
+s = {Point(0, 0), Point(1, 2), Point(0, 0)}
+print(len(s))  # 2`,
+    explanation: "Defining __eq__ automatically sets __hash__ to None in Python 3, making the class unhashable. If objects must be usable as dict keys or set members, define __hash__ using the same fields as __eq__.",
+  },
+  {
+    id: "py-context-manager-class",
+    language: "python",
+    title: "Context manager via __enter__ / __exit__",
+    tag: "classes",
+    code: `class Timer:
+    import time
+
+    def __enter__(self):
+        self._start = self.time.perf_counter()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        elapsed = self.time.perf_counter() - self._start
+        print(f"Elapsed: {elapsed:.4f}s")
+        return False   # don't suppress exceptions
+
+with Timer() as t:
+    total = sum(range(1_000_000))
+# Elapsed: 0.0412s (approximate)`,
+    explanation: "__enter__ sets up the resource and returns it (often self). __exit__ tears it down; returning True suppresses any exception. Returning False (or None) re-raises the exception.",
+  },
+  {
+    id: "py-generator-send",
+    language: "python",
+    title: "Generator send() — two-way communication",
+    tag: "snippet",
+    code: `def accumulator():
+    total = 0
+    while True:
+        value = yield total   # yield sends total out, receives next value
+        if value is None:
+            break
+        total += value
+
+gen = accumulator()
+next(gen)           # prime the generator
+gen.send(10)        # total = 10
+gen.send(20)        # total = 30
+result = gen.send(5)
+print(result)       # 35`,
+    explanation: "yield is an expression — its value is whatever was passed via send(). The generator must be primed with next() (or send(None)) before the first send() call.",
+  },
+  {
+    id: "py-generator-throw",
+    language: "python",
+    title: "Generator throw() — inject exceptions",
+    tag: "snippet",
+    code: `def safe_gen():
+    try:
+        while True:
+            value = yield
+    except GeneratorExit:
+        print("Generator closed")
+    except ValueError as e:
+        print(f"ValueError received: {e}")
+        yield "recovered"
+
+gen = safe_gen()
+next(gen)
+result = gen.throw(ValueError, "bad input")
+print(result)   # recovered
+gen.close()     # Generator closed`,
+    explanation: "throw(exc_type, value) raises an exception at the yield point. If the generator catches it and yields again, throw() returns that value. close() sends GeneratorExit, which triggers cleanup.",
+  },
+  {
+    id: "py-yield-from",
+    language: "python",
+    title: "yield from — delegate to sub-generator",
+    tag: "snippet",
+    code: `def inner():
+    yield 1
+    yield 2
+
+def outer():
+    yield 0
+    yield from inner()   # delegates to inner, passes through send/throw
+    yield 3
+
+print(list(outer()))  # [0, 1, 2, 3]
+
+# Also flattens nested iterables.
+def flatten(nested):
+    for item in nested:
+        if isinstance(item, list):
+            yield from flatten(item)
+        else:
+            yield item
+
+print(list(flatten([1, [2, [3, 4]], 5])))  # [1, 2, 3, 4, 5]`,
+    explanation: "yield from delegates to a sub-generator, transparently forwarding send(), throw(), and close() calls. It's also the building block for asyncio coroutines prior to async/await syntax.",
+  },
+  {
+    id: "py-async-generator",
+    language: "python",
+    title: "Async generators",
+    tag: "snippet",
+    code: `import asyncio
+
+async def ticker(n: int):
+    for i in range(n):
+        await asyncio.sleep(0.01)
+        yield i
+
+async def main():
+    async for value in ticker(5):
+        print(value)   # 0 1 2 3 4
+
+asyncio.run(main())`,
+    explanation: "An async generator function uses both async def and yield. It can only be iterated with async for or aiter/anext. It cannot use return with a value.",
+  },
+  {
+    id: "py-typing-protocols-runtime",
+    language: "python",
+    title: "Runtime-checkable Protocol",
+    tag: "types",
+    code: `from typing import Protocol, runtime_checkable
+
+@runtime_checkable
+class Drawable(Protocol):
+    def draw(self) -> None: ...
+
+class Circle:
+    def draw(self) -> None:
+        print("Drawing circle")
+
+class Square:
+    def draw(self) -> None:
+        print("Drawing square")
+
+class Text:
+    def render(self) -> None:  # different method name
+        pass
+
+def render_all(items: list[Drawable]) -> None:
+    for item in items:
+        item.draw()
+
+print(isinstance(Circle(), Drawable))  # True
+print(isinstance(Text(),   Drawable))  # False`,
+    explanation: "@runtime_checkable allows isinstance() checks against a Protocol at runtime — useful for dynamic dispatch without inheritance. Static type checking still validates structural compatibility.",
+  },
+  {
+    id: "py-overloaded-function",
+    language: "python",
+    title: "@overload — type-level function overloads",
+    tag: "types",
+    code: `from typing import overload, Union
+
+@overload
+def process(x: int) -> int: ...
+@overload
+def process(x: str) -> str: ...
+
+def process(x: Union[int, str]) -> Union[int, str]:
+    if isinstance(x, int):
+        return x * 2
+    return x.upper()
+
+result_int: int = process(5)    # type checker knows: int
+result_str: str = process("hi") # type checker knows: str`,
+    explanation: "@overload teaches the type checker which output type corresponds to each input type. Only the last (implementation) overload is called at runtime — the @overload stubs are type-information only.",
+  },
+  {
+    id: "py-pep695-type-aliases",
+    language: "python",
+    title: "PEP 695 type aliases (Python 3.12+)",
+    tag: "types",
+    code: `# Python 3.12+ — new 'type' statement for type aliases.
+type Vector = list[float]
+type Matrix = list[Vector]
+
+def dot(a: Vector, b: Vector) -> float:
+    return sum(x * y for x, y in zip(a, b))
+
+v1: Vector = [1.0, 2.0, 3.0]
+v2: Vector = [4.0, 5.0, 6.0]
+print(dot(v1, v2))   # 32.0
+
+# Before 3.12: use TypeAlias annotation.
+from typing import TypeAlias
+OldVector: TypeAlias = list[float]`,
+    explanation: "The type statement (3.12+) creates a transparent type alias that is fully understood by type checkers. Unlike TypeAlias, it supports forward references and generic parameters natively.",
+  },
+  {
+    id: "py-pep695-generics",
+    language: "python",
+    title: "PEP 695 generic functions (Python 3.12+)",
+    tag: "types",
+    code: `# Python 3.12+ — new syntax for generic functions.
+def first[T](items: list[T]) -> T:
+    return items[0]
+
+def zip_pairs[A, B](a: list[A], b: list[B]) -> list[tuple[A, B]]:
+    return list(zip(a, b))
+
+print(first([1, 2, 3]))           # 1
+print(zip_pairs([1, 2], ["a", "b"]))  # [(1, 'a'), (2, 'b')]
+
+# Before 3.12: T = TypeVar("T"); def first(items: list[T]) -> T: ...`,
+    explanation: "PEP 695 (3.12+) introduces the [T] syntax for declaring type parameters on functions and classes, eliminating the verbose TypeVar() boilerplate while preserving full static type checking.",
+  },
+  {
+    id: "py-string-interning",
+    language: "python",
+    title: "String interning and identity vs equality",
+    tag: "caveats",
+    code: `# CPython interns short strings that look like identifiers.
+a = "hello"
+b = "hello"
+print(a is b)   # True — interned (implementation detail!)
+
+# Long or computed strings may NOT be interned.
+c = "hello world"
+d = "hello world"
+print(c is d)   # False (or True — implementation-dependent)
+
+# Never use 'is' to compare strings — use '=='.
+# Explicit interning for performance (e.g., large symbol tables).
+import sys
+x = sys.intern("my_module.MyClass.method_name")`,
+    explanation: "CPython automatically interns short strings that look like identifiers, but this is an implementation detail. Always use == for string comparison — is checks object identity, not value.",
+  },
+  {
+    id: "py-int-caching",
+    language: "python",
+    title: "Small integer caching pitfall",
+    tag: "caveats",
+    code: `# CPython caches integers from -5 to 256 as singletons.
+a, b = 100, 100
+print(a is b)   # True — same cached object
+
+c, d = 1000, 1000
+print(c is d)   # False in most contexts (implementation detail)
+
+# Interactive REPL may compile both as a constant, making it True.
+# Never rely on 'is' for integer equality — always use '=='.
+x = 1000
+y = 1000
+print(x == y)   # always True
+print(x is y)   # unreliable`,
+    explanation: "CPython pre-allocates integer objects for -5 through 256 so is comparisons 'work' in that range. This is an implementation detail that varies by Python version and context — use == for value comparison.",
+  },
+  {
+    id: "py-mutable-default-arg",
+    language: "python",
+    title: "Mutable default argument pitfall",
+    tag: "caveats",
+    code: `# THE classic Python gotcha.
+def append_to(element, to=[]):   # 'to' is created ONCE
+    to.append(element)
+    return to
+
+print(append_to(1))  # [1]
+print(append_to(2))  # [1, 2] — same list object reused!
+
+# Correct fix: use None as sentinel.
+def append_safe(element, to=None):
+    if to is None:
+        to = []
+    to.append(element)
+    return to
+
+print(append_safe(1))  # [1]
+print(append_safe(2))  # [2] — new list each time`,
+    explanation: "Default argument values are evaluated once when the function is defined, not each time it's called. Mutable defaults (list, dict, set) are shared across all calls that use the default.",
+  },
+  {
+    id: "py-closure-loop-pitfall",
+    language: "python",
+    title: "Closure in loop variable pitfall",
+    tag: "caveats",
+    code: `# Broken — all closures capture the same 'i' variable.
+funcs_bad = [lambda: i for i in range(5)]
+print([f() for f in funcs_bad])  # [4, 4, 4, 4, 4]
+
+# Fix 1: default argument captures value by binding.
+funcs_good = [lambda i=i: i for i in range(5)]
+print([f() for f in funcs_good])  # [0, 1, 2, 3, 4]
+
+# Fix 2: use a factory function (explicit closure).
+def make_fn(i):
+    return lambda: i
+funcs_factory = [make_fn(i) for i in range(5)]
+print([f() for f in funcs_factory])  # [0, 1, 2, 3, 4]`,
+    explanation: "Closures capture variables by reference, not by value. When the loop variable changes, all closures see the new value. Capturing via a default argument or a factory function freezes the value at definition time.",
+  },
+  {
+    id: "py-late-binding",
+    language: "python",
+    title: "Late binding in closures",
+    tag: "caveats",
+    code: `x = 10
+
+def outer():
+    def inner():
+        return x   # x looked up at CALL time, not at definition time
+    return inner
+
+fn = outer()
+x = 99
+print(fn())   # 99 — sees the modified x
+
+# Immediate binding: capture with default argument.
+def outer2():
+    def inner(x=x):   # x bound at definition time
+        return x
+    return inner
+
+fn2 = outer2()
+x = 200
+print(fn2())  # 99 — captured at definition, not affected by later change`,
+    explanation: "Python closures look up free variables at call time, not at definition time. This is usually intuitive but surprising in loops or when the enclosing scope variable changes later.",
+  },
+  {
+    id: "py-global-nonlocal",
+    language: "python",
+    title: "global and nonlocal declarations",
+    tag: "snippet",
+    code: `count = 0
+
+def increment():
+    global count   # refers to module-level 'count'
+    count += 1
+
+def make_counter():
+    n = 0
+    def tick():
+        nonlocal n   # refers to enclosing function's 'n'
+        n += 1
+        return n
+    return tick
+
+counter = make_counter()
+print(counter(), counter())  # 1 2`,
+    explanation: "global rebinds a name to the module scope. nonlocal rebinds to the nearest enclosing function scope. Without these declarations, assignment creates a new local variable, shadowing the outer one.",
+  },
+  {
+    id: "py-unpacking-generalized",
+    language: "python",
+    title: "Generalized unpacking (PEP 448)",
+    tag: "snippet",
+    code: `a = [1, 2, 3]
+b = [4, 5]
+
+# Merge sequences.
+merged = [*a, *b, 6]
+print(merged)  # [1, 2, 3, 4, 5, 6]
+
+# Merge dicts — later keys win.
+d1 = {"x": 1, "y": 2}
+d2 = {"y": 99, "z": 3}
+combined = {**d1, **d2}
+print(combined)  # {'x': 1, 'y': 99, 'z': 3}
+
+# In function calls.
+def f(a, b, c, d): return (a, b, c, d)
+print(f(*a, *b))   # (1, 2, 3, 4)`,
+    explanation: "PEP 448 (Python 3.5+) allows * and ** in literals and function calls, enabling clean merging of sequences and dicts without explicit concatenation or dict.update().",
+  },
+  {
+    id: "py-assignment-expression-walrus",
+    language: "python",
+    title: "Walrus operator patterns and scope",
+    tag: "snippet",
+    code: `# Walrus in if — avoids double evaluation.
+import re
+text = "Error 404: not found"
+if m := re.search(r"Error (\d+)", text):
+    print(m.group(1))   # 404
+
+# Walrus in while — read until sentinel.
+data = iter([1, 2, 3, None, 5])
+while (val := next(data)) is not None:
+    print(val)   # 1 2 3
+
+# Scope: walrus leaks into the enclosing scope (unlike loop variables in
+# comprehensions — which are isolated).
+result = [y := x + 1 for x in range(3)]
+print(y)   # 3 — last assigned value leaks`,
+    explanation: "The walrus operator (:=) assigns and returns a value in a single expression. In comprehensions, the assigned name leaks into the enclosing scope — a gotcha that differs from normal comprehension variable scoping.",
+  },
+  {
+    id: "py-class-decorators",
+    language: "python",
+    title: "Class decorators",
+    tag: "classes",
+    code: `def add_repr(cls):
+    """Add __repr__ that lists all instance attributes."""
+    def __repr__(self):
+        attrs = ", ".join(f"{k}={v!r}" for k, v in self.__dict__.items())
+        return f"{cls.__name__}({attrs})"
+    cls.__repr__ = __repr__
+    return cls
+
+@add_repr
+class Point:
+    def __init__(self, x, y):
+        self.x, self.y = x, y
+
+print(Point(1, 2))   # Point(x=1, y=2)`,
+    explanation: "A class decorator takes a class and returns a class (or a replacement). It's a lighter alternative to metaclasses for adding or modifying behavior at class definition time.",
+  },
+  {
+    id: "py-__init_subclass__",
+    language: "python",
+    title: "__init_subclass__ — hook on inheritance",
+    tag: "classes",
+    code: `class Registry:
+    _registry: dict = {}
+
+    def __init_subclass__(cls, tag: str | None = None, **kwargs):
+        super().__init_subclass__(**kwargs)
+        if tag:
+            Registry._registry[tag] = cls
+
+class Handler(Registry, tag="http"):
+    def handle(self): return "HTTP"
+
+class WsHandler(Registry, tag="ws"):
+    def handle(self): return "WebSocket"
+
+print(Registry._registry)
+# {'http': <class 'Handler'>, 'ws': <class 'WsHandler'>}`,
+    explanation: "__init_subclass__ is called on the base class whenever a new subclass is defined, optionally with keyword arguments from the class statement. It's the clean alternative to metaclasses for plugin/registry patterns.",
+  },
+  {
+    id: "py-dataclass-inheritance",
+    language: "python",
+    title: "Dataclass inheritance rules",
+    tag: "caveats",
+    code: `from dataclasses import dataclass
+
+@dataclass
+class Base:
+    x: int = 0
+    y: int = 0
+
+# Child must not declare a field without a default if Base has defaults.
+# This would fail: @dataclass class Bad(Base): z: int
+@dataclass
+class Child(Base):
+    z: int = 0   # OK — has default
+
+c = Child(x=1, y=2, z=3)
+print(c)   # Child(x=1, y=2, z=3)`,
+    explanation: "Dataclass inheritance places child fields after parent fields in __init__. A field without a default cannot follow a field with a default — the same rule as regular function parameters.",
+  },
+  {
+    id: "py-named-tuple-methods",
+    language: "python",
+    title: "NamedTuple with methods",
+    tag: "snippet",
+    code: `from typing import NamedTuple
+
+class Point(NamedTuple):
+    x: float
+    y: float
+
+    def distance(self, other: "Point") -> float:
+        return ((self.x - other.x)**2 + (self.y - other.y)**2) ** 0.5
+
+    def __add__(self, other: "Point") -> "Point":
+        return Point(self.x + other.x, self.y + other.y)
+
+p1 = Point(0, 0)
+p2 = Point(3, 4)
+print(p1.distance(p2))  # 5.0
+print(p1 + p2)          # Point(x=3, y=4)`,
+    explanation: "Typing.NamedTuple allows adding methods to named tuples while keeping immutability, tuple unpacking, and positional indexing. It's cleaner than collections.namedtuple for typed code.",
+  },
+  {
+    id: "py-enum-auto-custom",
+    language: "python",
+    title: "Enum with custom auto() values",
+    tag: "snippet",
+    code: `from enum import Enum, auto
+
+class Color(Enum):
+    def _generate_next_value_(name, start, count, last_values):
+        return name.lower()   # use lowercase name as value
+
+    RED   = auto()
+    GREEN = auto()
+    BLUE  = auto()
+
+print(Color.RED.value)    # red
+print(Color.GREEN.value)  # green
+
+# StrEnum (Python 3.11+) — enum members are strings.
+from enum import StrEnum
+class Direction(StrEnum):
+    NORTH = auto()  # value = "north"
+    SOUTH = auto()`,
+    explanation: "Override _generate_next_value_ to customize what auto() produces. StrEnum (3.11+) makes members actual strings — useful for JSON keys, HTTP methods, and config values.",
+  },
+  {
+    id: "py-class-slots-props",
+    language: "python",
+    title: "Properties in classes with __slots__",
+    tag: "caveats",
+    code: `class Circle:
+    __slots__ = ("_radius",)   # note: private slot for backing store
+
+    def __init__(self, radius: float):
+        self._radius = radius
+
+    @property
+    def radius(self) -> float:
+        return self._radius
+
+    @radius.setter
+    def radius(self, value: float) -> None:
+        if value < 0:
+            raise ValueError("radius must be non-negative")
+        self._radius = value
+
+c = Circle(5)
+c.radius = 10
+print(c.radius)   # 10`,
+    explanation: "When using __slots__ with properties, the backing attribute must be in __slots__ (typically with a private name like _radius). The property descriptor itself lives on the class, not in slots.",
+  },
+  {
+    id: "py-collections-abc",
+    language: "python",
+    title: "collections.abc — abstract base classes",
+    tag: "types",
+    code: `from collections.abc import (
+    Sequence, MutableSequence, Mapping,
+    Iterable, Iterator, Callable
+)
+
+def process(items: Iterable[int]) -> list[int]:
+    return [x * 2 for x in items]
+
+# Accept any sequence (list, tuple, range, str, etc.)
+def first(s: Sequence) -> object:
+    return s[0]
+
+# Type-check an object dynamically.
+print(isinstance([1, 2], MutableSequence))  # True
+print(isinstance((1, 2), MutableSequence))  # False (tuple is immutable)`,
+    explanation: "collections.abc provides abstract base classes for container types. Use them in type hints to accept the broadest compatible type — Iterable over list, Mapping over dict — improving API flexibility.",
+  },
+  {
+    id: "py-enum-flags",
+    language: "python",
+    title: "Flag enum — bitmask in Python",
+    tag: "snippet",
+    code: `from enum import Flag, auto
+
+class Permission(Flag):
+    READ    = auto()   # 1
+    WRITE   = auto()   # 2
+    EXECUTE = auto()   # 4
+    ALL     = READ | WRITE | EXECUTE
+
+user_perms = Permission.READ | Permission.WRITE
+print(user_perms)                        # Permission.READ|WRITE
+print(Permission.READ in user_perms)     # True
+print(Permission.EXECUTE in user_perms)  # False
+
+# Remove a flag.
+user_perms &= ~Permission.WRITE
+print(user_perms)   # Permission.READ`,
+    explanation: "Flag enum supports bitwise operations (&, |, ~, ^) and membership testing with in. It's the Pythonic equivalent of C's bitmask enum patterns — no manual power-of-two constants needed.",
+  },
+  {
+    id: "py-typing-self",
+    language: "python",
+    title: "Self type — fluent interfaces (Python 3.11+)",
+    tag: "types",
+    code: `from typing import Self
+
+class Builder:
+    def __init__(self) -> None:
+        self._parts: list[str] = []
+
+    def add(self, part: str) -> Self:
+        self._parts.append(part)
+        return self
+
+    def build(self) -> str:
+        return " ".join(self._parts)
+
+class ExtBuilder(Builder):
+    def add_header(self, h: str) -> Self:
+        return self.add(f"[{h}]")
+
+# Chaining returns ExtBuilder, not Builder.
+result = ExtBuilder().add_header("INFO").add("message").build()
+print(result)   # [INFO] message`,
+    explanation: "Self (3.11+) represents the type of the current class in annotations, making fluent builder patterns type-safe across inheritance — subclass methods correctly return the subclass type.",
+  },
+  {
+    id: "py-typing-unpack",
+    language: "python",
+    title: "TypeVarTuple and Unpack — variadic generics",
+    tag: "types",
+    code: `from typing import TypeVarTuple, Unpack, TypeVar
+
+Ts = TypeVarTuple("Ts")
+T  = TypeVar("T")
+
+def first_of_each(*args: Unpack[Ts]) -> tuple[Unpack[Ts]]:
+    return args
+
+# Type checker knows the exact types of each element.
+result = first_of_each(1, "hello", 3.14)
+# result: tuple[int, str, float]
+print(result)  # (1, 'hello', 3.14)`,
+    explanation: "TypeVarTuple (3.11+) enables variadic generics — generic functions where the number and types of type arguments vary. Used in NumPy-style array shape typing and typed *args unpacking.",
+  },
+  {
+    id: "py-array-module",
+    language: "python",
+    title: "array module — typed arrays",
+    tag: "structures",
+    code: `import array
+
+# 'i' = signed int, 'd' = double, 'B' = unsigned char
+arr = array.array("i", [1, 2, 3, 4, 5])
+print(arr)            # array('i', [1, 2, 3, 4, 5])
+print(arr[2])         # 3
+arr.append(6)
+arr.extend([7, 8])
+
+# Efficient file I/O.
+import io
+buf = io.BytesIO()
+arr.tofile(buf)
+print(len(buf.getvalue()))   # 32 bytes (8 × 4 bytes)`,
+    explanation: "array.array stores a homogeneous sequence of C-typed values without Python object overhead — 4–8× more memory-efficient than a list of ints or floats for large numeric data.",
+  },
+  {
+    id: "py-cprofile-usage",
+    language: "python",
+    title: "cProfile — built-in profiler",
+    tag: "snippet",
+    code: `import cProfile, pstats, io
+
+def slow():
+    return sum(i**2 for i in range(100_000))
+
+pr = cProfile.Profile()
+pr.enable()
+slow()
+pr.disable()
+
+s = io.StringIO()
+ps = pstats.Stats(pr, stream=s).sort_stats("cumulative")
+ps.print_stats(5)   # top 5 functions by cumulative time
+print(s.getvalue())`,
+    explanation: "cProfile is a deterministic C-level profiler with low overhead. Sort by cumulative to find hot call paths; by tottime to isolate individual function cost. Use snakeviz for a visual flame chart.",
+  },
+  {
+    id: "py-timeit-module",
+    language: "python",
+    title: "timeit — micro-benchmarking",
+    tag: "snippet",
+    code: `import timeit
+
+# Quick command-line style.
+t1 = timeit.timeit("[x**2 for x in range(100)]", number=10_000)
+t2 = timeit.timeit("list(map(lambda x: x**2, range(100)))", number=10_000)
+print(f"listcomp: {t1:.4f}s")
+print(f"map:      {t2:.4f}s")
+
+# With setup code.
+t3 = timeit.timeit(
+    stmt="sorted(data)",
+    setup="data = list(range(1000, 0, -1))",
+    number=1000,
+)
+print(f"sort: {t3:.4f}s")`,
+    explanation: "timeit runs a snippet many times (number=) to average out OS noise, disabling garbage collection between runs. Always benchmark with realistic data size — micro-benchmark results do not always scale.",
+  },
+  {
+    id: "py-decimal-module",
+    language: "python",
+    title: "decimal — exact decimal arithmetic",
+    tag: "snippet",
+    code: `from decimal import Decimal, getcontext
+
+# Floating-point pitfall.
+print(0.1 + 0.2)              # 0.30000000000000004
+
+# Exact decimal.
+print(Decimal("0.1") + Decimal("0.2"))  # 0.3
+
+# Set precision globally.
+getcontext().prec = 50
+result = Decimal(1) / Decimal(7)
+print(result)  # 0.14285714285714285714285714285714285714285714285714
+
+# Rounding modes.
+print(Decimal("2.675").quantize(Decimal("0.01")))  # 2.68`,
+    explanation: "The decimal module provides exact base-10 arithmetic — essential for financial calculations where floating-point rounding errors are unacceptable. Set precision and rounding mode explicitly for deterministic behavior.",
+  },
+  {
+    id: "py-fractions-module",
+    language: "python",
+    title: "fractions.Fraction — exact rational arithmetic",
+    tag: "snippet",
+    code: `from fractions import Fraction
+
+a = Fraction(1, 3)
+b = Fraction(1, 6)
+
+print(a + b)     # 1/2
+print(a * b)     # 1/18
+print(a / b)     # 2
+print(float(a))  # 0.3333333333333333
+
+# Fraction from float (may surprise you).
+print(Fraction(0.1))  # 3602879701896397/36028797018963968
+# Fraction from string is exact.
+print(Fraction("0.1"))  # 1/10`,
+    explanation: "Fraction stores numerator and denominator as exact integers and performs arithmetic without rounding. Converting from float first converts the binary representation — always pass a string or integer for exact values.",
+  },
+  {
+    id: "py-statistics-module",
+    language: "python",
+    title: "statistics module — descriptive stats",
+    tag: "snippet",
+    code: `import statistics as stats
+
+data = [4, 8, 15, 16, 23, 42]
+
+print(stats.mean(data))           # 18.0
+print(stats.median(data))         # 15.5
+print(stats.stdev(data))          # 13.277...  (sample std dev)
+print(stats.pstdev(data))         # 12.123...  (population std dev)
+print(stats.variance(data))       # 176.33...
+print(stats.quantiles(data, n=4)) # [7.5, 15.5, 25.25] — quartiles`,
+    explanation: "The statistics module provides correct implementations of common descriptive statistics. Use pstdev/pvariance when you have the full population; stdev/variance when working with a sample.",
+  },
+  {
+    id: "py-pathlib-write-text",
+    language: "python",
+    title: "pathlib read/write convenience methods",
+    tag: "snippet",
+    code: `from pathlib import Path
+import tempfile, os
+
+with tempfile.TemporaryDirectory() as d:
+    p = Path(d) / "data.txt"
+
+    # Write atomically.
+    p.write_text("Hello\nWorld\n", encoding="utf-8")
+
+    # Read back.
+    content = p.read_text(encoding="utf-8")
+    print(content)
+
+    # Bytes.
+    p.write_bytes(b"\x00\x01\x02")
+    print(p.read_bytes().hex())   # 000102
+
+    # Stat.
+    print(p.stat().st_size)       # 3`,
+    explanation: "Path.write_text / read_text / write_bytes / read_bytes are convenience wrappers that open, operate, and close the file in one call — cleaner than the four-line open/write/close pattern for simple cases.",
+  },
+  {
+    id: "py-contextlib-suppress",
+    language: "python",
+    title: "contextlib.suppress — swallow specific exceptions",
+    tag: "snippet",
+    code: `from contextlib import suppress
+from pathlib import Path
+
+# Without suppress.
+try:
+    Path("/nonexistent").unlink()
+except FileNotFoundError:
+    pass
+
+# With suppress — cleaner for fire-and-forget deletions.
+with suppress(FileNotFoundError):
+    Path("/nonexistent").unlink()
+
+# Multiple exception types.
+with suppress(KeyError, IndexError):
+    d = {}
+    _ = d["missing"]`,
+    explanation: "contextlib.suppress is the contextmanager equivalent of except: pass — it swallows the listed exceptions while letting all others propagate. Only use it when 'the exception occurring is a normal outcome'.",
+  },
+  {
+    id: "py-contextlib-contextmanager",
+    language: "python",
+    title: "contextlib.contextmanager — generator-based CM",
+    tag: "snippet",
+    code: `from contextlib import contextmanager
+import time
+
+@contextmanager
+def timed(label: str):
+    start = time.perf_counter()
+    try:
+        yield          # caller's with-block runs here
+    finally:
+        elapsed = time.perf_counter() - start
+        print(f"{label}: {elapsed:.4f}s")
+
+with timed("computation"):
+    total = sum(range(1_000_000))`,
+    explanation: "@contextmanager turns a generator function into a context manager: code before yield runs as __enter__, code after yield (in finally) runs as __exit__. Put teardown in finally so it runs even on exception.",
+  },
+  {
+    id: "py-functools-partial",
+    language: "python",
+    title: "functools.partial — partial application",
+    tag: "snippet",
+    code: `from functools import partial
+
+def power(base: int, exp: int) -> int:
+    return base ** exp
+
+square = partial(power, exp=2)
+cube   = partial(power, exp=3)
+double = partial(power, 2)    # positional: base=2
+
+print(square(5))   # 25
+print(cube(3))     # 27
+print(double(10))  # 1024
+
+# Common use: pre-fill comparison key.
+from functools import partial
+words = ["banana", "apple", "cherry"]
+key_2nd = partial(lambda s, i: s[i], i=1)
+print(sorted(words, key=key_2nd))  # ['banana', 'cherry', 'apple']`,
+    explanation: "functools.partial freezes some arguments of a callable, producing a new callable. It's cleaner than a lambda for simple pre-filled calls and integrates with tools that accept callables.",
+  },
+  {
+    id: "py-operator-attrgetter",
+    language: "python",
+    title: "operator.attrgetter for attribute-based sorting",
+    tag: "snippet",
+    code: `from operator import attrgetter
+from dataclasses import dataclass
+
+@dataclass
+class Employee:
+    name: str
+    dept: str
+    salary: float
+
+employees = [
+    Employee("Ada",   "Eng",  120_000),
+    Employee("Linus", "Eng",   95_000),
+    Employee("Grace", "Mgmt", 140_000),
+]
+
+# Sort by dept then salary descending.
+sorted_emps = sorted(employees,
+    key=attrgetter("dept", "salary"),
+)
+for e in sorted_emps:
+    print(e.name, e.dept, e.salary)`,
+    explanation: "attrgetter is faster than a lambda for attribute access because it is implemented in C. With multiple arguments it returns a tuple, enabling multi-key sort with the same tuple comparison semantics.",
+  },
+  {
+    id: "py-hash-hmac",
+    language: "python",
+    title: "hashlib and hmac — cryptographic hashing",
+    tag: "snippet",
+    code: `import hashlib, hmac, os
+
+# Content hashing.
+data = b"Hello, World!"
+digest = hashlib.sha256(data).hexdigest()
+print(digest[:16])   # e4ded...
+
+# HMAC — message authentication.
+secret = os.urandom(32)
+mac = hmac.new(secret, data, hashlib.sha256).hexdigest()
+print(mac[:16])
+
+# Verify with constant-time compare to prevent timing attacks.
+def verify(secret, data, expected_mac):
+    actual = hmac.new(secret, data, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(actual, expected_mac)`,
+    explanation: "Use hmac.new instead of hashlib for message authentication — HMAC adds a secret key so the MAC can't be forged without it. Always use hmac.compare_digest for verification to prevent timing attacks.",
+  },
+  {
+    id: "py-secrets-module",
+    language: "python",
+    title: "secrets module — cryptographically secure randomness",
+    tag: "snippet",
+    code: `import secrets, string
+
+# Secure random bytes (for tokens, nonces).
+token = secrets.token_bytes(32)
+print(token.hex())
+
+# URL-safe base64 token.
+url_token = secrets.token_urlsafe(32)
+print(url_token)   # e.g. "wJ3Kq..."
+
+# Secure random choice.
+alphabet = string.ascii_letters + string.digits
+password = "".join(secrets.choice(alphabet) for _ in range(16))
+print(password)
+
+# NEVER use random module for security-sensitive purposes.`,
+    explanation: "The secrets module uses the OS CSPRNG (os.urandom()) for cryptographically secure randomness. Use it for tokens, passwords, and nonces. The random module is NOT secure — it is a PRNG for simulations.",
+  },
+  {
+    id: "py-socket-basic",
+    language: "python",
+    title: "socket — TCP client basics",
+    tag: "snippet",
+    code: `import socket
+
+# TCP connection to a server.
+with socket.create_connection(("example.com", 80), timeout=5) as sock:
+    # Send an HTTP/1.0 request.
+    request = b"GET / HTTP/1.0\r\nHost: example.com\r\n\r\n"
+    sock.sendall(request)
+
+    # Read response in chunks.
+    chunks = []
+    while chunk := sock.recv(4096):
+        chunks.append(chunk)
+
+response = b"".join(chunks)
+print(response[:200])`,
+    explanation: "socket.create_connection handles hostname resolution and connection with a timeout, returning a connected socket. Use sendall (not send) to guarantee all bytes are sent even if the kernel buffers partially.",
+  },
+  {
+    id: "py-ipaddress-module",
+    language: "python",
+    title: "ipaddress — IP address manipulation",
+    tag: "snippet",
+    code: `import ipaddress
+
+ip = ipaddress.ip_address("192.168.1.5")
+print(ip.is_private)     # True
+print(ip.version)        # 4
+
+net = ipaddress.ip_network("10.0.0.0/8")
+print(ip in net)         # False
+
+# Iterate a /30 subnet.
+for host in ipaddress.ip_network("192.168.0.0/30").hosts():
+    print(host)
+# 192.168.0.1  192.168.0.2`,
+    explanation: "The ipaddress module parses, validates, and manipulates IPv4/IPv6 addresses and networks. It's far safer than string manipulation and handles subnet math, CIDR notation, and containment checks.",
+  },
+  {
+    id: "py-weakref-ref",
+    language: "python",
+    title: "weakref.ref — callback on collection",
+    tag: "snippet",
+    code: `import weakref
+
+class Resource:
+    def __repr__(self): return "Resource()"
+
+def on_gone(ref):
+    print(f"Resource collected: {ref}")
+
+obj = Resource()
+ref = weakref.ref(obj, on_gone)
+
+print(ref())   # Resource()  — obj is alive
+
+del obj        # triggers GC (reference count → 0 in CPython)
+# "Resource collected: <weakref at 0x...>"
+print(ref())   # None — object is gone`,
+    explanation: "weakref.ref takes an optional callback invoked with the dead reference when the referent is collected. Useful for cache invalidation and cleanup without preventing collection.",
+  },
+  {
+    id: "py-pep517-build",
+    language: "python",
+    title: "pyproject.toml — modern packaging",
+    tag: "understanding",
+    code: `# pyproject.toml — replaces setup.py + setup.cfg
+[build-system]
+requires      = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name        = "my-package"
+version     = "1.0.0"
+description = "A short description"
+requires-python = ">=3.11"
+dependencies = [
+    "requests>=2.28",
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7", "mypy"]
+
+[project.scripts]
+my-cli = "my_package.cli:main"`,
+    explanation: "PEP 517/518 standardize build tooling via pyproject.toml. The build-system table specifies the build backend (hatchling, flit, setuptools, poetry-core). dependencies lists runtime requirements; optional-dependencies groups extras.",
+  },
+  {
+    id: "py-re-compile-flags",
+    language: "python",
+    title: "re.compile with flags",
+    tag: "snippet",
+    code: `import re
+
+# Compile for reuse — significant speed-up when applied many times.
+pattern = re.compile(
+    r"""
+    (?P<year>  \d{4})   # named group for year
+    -
+    (?P<month> \d{2})   # named group for month
+    -
+    (?P<day>   \d{2})   # named group for day
+    """,
+    re.VERBOSE,         # allows inline comments and whitespace
+)
+
+m = pattern.match("2024-05-06")
+if m:
+    print(m.group("year"), m.group("month"), m.group("day"))
+# 2024 05 06`,
+    explanation: "re.VERBOSE (re.X) lets you add whitespace and comments to patterns. Compile patterns used in tight loops — re.compile caches the compiled object, avoiding repeated parse overhead.",
+  },
+  {
+    id: "py-subclasshook",
+    language: "python",
+    title: "__subclasshook__ — virtual subclassing",
+    tag: "classes",
+    code: `from abc import ABC
+
+class Printable(ABC):
+    @classmethod
+    def __subclasshook__(cls, C):
+        if cls is Printable:
+            if any("print_info" in B.__dict__ for B in C.__mro__):
+                return True
+        return NotImplemented
+
+class Document:
+    def print_info(self): print("document")
+
+class Image:
+    pass  # no print_info
+
+print(issubclass(Document, Printable))  # True
+print(issubclass(Image,    Printable))  # False
+print(isinstance(Document(), Printable))  # True`,
+    explanation: "__subclasshook__ allows a class to be considered a virtual subclass of an ABC without inheriting from it — the mechanism behind how collections.abc classifies built-in types.",
+  },
+  {
+    id: "py-exception-hierarchy",
+    language: "python",
+    title: "Python exception hierarchy",
+    tag: "understanding",
+    code: `# BaseException
+#   ├── SystemExit       — sys.exit()
+#   ├── KeyboardInterrupt — Ctrl-C
+#   ├── GeneratorExit    — generator.close()
+#   └── Exception        — catch-all for normal errors
+#         ├── ValueError, TypeError, AttributeError
+#         ├── LookupError → KeyError, IndexError
+#         ├── ArithmeticError → ZeroDivisionError
+#         ├── OSError → FileNotFoundError, PermissionError
+#         └── RuntimeError → RecursionError, NotImplementedError
+
+try:
+    raise ValueError("bad value")
+except Exception as e:
+    print(type(e).__mro__)
+    # [ValueError, Exception, BaseException, object]`,
+    explanation: "Catch Exception to handle normal program errors. Never catch BaseException — that would swallow KeyboardInterrupt and SystemExit, preventing clean shutdown.",
+  },
+  {
+    id: "py-pep484-generics-class",
+    language: "python",
+    title: "Generic classes (pre-3.12)",
+    tag: "types",
+    code: `from typing import Generic, TypeVar
+
+T = TypeVar("T")
+K = TypeVar("K")
+V = TypeVar("V")
+
+class Stack(Generic[T]):
+    def __init__(self) -> None:
+        self._items: list[T] = []
+
+    def push(self, item: T) -> None:
+        self._items.append(item)
+
+    def pop(self) -> T:
+        return self._items.pop()
+
+    def peek(self) -> T:
+        return self._items[-1]
+
+s: Stack[int] = Stack()
+s.push(1)
+print(s.pop())  # 1`,
+    explanation: "Generic[T] makes a class parameterizable by type. Type checkers enforce that all T usages within the class refer to the same concrete type at the call site — catching type errors before runtime.",
+  },
+  {
+    id: "py-abc-abstract-classmethod",
+    language: "python",
+    title: "abstractclassmethod and abstractstaticmethod",
+    tag: "classes",
+    code: `from abc import ABC, abstractmethod
+
+class Plugin(ABC):
+    @classmethod
+    @abstractmethod
+    def name(cls) -> str: ...
+
+    @staticmethod
+    @abstractmethod
+    def version() -> str: ...
+
+class MyPlugin(Plugin):
+    @classmethod
+    def name(cls) -> str:
+        return "my-plugin"
+
+    @staticmethod
+    def version() -> str:
+        return "1.0.0"
+
+print(MyPlugin.name())     # my-plugin
+print(MyPlugin.version())  # 1.0.0`,
+    explanation: "Combine @classmethod or @staticmethod with @abstractmethod (in that order — @classmethod outermost) to require subclasses to provide class-level or static implementations.",
+  },
+  {
+    id: "py-singleton-pattern",
+    language: "python",
+    title: "Thread-safe singleton",
+    tag: "classes",
+    code: `import threading
+
+class Singleton:
+    _instance = None
+    _lock = threading.Lock()
+
+    def __new__(cls):
+        if cls._instance is None:
+            with cls._lock:
+                if cls._instance is None:   # double-checked locking
+                    cls._instance = super().__new__(cls)
+        return cls._instance
+
+a = Singleton()
+b = Singleton()
+print(a is b)   # True`,
+    explanation: "The double-checked lock pattern avoids acquiring the lock on every call after initialization. In Python the GIL makes single-threaded access safe, but the double-check is still needed for multi-threaded correctness.",
+  },
+  {
+    id: "py-pep3107-annotations",
+    language: "python",
+    title: "Function annotations and __annotations__",
+    tag: "types",
+    code: `def greet(name: str, times: int = 1) -> str:
+    return (name + " ") * times
+
+# Access annotations at runtime.
+print(greet.__annotations__)
+# {'name': <class 'str'>, 'times': <class 'int'>, 'return': <class 'str'>}
+
+import typing
+# get_type_hints resolves forward references.
+hints = typing.get_type_hints(greet)
+print(hints)`,
+    explanation: "Function annotations (PEP 3107) are stored in __annotations__ and are accessible at runtime. get_type_hints evaluates string annotations (forward references) and applies module/local namespaces correctly.",
+  },
+  {
+    id: "py-chainmap",
+    language: "python",
+    title: "ChainMap — layered dict lookups",
+    tag: "structures",
+    code: `from collections import ChainMap
+
+defaults  = {"color": "blue",  "size": "M",  "qty": 1}
+override  = {"color": "red",   "qty": 5}
+env       = {"size": "XL"}
+
+# Layers searched left to right.
+merged = ChainMap(env, override, defaults)
+print(merged["color"])  # red    — from override
+print(merged["size"])   # XL     — from env
+print(merged["qty"])    # 5      — from override
+
+# Writes go only to the first map.
+merged["color"] = "green"
+print(override["color"])  # red — untouched
+print(merged.maps[0])     # {'size': 'XL', 'color': 'green'}`,
+    explanation: "ChainMap presents multiple dicts as a single view without copying. Reads search left-to-right (first match wins), writes always hit the first map. Used in Python's scoping implementation for nested namespaces.",
+  },
 ];
+
 
 
 

@@ -7327,7 +7327,1407 @@ print(override["color"])  # red — untouched
 print(merged.maps[0])     # {'size': 'XL', 'color': 'green'}`,
     explanation: "ChainMap presents multiple dicts as a single view without copying. Reads search left-to-right (first match wins), writes always hit the first map. Used in Python's scoping implementation for nested namespaces.",
   },
+  {
+    id: "py-lru-cache-maxsize",
+    language: "python",
+    title: "lru_cache with maxsize — bounded memoization",
+    tag: "snippet",
+    code: `from functools import lru_cache
+
+@lru_cache(maxsize=128)
+def expensive(n: int) -> int:
+    print(f"computing {n}")
+    return n * n
+
+print(expensive(5))   # computing 5 → 25
+print(expensive(5))   # cache hit → 25 (no print)
+print(expensive(6))   # computing 6 → 36
+
+info = expensive.cache_info()
+print(info)  # CacheInfo(hits=1, misses=2, maxsize=128, currsize=2)
+
+expensive.cache_clear()   # empty the cache`,
+    explanation: "lru_cache(maxsize=N) evicts the least-recently-used entry when the cache is full. Use maxsize=None (equivalent to @cache) only when the argument space is bounded.",
+  },
+  {
+    id: "py-operator-module",
+    language: "python",
+    title: "operator module — functional operators",
+    tag: "snippet",
+    code: `import operator
+
+# operator functions work where lambdas do.
+from functools import reduce
+nums = [1, 2, 3, 4, 5]
+product = reduce(operator.mul, nums)
+print(product)  # 120
+
+# Composable sort key.
+data = [{"name": "Ada", "age": 36}, {"name": "Linus", "age": 54}]
+by_age = sorted(data, key=operator.itemgetter("age"))
+print(by_age[0]["name"])  # Ada
+
+# Attribute getter.
+from dataclasses import dataclass
+@dataclass
+class P: x: int; y: int
+points = [P(3,1), P(1,4), P(2,2)]
+print(min(points, key=operator.attrgetter("x")).x)  # 1`,
+    explanation: "The operator module provides function equivalents of Python's operators. They are implemented in C, so faster than equivalent lambdas, and work well with map, filter, reduce, and sorted.",
+  },
+  {
+    id: "py-copy-module",
+    language: "python",
+    title: "copy.copy vs copy.deepcopy — complete picture",
+    tag: "understanding",
+    code: `import copy
+
+class Node:
+    def __init__(self, val, children=None):
+        self.val = val
+        self.children = children or []
+
+root = Node(1, [Node(2), Node(3)])
+
+# Shallow copy: new Node but same children list.
+sc = copy.copy(root)
+print(sc is root)              # False
+print(sc.children is root.children)  # True — shared!
+
+# Deep copy: fully independent graph.
+dc = copy.deepcopy(root)
+print(dc.children is root.children)  # False — independent copy`,
+    explanation: "copy.copy creates a new top-level object but shares references to nested objects. copy.deepcopy recursively copies the entire object graph. For objects with __copy__ or __deepcopy__, those methods are called.",
+  },
+  {
+    id: "py-io-bytesio",
+    language: "python",
+    title: "io.BytesIO — in-memory binary stream",
+    tag: "snippet",
+    code: `import io, struct
+
+# Build a binary message in memory.
+buf = io.BytesIO()
+buf.write(b"MAGIC")
+buf.write(struct.pack(">I", 12345))   # big-endian uint32
+
+# Seek back and read.
+buf.seek(0)
+magic = buf.read(5)
+length = struct.unpack(">I", buf.read(4))[0]
+print(magic, length)   # b'MAGIC' 12345
+
+# Useful for testing code that writes to files.
+buf2 = io.BytesIO(b"existing content")
+print(buf2.read())   # b'existing content'`,
+    explanation: "BytesIO is the binary counterpart to StringIO — a file-like object backed by bytes. Use it in tests to capture binary output or as an in-memory staging area before writing to a real file.",
+  },
+  {
+    id: "py-popen-subprocess",
+    language: "python",
+    title: "subprocess — run shell commands",
+    tag: "snippet",
+    code: `import subprocess
+
+# Simple: capture output, raise on non-zero exit.
+result = subprocess.run(
+    ["git", "status"],
+    capture_output=True, text=True, check=True
+)
+print(result.stdout)
+
+# Pipe output from one command to another.
+p1 = subprocess.Popen(["ls", "-la"], stdout=subprocess.PIPE)
+p2 = subprocess.Popen(["grep", "py"], stdin=p1.stdout,
+                       stdout=subprocess.PIPE, text=True)
+p1.stdout.close()
+output, _ = p2.communicate()
+print(output)`,
+    explanation: "subprocess.run is the high-level interface; Popen is low-level for piping and streaming. Always pass a list (not a string) to avoid shell injection. check=True raises CalledProcessError on non-zero exit codes.",
+  },
+  {
+    id: "py-tempfile-usage",
+    language: "python",
+    title: "tempfile — safe temporary files",
+    tag: "snippet",
+    code: `import tempfile, os
+
+# NamedTemporaryFile — visible by name, deleted on close.
+with tempfile.NamedTemporaryFile(mode="w", suffix=".txt",
+                                  delete=True) as f:
+    f.write("temporary content")
+    print(f.name)   # e.g. /tmp/tmpXXXXXX.txt
+# File is deleted when the with block exits.
+
+# TemporaryDirectory — directory deleted on exit.
+with tempfile.TemporaryDirectory() as d:
+    path = os.path.join(d, "data.bin")
+    with open(path, "wb") as fp:
+        fp.write(b"\x00" * 1024)
+    print(os.listdir(d))   # ['data.bin']
+# Directory and contents deleted here.`,
+    explanation: "tempfile handles OS-specific temporary file locations and deletion automatically. NamedTemporaryFile is useful when the file must be opened by name (e.g., passed to subprocess). TemporaryDirectory cleans up entire trees.",
+  },
+  {
+    id: "py-configparser-usage",
+    language: "python",
+    title: "configparser — INI file parsing",
+    tag: "snippet",
+    code: `import configparser, io
+
+ini = """
+[database]
+host = localhost
+port = 5432
+name = appdb
+
+[app]
+debug = true
+workers = 4
+"""
+
+config = configparser.ConfigParser()
+config.read_string(ini)
+
+print(config["database"]["host"])   # localhost
+print(config.getint("database", "port"))    # 5432
+print(config.getboolean("app", "debug"))    # True
+print(config.getint("app", "workers"))      # 4`,
+    explanation: "configparser reads Windows-style INI files. getint, getfloat, and getboolean convert values automatically. Interpolation with %(key)s allows values to reference other keys in the same section.",
+  },
+  {
+    id: "py-zipfile-usage",
+    language: "python",
+    title: "zipfile — create and read ZIP archives",
+    tag: "snippet",
+    code: `import zipfile, io
+
+# Create a zip in memory.
+buf = io.BytesIO()
+with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+    zf.writestr("hello.txt", "Hello, World!")
+    zf.writestr("data/config.json", '{"key": "value"}')
+
+# Read back.
+buf.seek(0)
+with zipfile.ZipFile(buf) as zf:
+    print(zf.namelist())         # ['hello.txt', 'data/config.json']
+    content = zf.read("hello.txt")
+    print(content.decode())      # Hello, World!`,
+    explanation: "zipfile supports reading and writing ZIP archives in memory (BytesIO) or to disk. ZIP_DEFLATED is the standard compression algorithm. writestr accepts a filename and bytes/str — useful for generating archives without writing temp files.",
+  },
+  {
+    id: "py-tarfile-usage",
+    language: "python",
+    title: "tarfile — create and extract .tar archives",
+    tag: "snippet",
+    code: `import tarfile, io
+
+# Create a .tar.gz in memory.
+buf = io.BytesIO()
+with tarfile.open(fileobj=buf, mode="w:gz") as tf:
+    info = tarfile.TarInfo(name="hello.txt")
+    data = b"Hello from tar!"
+    info.size = len(data)
+    tf.addfile(info, io.BytesIO(data))
+
+# Extract a member.
+buf.seek(0)
+with tarfile.open(fileobj=buf, mode="r:gz") as tf:
+    member = tf.getmember("hello.txt")
+    f = tf.extractfile(member)
+    print(f.read().decode())   # Hello from tar!`,
+    explanation: "tarfile handles .tar, .tar.gz, and .tar.bz2 archives. Use mode='w:gz' for compressed output. Always pass members explicitly to extractall to avoid path traversal vulnerabilities (the tar slip attack).",
+  },
+  {
+    id: "py-pickle-protocol",
+    language: "python",
+    title: "pickle — object serialization protocols",
+    tag: "caveats",
+    code: `import pickle
+
+data = {"key": [1, 2, 3], "nested": {"a": True}}
+
+# Serialize to bytes.
+blob = pickle.dumps(data, protocol=5)   # latest protocol
+print(len(blob))
+
+# Deserialize.
+restored = pickle.loads(blob)
+print(restored)   # same structure
+
+# NEVER unpickle data from an untrusted source —
+# it executes arbitrary Python code on load.
+# Use json or msgpack for cross-language/untrusted data.`,
+    explanation: "Pickle serializes arbitrary Python objects including classes, closures, and numpy arrays. Protocol 5 (Python 3.8+) adds out-of-band buffers for zero-copy large data. NEVER deserialize pickle data from untrusted sources.",
+  },
+  {
+    id: "py-shelve-module",
+    language: "python",
+    title: "shelve — persistent dict-like store",
+    tag: "snippet",
+    code: `import shelve
+
+# Open or create a shelf file.
+with shelve.open("mystore") as db:
+    db["user"] = {"name": "Ada", "age": 36}
+    db["counter"] = 0
+
+# Reopen and read/write.
+with shelve.open("mystore") as db:
+    user = db["user"]
+    print(user["name"])   # Ada
+    db["counter"] = db["counter"] + 1
+
+# Clean up test files (platform-dependent extensions).
+import os, glob
+for f in glob.glob("mystore*"): os.remove(f)`,
+    explanation: "shelve persists a dict to disk using pickle and dbm. Keys must be strings; values can be any picklable object. It's a quick persistence layer for simple scripts — not suitable for concurrent access.",
+  },
+  {
+    id: "py-dataclasses-asdict",
+    language: "python",
+    title: "dataclasses.asdict and astuple",
+    tag: "snippet",
+    code: `from dataclasses import dataclass, asdict, astuple
+
+@dataclass
+class Point:
+    x: float
+    y: float
+
+@dataclass
+class Line:
+    start: Point
+    end: Point
+
+line = Line(Point(0, 0), Point(3, 4))
+
+d = asdict(line)
+print(d)   # {'start': {'x': 0, 'y': 0}, 'end': {'x': 3, 'y': 4}}
+
+t = astuple(line)
+print(t)   # ((0, 0), (3, 4))`,
+    explanation: "asdict recursively converts a dataclass to a dict of dicts, making it easy to serialize to JSON. astuple does the same into nested tuples. Both deep-copy the values, so mutations don't affect the original.",
+  },
+  {
+    id: "py-multiprocessing-pool",
+    language: "python",
+    title: "multiprocessing.Pool — CPU-bound parallelism",
+    tag: "snippet",
+    code: `from multiprocessing import Pool
+import os
+
+def compute(n: int) -> int:
+    return sum(i * i for i in range(n))
+
+if __name__ == "__main__":   # required on Windows/macOS
+    with Pool(processes=os.cpu_count()) as pool:
+        results = pool.map(compute, [10_000, 20_000, 30_000])
+    print(results)   # [sum1, sum2, sum3]
+
+    # Non-blocking: imap_unordered for streaming results.
+    with Pool() as pool:
+        for r in pool.imap_unordered(compute, range(10)):
+            print(r, end=" ")`,
+    explanation: "Pool.map distributes work across worker processes, bypassing the GIL for CPU-bound tasks. The if __name__ == '__main__' guard is required on Windows to prevent recursive subprocess spawning.",
+  },
+  {
+    id: "py-multiprocessing-queue",
+    language: "python",
+    title: "multiprocessing.Queue — inter-process communication",
+    tag: "snippet",
+    code: `from multiprocessing import Process, Queue
+
+def producer(q: Queue) -> None:
+    for i in range(5):
+        q.put(i)
+    q.put(None)   # sentinel to signal done
+
+def consumer(q: Queue) -> None:
+    while (item := q.get()) is not None:
+        print(f"consumed: {item}")
+
+if __name__ == "__main__":
+    q: Queue = Queue()
+    p = Process(target=producer, args=(q,))
+    c = Process(target=consumer, args=(q,))
+    p.start(); c.start()
+    p.join();  c.join()`,
+    explanation: "multiprocessing.Queue is process-safe (unlike threading.Queue which is only thread-safe). Data is pickled on send and unpickled on receive — keep messages small or use shared memory (multiprocessing.Array) for large data.",
+  },
+  {
+    id: "py-logging-handlers",
+    language: "python",
+    title: "logging handlers — rotating file logs",
+    tag: "snippet",
+    code: `import logging
+from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
+
+logger = logging.getLogger("app")
+logger.setLevel(logging.DEBUG)
+
+# Rotate at 5 MB, keep 3 backups.
+rh = RotatingFileHandler("app.log", maxBytes=5*1024*1024, backupCount=3)
+rh.setLevel(logging.INFO)
+
+# Also print DEBUG to console.
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+
+fmt = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
+rh.setFormatter(fmt)
+ch.setFormatter(fmt)
+
+logger.addHandler(rh)
+logger.addHandler(ch)
+
+logger.info("started")
+logger.debug("verbose debug info")`,
+    explanation: "RotatingFileHandler rolls logs by size; TimedRotatingFileHandler rolls by time interval (midnight, hourly). Multiple handlers on one logger let you send different severity levels to different destinations simultaneously.",
+  },
+  {
+    id: "py-json-lines",
+    language: "python",
+    title: "JSON Lines — streaming JSON format",
+    tag: "snippet",
+    code: `import json, io
+
+records = [
+    {"id": 1, "name": "Ada"},
+    {"id": 2, "name": "Linus"},
+    {"id": 3, "name": "Grace"},
+]
+
+# Write JSON Lines (one JSON object per line).
+buf = io.StringIO()
+for record in records:
+    buf.write(json.dumps(record) + "\n")
+
+# Read back.
+buf.seek(0)
+for line in buf:
+    obj = json.loads(line)
+    print(obj["name"])`,
+    explanation: "JSON Lines (.jsonl) stores one JSON object per line, enabling streaming reads without parsing the entire file. It is the standard format for log files, ML training data, and large dataset exports.",
+  },
+  {
+    id: "py-typing-typeguard",
+    language: "python",
+    title: "TypeGuard — custom type narrowing functions",
+    tag: "types",
+    code: `from typing import TypeGuard
+
+def is_str_list(val: list[object]) -> TypeGuard[list[str]]:
+    return all(isinstance(x, str) for x in val)
+
+def process(items: list[object]) -> None:
+    if is_str_list(items):
+        # type checker knows items: list[str] here
+        print(items[0].upper())
+    else:
+        print("not all strings")
+
+process(["hello", "world"])  # HELLO`,
+    explanation: "TypeGuard annotates a function that narrows the type of its argument when it returns True. The type checker widens the narrowed type in the if branch — without TypeGuard the checker would still see list[object].",
+  },
+  {
+    id: "py-typing-never",
+    language: "python",
+    title: "Never — the bottom type",
+    tag: "types",
+    code: `from typing import Never, NoReturn
+
+# Never — a type with no possible values (bottom type).
+# assert_never raises at runtime if reached.
+from typing import assert_never, Literal
+
+Color = Literal["red", "green", "blue"]
+
+def handle(c: Color) -> str:
+    if c == "red":   return "stop"
+    if c == "green": return "go"
+    if c == "blue":  return "caution"
+    assert_never(c)   # type: Never — exhaustiveness check
+
+# NoReturn — function that never returns (raises or loops forever).
+def fail(msg: str) -> NoReturn:
+    raise RuntimeError(msg)`,
+    explanation: "Never is the bottom type — no value can have this type. assert_never is the idiomatic exhaustiveness checker: if new variants are added to a Literal/Union without handling, the type checker flags the assert_never call.",
+  },
+  {
+    id: "py-ast-module",
+    language: "python",
+    title: "ast module — parse and inspect Python code",
+    tag: "snippet",
+    code: `import ast
+
+source = """
+def add(a, b):
+    return a + b
+"""
+
+tree = ast.parse(source)
+
+# Walk all nodes.
+for node in ast.walk(tree):
+    if isinstance(node, ast.FunctionDef):
+        print(f"Function: {node.name}")   # Function: add
+    if isinstance(node, ast.Return):
+        print("Has return")
+
+# Pretty-print.
+print(ast.dump(tree, indent=2))`,
+    explanation: "The ast module parses Python source into an abstract syntax tree. Walk the tree for static analysis, linting, or code transformation. Use ast.unparse() (3.9+) to convert a modified tree back to source code.",
+  },
+  {
+    id: "py-inspect-module",
+    language: "python",
+    title: "inspect — introspect live objects",
+    tag: "snippet",
+    code: `import inspect
+
+def greet(name: str, times: int = 1) -> str:
+    """Say hello."""
+    return (name + " ") * times
+
+# Signature.
+sig = inspect.signature(greet)
+print(sig)   # (name: str, times: int = 1) -> str
+
+# Parameters.
+for param in sig.parameters.values():
+    print(param.name, param.default, param.annotation)
+
+# Source code.
+print(inspect.getsource(greet))
+
+# Caller information.
+frame = inspect.currentframe()
+print(inspect.getframeinfo(frame).lineno)`,
+    explanation: "inspect provides runtime access to live objects: signatures, source code, call frames, and class hierarchies. Used heavily by testing frameworks, debuggers, and documentation generators.",
+  },
+  {
+    id: "py-dis-module",
+    language: "python",
+    title: "dis — disassemble Python bytecode",
+    tag: "snippet",
+    code: `import dis
+
+def add(a, b):
+    return a + b
+
+dis.dis(add)
+# 2           0 RESUME          0
+# 3           2 LOAD_FAST       0 (a)
+#             4 LOAD_FAST       1 (b)
+#             6 BINARY_OP      0 (+)
+#            10 RETURN_VALUE
+
+# Count bytecode instructions.
+code = compile("x = a + b * 2", "<string>", "exec")
+print(len(list(dis.get_instructions(code))))`,
+    explanation: "dis disassembles a function or code object into CPython bytecode instructions. Useful for understanding why two seemingly equivalent snippets have different performance characteristics.",
+  },
+  {
+    id: "py-ctypes-basics",
+    language: "python",
+    title: "ctypes — call C functions from Python",
+    tag: "snippet",
+    code: `import ctypes, ctypes.util
+
+# Load a shared library.
+libc = ctypes.CDLL(ctypes.util.find_library("c"))
+
+# Call printf.
+libc.printf(b"Hello from C: %d\n", ctypes.c_int(42))
+
+# Call strlen.
+libc.strlen.restype  = ctypes.c_size_t
+libc.strlen.argtypes = [ctypes.c_char_p]
+n = libc.strlen(b"hello world")
+print(n)   # 11`,
+    explanation: "ctypes lets you call C functions in shared libraries without writing a C extension. Always set restype and argtypes to prevent silent data corruption from wrong calling conventions.",
+  },
+  {
+    id: "py-sys-getsizeof",
+    language: "python",
+    title: "sys.getsizeof — object memory size",
+    tag: "snippet",
+    code: `import sys
+
+print(sys.getsizeof(0))         # 28 bytes (CPython int)
+print(sys.getsizeof(1000))      # 28 bytes (small int — same size)
+print(sys.getsizeof([]))        # 56 bytes (empty list)
+print(sys.getsizeof([1,2,3]))   # 88 bytes (list with 3 refs)
+print(sys.getsizeof({}))        # 64 bytes (empty dict)
+print(sys.getsizeof(""))        # 49 bytes (empty str)
+print(sys.getsizeof("hello"))   # 54 bytes
+
+# getsizeof does NOT include referenced objects.
+lst = [1, 2, 3]
+print(sys.getsizeof(lst))  # 88 — only the list array, not the int objects`,
+    explanation: "sys.getsizeof returns the direct memory of an object in bytes, not its total memory footprint. For the recursive total, use tracemalloc or a recursive walk. Sizes are CPython-specific and version-dependent.",
+  },
+  {
+    id: "py-reprlib-module",
+    language: "python",
+    title: "reprlib — safe repr for large objects",
+    tag: "snippet",
+    code: `import reprlib
+
+# reprlib.repr truncates large containers.
+big_list = list(range(1000))
+print(reprlib.repr(big_list))
+# [0, 1, 2, 3, 4, 5, ...]
+
+big_str = "x" * 1000
+print(reprlib.repr(big_str))
+# 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx...'
+
+# Customize limits.
+r = reprlib.Repr()
+r.maxlist = 3
+r.maxstring = 20
+print(r.repr(big_list))   # [0, 1, 2, ...]`,
+    explanation: "reprlib.repr is a safe alternative to repr that limits output length for large containers and strings — useful in logging, debug output, and tools that can't handle unbounded repr output.",
+  },
+  {
+    id: "py-pdb-debugging",
+    language: "python",
+    title: "pdb — built-in debugger",
+    tag: "snippet",
+    code: `import pdb
+
+def buggy(lst):
+    total = 0
+    for item in lst:
+        pdb.set_trace()   # drop into debugger here
+        total += item
+    return total
+
+# Python 3.7+: use the built-in breakpoint() instead.
+def better(lst):
+    total = 0
+    for item in lst:
+        breakpoint()      # same as pdb.set_trace() by default
+        total += item
+    return total
+
+# In REPL: pdb commands
+# n (next), s (step into), c (continue), p expr (print), q (quit)`,
+    explanation: "breakpoint() (3.7+) is the preferred way to set a programmatic breakpoint — it respects the PYTHONBREAKPOINT environment variable, allowing you to swap out pdb for richer debuggers (ipdb, pudb) without code changes.",
+  },
+  {
+    id: "py-contextlib-redirect",
+    language: "python",
+    title: "contextlib.redirect_stdout — capture print output",
+    tag: "snippet",
+    code: `import io
+from contextlib import redirect_stdout, redirect_stderr
+
+# Capture stdout.
+buf = io.StringIO()
+with redirect_stdout(buf):
+    print("captured!")
+    print("also captured")
+
+output = buf.getvalue()
+print(f"Captured: {output!r}")  # Captured: 'captured!\nalso captured\n'
+
+# Silence stderr.
+with redirect_stderr(io.StringIO()):
+    import warnings
+    warnings.warn("this warning is suppressed")`,
+    explanation: "redirect_stdout/redirect_stderr temporarily swap sys.stdout/sys.stderr, making them useful for capturing output from functions you can't modify — useful in tests and for silencing noisy third-party code.",
+  },
+  {
+    id: "py-dataclass-replace",
+    language: "python",
+    title: "dataclasses.replace — non-destructive update",
+    tag: "snippet",
+    code: `from dataclasses import dataclass, replace
+
+@dataclass(frozen=True)
+class Config:
+    host: str = "localhost"
+    port: int = 8080
+    debug: bool = False
+
+base = Config()
+prod = replace(base, host="prod.example.com", debug=False)
+dev  = replace(base, debug=True)
+
+print(base)  # Config(host='localhost', port=8080, debug=False)
+print(prod)  # Config(host='prod.example.com', port=8080, debug=False)`,
+    explanation: "dataclasses.replace is the dataclass equivalent of record with — it creates a copy with specified fields changed. It's the idiomatic way to create modified copies of frozen dataclasses.",
+  },
+  {
+    id: "py-functools-wraps",
+    language: "python",
+    title: "functools.wraps — preserve decorator metadata",
+    tag: "snippet",
+    code: `from functools import wraps
+
+def timer(fn):
+    import time
+    @wraps(fn)    # copies __name__, __doc__, __annotations__, etc.
+    def wrapper(*args, **kwargs):
+        start = time.perf_counter()
+        result = fn(*args, **kwargs)
+        print(f"{fn.__name__} took {time.perf_counter()-start:.4f}s")
+        return result
+    return wrapper
+
+@timer
+def add(a: int, b: int) -> int:
+    """Add two numbers."""
+    return a + b
+
+print(add.__name__)   # add (not 'wrapper')
+print(add.__doc__)    # Add two numbers.`,
+    explanation: "@wraps copies the wrapped function's metadata to the wrapper. Without it, introspection tools (help(), sphinx, pytest) see the decorator's internals instead of the original function's signature and docstring.",
+  },
+  {
+    id: "py-textwrap-module",
+    language: "python",
+    title: "textwrap — format long strings",
+    tag: "snippet",
+    code: `import textwrap
+
+long_text = (
+    "This is a very long string that needs to be wrapped at a certain "
+    "column width for terminal display or documentation purposes."
+)
+
+print(textwrap.fill(long_text, width=50))
+
+# Dedent — strip common leading whitespace.
+indented = """
+    line one
+    line two
+    line three
+"""
+print(textwrap.dedent(indented).strip())
+
+# Indent — add prefix to each line.
+print(textwrap.indent("hello\nworld", prefix="  > "))`,
+    explanation: "textwrap.fill wraps long strings at word boundaries. dedent strips common leading whitespace from multiline strings (useful for inline multiline string literals). indent adds a prefix to each line.",
+  },
+  {
+    id: "py-string-template-advanced",
+    language: "python",
+    title: "string.Formatter — custom format strings",
+    tag: "snippet",
+    code: `import string
+
+class VerboseFormatter(string.Formatter):
+    def get_value(self, key, args, kwargs):
+        print(f"  looking up {key!r}")
+        return super().get_value(key, args, kwargs)
+
+fmt = VerboseFormatter()
+result = fmt.format("Hello {name}, you are {age}!", name="Ada", age=36)
+print(result)
+# looking up 'name'
+# looking up 'age'
+# Hello Ada, you are 36!`,
+    explanation: "string.Formatter is the base class behind str.format(). Override get_value, format_field, or convert_field to customize how format strings are resolved — useful for template engines and config substitution.",
+  },
+  {
+    id: "py-enum-functional",
+    language: "python",
+    title: "Enum functional API",
+    tag: "snippet",
+    code: `from enum import Enum
+
+# Functional API for dynamic enum creation.
+Status = Enum("Status", ["PENDING", "ACTIVE", "CLOSED"])
+print(Status.ACTIVE.value)   # 2
+
+# With explicit values.
+Color = Enum("Color", {"RED": "#FF0000", "GREEN": "#00FF00", "BLUE": "#0000FF"})
+print(Color.RED.value)       # #FF0000
+
+# Enum from a list of strings.
+Weekday = Enum("Weekday", "MON TUE WED THU FRI SAT SUN")
+print(list(Weekday)[:3])     # [<Weekday.MON: 1>, <Weekday.TUE: 2>, ...]`,
+    explanation: "The functional API creates Enum classes dynamically — useful when the set of values is known only at runtime (e.g., read from a config file or database). Values can be any string, including 'NAME1 NAME2' for automatic integer values.",
+  },
+  {
+    id: "py-abc-register",
+    language: "python",
+    title: "ABC.register — virtual subclassing",
+    tag: "classes",
+    code: `from abc import ABC
+
+class Drawable(ABC):
+    @classmethod
+    def draw(cls) -> None: ...
+
+# Register an existing class without modifying it.
+class Circle:
+    def draw(self) -> None:
+        print("Drawing circle")
+
+Drawable.register(Circle)
+
+print(issubclass(Circle, Drawable))   # True
+print(isinstance(Circle(), Drawable)) # True
+# But Circle.draw won't raise if not implemented!`,
+    explanation: "ABC.register declares an existing class as a virtual subclass of an ABC, making isinstance/issubclass return True without inheriting. There's no enforcement of abstract methods for registered classes — use with care.",
+  },
+  {
+    id: "py-property-cached",
+    language: "python",
+    title: "functools.cached_property — lazy computed attribute",
+    tag: "snippet",
+    code: `from functools import cached_property
+
+class Circle:
+    def __init__(self, radius: float):
+        self.radius = radius
+
+    @cached_property
+    def area(self) -> float:
+        print("computing area...")
+        return 3.14159 * self.radius ** 2
+
+c = Circle(5)
+print(c.area)   # computing area... → 78.539...
+print(c.area)   # no recomputation → 78.539...
+
+# Invalidate by deleting.
+del c.area
+print(c.area)   # computing area... again`,
+    explanation: "cached_property computes the value on first access and stores it in the instance's __dict__, replacing itself. Subsequent accesses return the cached value directly without any property overhead.",
+  },
+  {
+    id: "py-number-tower",
+    language: "python",
+    title: "Python number tower — numeric ABCs",
+    tag: "understanding",
+    code: `import numbers
+
+# Python's numeric hierarchy:
+# Number → Complex → Real → Rational → Integral
+
+print(isinstance(42,    numbers.Integral))  # True
+print(isinstance(3.14,  numbers.Real))      # True
+print(isinstance(1+2j,  numbers.Complex))   # True
+print(isinstance(42,    numbers.Real))      # True — int is-a Real
+print(isinstance(3.14,  numbers.Integral))  # False
+
+# Use ABCs in type-checking functions.
+def square(x: numbers.Real) -> float:
+    return float(x) * float(x)
+
+print(square(3))    # 9.0
+print(square(2.5))  # 6.25`,
+    explanation: "The numbers module defines abstract base classes for numeric types. isinstance(x, numbers.Real) accepts int, float, Fraction, and Decimal — broader than a concrete type check.",
+  },
+  {
+    id: "py-weakref-methods",
+    language: "python",
+    title: "WeakMethod — weak references to bound methods",
+    tag: "snippet",
+    code: `import weakref
+
+class Button:
+    def on_click(self) -> None:
+        print("clicked!")
+
+btn = Button()
+
+# weakref.ref to a bound method would fail — bound methods
+# are created on-the-fly and have no persistent identity.
+# Use WeakMethod instead.
+ref = weakref.WeakMethod(btn.on_click)
+
+callback = ref()
+if callback:
+    callback()   # clicked!
+
+del btn          # button GC'd
+print(ref())     # None`,
+    explanation: "weakref.WeakMethod holds a weak reference to a bound method by internally holding weak refs to the object and the function separately, since bound methods are ephemeral objects created anew on each attribute access.",
+  },
+  {
+    id: "py-platform-module",
+    language: "python",
+    title: "platform — OS and Python runtime info",
+    tag: "snippet",
+    code: `import platform, sys
+
+print(platform.system())       # Linux / Windows / Darwin
+print(platform.release())      # kernel/OS version
+print(platform.machine())      # x86_64 / arm64
+print(platform.python_version())  # e.g. 3.12.0
+
+# Conditional platform code.
+if platform.system() == "Windows":
+    path_sep = "\\"
+else:
+    path_sep = "/"
+
+# sys.platform is simpler for coarse checks.
+print(sys.platform)   # linux / win32 / darwin`,
+    explanation: "platform provides detailed OS, hardware, and Python runtime information. Use sys.platform for simple OS detection in cross-platform code; use platform for richer details like kernel version or processor architecture.",
+  },
+  {
+    id: "py-signal-module",
+    language: "python",
+    title: "signal — UNIX signal handling",
+    tag: "snippet",
+    code: `import signal, time
+
+# Register a handler for SIGTERM.
+def handle_term(signum, frame):
+    print("SIGTERM received — cleaning up")
+    raise SystemExit(0)
+
+signal.signal(signal.SIGTERM, handle_term)
+
+# Graceful SIGINT (Ctrl-C) handler.
+def handle_int(signum, frame):
+    print("\nInterrupted — shutting down")
+    raise SystemExit(130)   # 128 + 2
+
+signal.signal(signal.SIGINT, handle_int)
+
+print("Running... (press Ctrl-C to test)")
+# time.sleep(10)   # uncomment to test`,
+    explanation: "signal.signal registers a callback for OS signals. SIGTERM is the polite shutdown request from systemd/Docker. SIGINT is Ctrl-C. Signal handlers run in the main thread — avoid blocking operations inside them.",
+  },
+  {
+    id: "py-uuid-module",
+    language: "python",
+    title: "uuid — UUID generation",
+    tag: "snippet",
+    code: `import uuid
+
+# Random UUID (v4) — most common.
+u4 = uuid.uuid4()
+print(u4)                # e.g. 550e8400-e29b-41d4-a716-446655440000
+print(str(u4))
+print(u4.hex)            # no dashes
+print(u4.bytes)          # 16 bytes
+
+# Name-based UUID (v5) — deterministic from namespace + name.
+ns  = uuid.NAMESPACE_URL
+u5  = uuid.uuid5(ns, "https://example.com")
+u5b = uuid.uuid5(ns, "https://example.com")
+print(u5 == u5b)   # True — same inputs → same UUID
+
+# Parse.
+parsed = uuid.UUID("550e8400-e29b-41d4-a716-446655440000")`,
+    explanation: "uuid4() is cryptographically random — use it for database primary keys and session tokens. uuid5() is deterministic (SHA-1 based) — use it to generate a stable ID from a canonical name, e.g. deduplicating scraped URLs.",
+  },
+  {
+    id: "py-calendar-module",
+    language: "python",
+    title: "calendar — month/week calculations",
+    tag: "snippet",
+    code: `import calendar
+
+# Days in a month (handles leap years).
+print(calendar.monthrange(2024, 2))  # (3, 29) — Thu, 29 days
+
+# Check leap year.
+print(calendar.isleap(2024))  # True
+
+# Week number.
+import datetime
+d = datetime.date(2024, 5, 6)
+print(d.isocalendar())    # IsoCalendarDate(year=2024, week=19, weekday=1)
+
+# Text calendar.
+print(calendar.month(2024, 5))`,
+    explanation: "The calendar module handles month arithmetic, leap years, and ISO week numbers. monthrange returns the weekday of the first day and the number of days — essential for building calendar grids without off-by-one errors.",
+  },
+  {
+    id: "py-datetime-timedelta",
+    language: "python",
+    title: "datetime.timedelta — duration arithmetic",
+    tag: "snippet",
+    code: `from datetime import datetime, timedelta, timezone
+
+now = datetime.now(tz=timezone.utc)
+
+# Add duration.
+in_30_days = now + timedelta(days=30)
+last_week  = now - timedelta(weeks=1)
+
+# Difference between two datetimes.
+d1 = datetime(2024, 1, 1, tzinfo=timezone.utc)
+d2 = datetime(2024, 5, 6, tzinfo=timezone.utc)
+delta = d2 - d1
+print(delta.days)          # 126
+print(delta.total_seconds())  # 10886400.0`,
+    explanation: "timedelta represents a duration in days, seconds, and microseconds. Subtract two datetime objects to get a timedelta; add a timedelta to a datetime to compute a future or past point. Always use tz-aware datetimes for cross-timezone math.",
+  },
+  {
+    id: "py-re-lookahead",
+    language: "python",
+    title: "Regex lookahead and lookbehind",
+    tag: "snippet",
+    code: `import re
+
+text = "price: $100, discount: $20, total: $80"
+
+# Positive lookahead: number followed by a comma.
+# re.findall r"\d+(?=,)" matches numbers before commas.
+print(re.findall(r"\d+(?=,)", text))   # ['100', '20']
+
+# Negative lookahead: word not followed by a digit.
+print(re.findall(r"\b\w+\b(?!\d)", "abc 123 def 456 ghi"))
+# ['abc', 'def', 'ghi']  — words not before digits
+
+# Lookbehind: number preceded by $.
+print(re.findall(r"(?<=\$)\d+", text))  # ['100', '20', '80']`,
+    explanation: "Lookaheads (?=...) and lookbehinds (?<=...) match positions without consuming characters — zero-width assertions. They allow complex conditions (like 'preceded by $') without including the surrounding text in the match.",
+  },
+  {
+    id: "py-classvar-annotation",
+    language: "python",
+    title: "ClassVar — class-level vs instance annotation",
+    tag: "types",
+    code: `from typing import ClassVar
+from dataclasses import dataclass
+
+@dataclass
+class Employee:
+    name: str
+    salary: float
+    # ClassVar: NOT included in __init__, repr, or comparison.
+    _headcount: ClassVar[int] = 0
+
+    def __post_init__(self) -> None:
+        Employee._headcount += 1
+
+e1 = Employee("Ada", 120_000)
+e2 = Employee("Linus", 95_000)
+print(Employee._headcount)  # 2
+print(e1._headcount)        # 2 — same class variable`,
+    explanation: "ClassVar[T] signals to both humans and type checkers that a field is a class variable shared across all instances, not per-instance. Dataclasses exclude ClassVar fields from __init__ and other generated methods.",
+  },
+  {
+    id: "py-re-named-groups",
+    language: "python",
+    title: "Named capture groups in regex",
+    tag: "snippet",
+    code: `import re
+
+log = "2024-05-06 12:30:00 ERROR disk full"
+
+pattern = re.compile(
+    r"(?P<date>\d{4}-\d{2}-\d{2}) "
+    r"(?P<time>\d{2}:\d{2}:\d{2}) "
+    r"(?P<level>\w+) "
+    r"(?P<message>.+)"
+)
+
+m = pattern.match(log)
+if m:
+    print(m.group("date"))    # 2024-05-06
+    print(m.group("level"))   # ERROR
+    print(m.groupdict())      # {'date':..., 'time':..., ...}`,
+    explanation: "Named groups (?P<name>...) make regex matches self-documenting and allow accessing captures by name instead of position number. groupdict() returns all named groups as a dict, ideal for structured log parsing.",
+  },
+  {
+    id: "py-urllib-parse",
+    language: "python",
+    title: "urllib.parse — URL manipulation",
+    tag: "snippet",
+    code: `from urllib.parse import urlparse, urljoin, urlencode, quote
+
+# Parse a URL.
+parsed = urlparse("https://example.com/path?q=hello&lang=en#section")
+print(parsed.scheme)    # https
+print(parsed.netloc)    # example.com
+print(parsed.path)      # /path
+print(parsed.query)     # q=hello&lang=en
+
+# Build query string.
+qs = urlencode({"q": "hello world", "page": 1})
+print(qs)   # q=hello+world&page=1
+
+# Percent-encode a path segment.
+print(quote("/path with spaces/"))  # /path%20with%20spaces/
+
+# Join relative URLs.
+print(urljoin("https://example.com/base/", "../other"))  # https://example.com/other`,
+    explanation: "urllib.parse is the standard library for URL construction and decomposition. urlencode handles query parameters; quote handles path-segment encoding. Always use these instead of manual string concatenation for URLs.",
+  },
+  {
+    id: "py-http-server",
+    language: "python",
+    title: "http.server — simple development server",
+    tag: "snippet",
+    code: `from http.server import HTTPServer, BaseHTTPRequestHandler
+
+class HelloHandler(BaseHTTPRequestHandler):
+    def do_GET(self) -> None:
+        body = b"Hello, World!"
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, *args) -> None:
+        pass   # silence default logging
+
+# Quick command-line server: python -m http.server 8080
+server = HTTPServer(("", 8080), HelloHandler)
+# server.serve_forever()   # uncomment to start`,
+    explanation: "http.server is the built-in HTTP server — useful for quick local file serving and API mocks during development. Never use it in production: it is single-threaded, has no HTTPS, and no rate limiting.",
+  },
+  {
+    id: "py-enum-unique",
+    language: "python",
+    title: "@unique decorator — prevent duplicate enum values",
+    tag: "caveats",
+    code: `from enum import Enum, unique
+
+@unique
+class Status(Enum):
+    ACTIVE   = 1
+    INACTIVE = 2
+    PENDING  = 3
+    # DUPLICATE = 1  # ValueError: duplicate values found
+
+# Without @unique, duplicate values create aliases.
+class AliasedEnum(Enum):
+    A = 1
+    B = 1    # B is an alias for A
+    C = 2
+
+print(AliasedEnum.B)        # AliasedEnum.A — alias resolves to original
+print(AliasedEnum.A is AliasedEnum.B)  # True`,
+    explanation: "@unique raises ValueError at class definition time if any two members share the same value. Without it, duplicate values silently become aliases — which is occasionally intentional but often a bug.",
+  },
+  {
+    id: "py-bytes-operations",
+    language: "python",
+    title: "bytes operations — search and decode",
+    tag: "snippet",
+    code: `data = b"Hello, World! Hello again."
+
+# Search.
+print(data.find(b"World"))     # 7
+print(data.count(b"Hello"))    # 2
+print(data.startswith(b"Hello"))  # True
+
+# Replace (returns new bytes — immutable).
+new_data = data.replace(b"Hello", b"Hi")
+print(new_data)
+
+# Decode to str.
+text = data.decode("utf-8")
+print(text.upper())
+
+# Split.
+lines = b"line1\nline2\nline3".split(b"\n")
+print(lines)   # [b'line1', b'line2', b'line3']`,
+    explanation: "bytes objects support most of the same methods as str (find, count, replace, split, startswith), but they operate on byte values. Always specify the encoding explicitly when calling decode().",
+  },
+  {
+    id: "py-int-methods",
+    language: "python",
+    title: "int bit manipulation methods",
+    tag: "snippet",
+    code: `n = 0b1010_1100   # 172
+
+# Bit length.
+print(n.bit_length())        # 8
+
+# Count set bits (Python 3.10+).
+print(n.bit_count())         # 4
+
+# Convert to bytes.
+b = n.to_bytes(length=2, byteorder="big")
+print(b.hex())               # 00ac
+
+# Parse from bytes.
+restored = int.from_bytes(b, byteorder="big")
+print(restored)              # 172
+
+# Convert to string with base.
+print(bin(n))   # 0b10101100
+print(hex(n))   # 0xac
+print(oct(n))   # 0o254`,
+    explanation: "Python's int has built-in methods for bit-level operations: bit_length, bit_count (3.10+), to_bytes/from_bytes for serialization, and the global bin/hex/oct for human-readable representations.",
+  },
+  {
+    id: "py-zoneinfo",
+    language: "python",
+    title: "zoneinfo — timezone-aware datetimes (3.9+)",
+    tag: "snippet",
+    code: `from datetime import datetime
+from zoneinfo import ZoneInfo
+
+# Timezone-aware datetime.
+utc   = datetime.now(tz=ZoneInfo("UTC"))
+ny    = datetime.now(tz=ZoneInfo("America/New_York"))
+tokyo = datetime.now(tz=ZoneInfo("Asia/Tokyo"))
+
+print(utc.isoformat())
+print(ny.isoformat())
+print(tokyo.isoformat())
+
+# Convert between timezones.
+meeting_utc = datetime(2024, 5, 6, 15, 0, tzinfo=ZoneInfo("UTC"))
+meeting_ny  = meeting_utc.astimezone(ZoneInfo("America/New_York"))
+print(meeting_ny)`,
+    explanation: "zoneinfo (3.9+) uses the IANA timezone database for accurate DST transitions. It replaces pytz as the standard timezone library. Use ZoneInfo('UTC') instead of datetime.timezone.utc for consistency.",
+  },
+  {
+    id: "py-graph-bfs",
+    language: "python",
+    title: "BFS — breadth-first graph traversal",
+    tag: "structures",
+    code: `from collections import deque
+from typing import Iterator
+
+Graph = dict[str, list[str]]
+
+def bfs(graph: Graph, start: str) -> Iterator[str]:
+    visited: set[str] = {start}
+    queue = deque([start])
+    while queue:
+        node = queue.popleft()
+        yield node
+        for neighbor in graph.get(node, []):
+            if neighbor not in visited:
+                visited.add(neighbor)
+                queue.append(neighbor)
+
+g: Graph = {"A": ["B", "C"], "B": ["D"], "C": ["D", "E"], "D": [], "E": []}
+print(list(bfs(g, "A")))   # ['A', 'B', 'C', 'D', 'E']`,
+    explanation: "BFS uses a deque for O(1) popleft, a visited set for O(1) membership, and a generator for lazy traversal. It finds the shortest path (fewest hops) in an unweighted graph.",
+  },
+  {
+    id: "py-graph-dfs",
+    language: "python",
+    title: "DFS — depth-first graph traversal",
+    tag: "structures",
+    code: `from typing import Iterator
+
+Graph = dict[str, list[str]]
+
+def dfs(graph: Graph, start: str,
+        visited: set[str] | None = None) -> Iterator[str]:
+    if visited is None:
+        visited = set()
+    visited.add(start)
+    yield start
+    for neighbor in graph.get(start, []):
+        if neighbor not in visited:
+            yield from dfs(graph, neighbor, visited)
+
+g: Graph = {"A": ["B", "C"], "B": ["D"], "C": ["D", "E"], "D": [], "E": []}
+print(list(dfs(g, "A")))   # ['A', 'B', 'D', 'C', 'E']`,
+    explanation: "Recursive DFS is clear but risks RecursionError on deep graphs. For production use, implement iterative DFS with an explicit stack. The visited set prevents infinite loops in graphs with cycles.",
+  },
+  {
+    id: "py-topological-sort",
+    language: "python",
+    title: "Topological sort with graphlib (Python 3.9+)",
+    tag: "structures",
+    code: `from graphlib import TopologicalSorter
+
+# Build a dependency graph: {node: {dependencies}}.
+graph = {
+    "build":   {"test"},
+    "test":    {"lint", "typecheck"},
+    "lint":    set(),
+    "typecheck": set(),
+    "deploy":  {"build"},
+}
+
+ts = TopologicalSorter(graph)
+order = list(ts.static_order())
+print(order)
+# ['lint', 'typecheck', 'test', 'build', 'deploy']`,
+    explanation: "graphlib.TopologicalSorter (3.9+) implements Kahn's algorithm. static_order() returns one valid topological order. It raises CycleError if the graph has a cycle. Use it for build systems and task schedulers.",
+  },
+  {
+    id: "py-class-body-exec",
+    language: "python",
+    title: "Class body execution — order and namespace",
+    tag: "understanding",
+    code: `class Meta:
+    # Class body is executed top-to-bottom like a function.
+    print("class body runs at definition time")
+
+    x = 10
+    y = x * 2   # x is available here
+
+    # Can call functions.
+    def _helper():
+        return 99
+    z = _helper()
+
+    # But 'self' doesn't exist in class scope.
+    # You can't use methods here — only at instance level.
+
+print(Meta.x, Meta.y, Meta.z)  # 10 20 99`,
+    explanation: "The class body executes in a fresh namespace dict. Variables defined in the body become class attributes. Methods are just functions added to the namespace. This is why classmethod/staticmethod decorators exist — regular functions don't receive the class or instance automatically.",
+  },
+  {
+    id: "py-object-model",
+    language: "python",
+    title: "Python object model — attribute lookup chain",
+    tag: "understanding",
+    code: `class A:
+    x = 10           # class attribute
+    def method(self): return "A.method"
+
+a = A()
+a.x = 99            # instance attribute shadows class attribute
+print(a.x)          # 99  — instance dict found first
+print(A.x)          # 10  — class dict
+
+del a.x
+print(a.x)          # 10  — falls back to class dict
+
+# Lookup order: instance.__dict__ → type.__dict__ → base class __dict__
+# Descriptors (properties, methods) intercept this chain.`,
+    explanation: "Python attribute lookup searches the instance's __dict__ first, then the class's __dict__ (and its MRO) for data descriptors, then the instance dict, then non-data descriptors. Understanding this chain explains how properties, slots, and class attributes interact.",
+  },
+  {
+    id: "py-global-interpreter-lock",
+    language: "python",
+    title: "GIL — Global Interpreter Lock",
+    tag: "understanding",
+    code: `# The GIL is a mutex in CPython that prevents multiple threads
+# from executing Python bytecode simultaneously.
+
+# Implication: CPU-bound threads don't benefit from multi-core.
+import threading, time
+
+def cpu_bound(n):
+    while n > 0: n -= 1
+
+t1 = threading.Thread(target=cpu_bound, args=(10**7,))
+t2 = threading.Thread(target=cpu_bound, args=(10**7,))
+# Running t1+t2 together is no faster than sequentially.
+
+# Solutions for CPU-bound parallelism:
+# 1. multiprocessing (separate processes, no GIL)
+# 2. concurrent.futures.ProcessPoolExecutor
+# 3. Cython / C extensions (can release GIL)
+# 4. Free-threaded CPython (Python 3.13, experimental)`,
+    explanation: "The GIL allows only one thread to execute Python bytecode at a time. I/O-bound threads work fine (GIL released during I/O waits). For CPU-bound parallelism, use multiprocessing or C extensions that release the GIL.",
+  },
+  {
+    id: "py-comprehension-scope",
+    language: "python",
+    title: "Comprehension scope isolation",
+    tag: "caveats",
+    code: `# Python 3: comprehensions have their own scope.
+x = 10
+result = [x for x in range(5)]   # 'x' inside is isolated
+print(x)   # 10 — outer x unchanged
+
+# Generator expressions also isolated.
+gen = (x * 2 for x in range(3))
+print(x)   # still 10
+
+# But walrus operator DOES leak from comprehensions.
+nums = [1, 2, 3]
+result = [last := n for n in nums]
+print(last)   # 3 — leaked from comprehension`,
+    explanation: "List/set/dict comprehensions and generator expressions have their own scope in Python 3 — the iteration variable does not bleed into the enclosing scope. The walrus operator is the notable exception: it always assigns to the enclosing scope.",
+  },
+  {
+    id: "py-generator-memory",
+    language: "python",
+    title: "Generator memory efficiency vs list",
+    tag: "understanding",
+    code: `import sys
+
+# List materializes all 1 million items in memory.
+lst = [x * x for x in range(1_000_000)]
+print(sys.getsizeof(lst))   # ~8 MB
+
+# Generator produces items on demand — constant memory.
+gen = (x * x for x in range(1_000_000))
+print(sys.getsizeof(gen))   # ~112 bytes
+
+# Useful for large files.
+def read_lines(path: str):
+    with open(path) as f:
+        yield from f   # yields one line at a time, never fully loaded`,
+    explanation: "A generator expression uses constant memory regardless of how many items it produces. Use generators (and yield from) when processing large sequences where you only need one item at a time.",
+  },
+  {
+    id: "py-sorted-vs-sort",
+    language: "python",
+    title: "sorted() vs list.sort() — in-place vs new",
+    tag: "snippet",
+    code: `data = [3, 1, 4, 1, 5, 9, 2, 6]
+
+# sorted(): returns a new list — original unchanged.
+result = sorted(data)
+print(data)    # [3, 1, 4, 1, 5, 9, 2, 6] — unchanged
+print(result)  # [1, 1, 2, 3, 4, 5, 6, 9]
+
+# list.sort(): in-place, returns None.
+data.sort(reverse=True)
+print(data)    # [9, 6, 5, 4, 3, 2, 1, 1]
+
+# Both accept key and reverse.
+words = ["banana", "Apple", "cherry"]
+print(sorted(words, key=str.lower))   # ['Apple', 'banana', 'cherry']`,
+    explanation: "sorted() creates a new list — use it on tuples, generators, and when you need the original unchanged. list.sort() sorts in-place with O(1) extra memory. Both use Timsort: O(n log n) worst case, O(n) for nearly sorted data.",
+  },
+  {
+    id: "py-set-operations",
+    language: "python",
+    title: "Set operations — union, intersection, difference",
+    tag: "structures",
+    code: `a = {1, 2, 3, 4}
+b = {3, 4, 5, 6}
+
+# Operator syntax.
+print(a | b)    # {1, 2, 3, 4, 5, 6}  — union
+print(a & b)    # {3, 4}              — intersection
+print(a - b)    # {1, 2}              — difference
+print(a ^ b)    # {1, 2, 5, 6}        — symmetric difference
+
+# Method syntax — accepts any iterable, not just sets.
+print(a.union([5, 6]))         # {1, 2, 3, 4, 5, 6}
+print(a.issubset({1,2,3,4,5})) # True
+print(a.isdisjoint({7, 8}))    # True`,
+    explanation: "Set operations are implemented efficiently using hash tables — union, intersection, and difference are O(min(m,n)) to O(m+n). The method forms accept any iterable; the operator forms require both operands to be sets.",
+  },
+  {
+    id: "py-enumerate-start",
+    language: "python",
+    title: "enumerate with start parameter",
+    tag: "snippet",
+    code: `items = ["a", "b", "c", "d"]
+
+# Default: starts at 0.
+for i, item in enumerate(items):
+    print(i, item)
+# 0 a  1 b  2 c  3 d
+
+# Start at 1 for human-friendly numbering.
+for i, item in enumerate(items, start=1):
+    print(f"{i}. {item}")
+# 1. a  2. b  3. c  4. d
+
+# Unpack directly into more variables.
+pairs = [(1, "one"), (2, "two")]
+for i, (num, word) in enumerate(pairs):
+    print(i, num, word)`,
+    explanation: "enumerate(iterable, start=N) produces (N, item[0]), (N+1, item[1]), ... pairs. The start parameter makes 1-based numbering trivial. Prefer enumerate over manual index tracking with range(len(lst)).",
+  },
 ];
+
 
 
 

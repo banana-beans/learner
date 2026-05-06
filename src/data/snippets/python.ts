@@ -2676,7 +2676,1861 @@ print([c.__name__ for c in D.__mro__])
 # This is why cooperative super() chains correctly without skipping.`,
     explanation: "Understanding the MRO is essential when using multiple inheritance. Print __mro__ whenever you're unsure which method will be called.",
   },
+  {
+    id: "py-groupby-itertools",
+    language: "python",
+    title: "itertools.groupby",
+    tag: "snippet",
+    code: `from itertools import groupby
+
+# groupby groups CONSECUTIVE equal elements — sort first if you want all groups.
+data = sorted([("a", 1), ("b", 2), ("a", 3), ("b", 4)], key=lambda x: x[0])
+
+for key, group in groupby(data, key=lambda x: x[0]):
+    items = list(group)
+    print(f"{key}: {items}")
+# a: [('a', 1), ('a', 3)]
+# b: [('b', 2), ('b', 4)]`,
+    explanation: "groupby yields (key, group-iterator) pairs. The group iterator is consumed lazily — always convert to list() before the next iteration of the outer loop.",
+  },
+  {
+    id: "py-product-itertools",
+    language: "python",
+    title: "itertools.product — cartesian product",
+    tag: "snippet",
+    code: `from itertools import product
+
+# product(*iters) is the Cartesian product — all combinations.
+for suit, rank in product("SH", range(1, 4)):
+    print(f"{rank}{suit}", end=" ")
+# 1S 2S 3S 1H 2H 3H
+
+# With repeat= for the same iterable multiple times:
+from itertools import product as prod
+binary = list(prod([0, 1], repeat=3))
+print(binary)
+# [(0,0,0),(0,0,1),(0,1,0),(0,1,1),(1,0,0),(1,0,1),(1,1,0),(1,1,1)]`,
+    explanation: "product replaces nested for loops. repeat=n is shorthand for product(it, it, ...) n times — useful for generating n-bit combinations.",
+  },
+  {
+    id: "py-combinations-permutations",
+    language: "python",
+    title: "combinations and permutations",
+    tag: "snippet",
+    code: `from itertools import combinations, permutations
+
+items = ["A", "B", "C"]
+
+# combinations: no repetition, order doesn't matter.
+print(list(combinations(items, 2)))
+# [('A', 'B'), ('A', 'C'), ('B', 'C')]
+
+# permutations: no repetition, order DOES matter.
+print(list(permutations(items, 2)))
+# [('A','B'),('A','C'),('B','A'),('B','C'),('C','A'),('C','B')]`,
+    explanation: "combinations(n,r) gives C(n,r) tuples; permutations(n,r) gives P(n,r). Use combinations_with_replacement when repetition is allowed.",
+  },
+  {
+    id: "py-map-filter",
+    language: "python",
+    title: "map() and filter()",
+    tag: "snippet",
+    code: `nums = [1, 2, 3, 4, 5, 6]
+
+# map(func, iter): apply func to each element — lazy.
+doubled = list(map(lambda x: x * 2, nums))
+print(doubled)   # [2, 4, 6, 8, 10, 12]
+
+# filter(pred, iter): keep items where pred returns True — lazy.
+evens = list(filter(lambda x: x % 2 == 0, nums))
+print(evens)   # [2, 4, 6]
+
+# List comprehensions are usually clearer:
+# [x*2 for x in nums]  vs  list(map(...))`,
+    explanation: "map() and filter() are fine but list comprehensions are more Pythonic for most cases. Use map/filter when passing them to other higher-order functions.",
+  },
+  {
+    id: "py-reduce-accumulate",
+    language: "python",
+    title: "itertools.accumulate — running totals",
+    tag: "snippet",
+    code: `from itertools import accumulate
+import operator
+
+data = [1, 2, 3, 4, 5]
+
+# accumulate yields running aggregates.
+print(list(accumulate(data)))                       # [1, 3, 6, 10, 15] — prefix sums
+print(list(accumulate(data, operator.mul)))         # [1, 2, 6, 24, 120] — running product
+print(list(accumulate(data, max)))                  # [1, 2, 3, 4, 5]    — running max`,
+    explanation: "accumulate is the scan (prefix reduction) operation. It's faster than computing each prefix sum manually and works with any binary function.",
+  },
+  {
+    id: "py-string-template",
+    language: "python",
+    title: "string.Template for user-supplied templates",
+    tag: "snippet",
+    code: `from string import Template
+
+# Template uses $variable or \${variable} syntax.
+# Safer than f-strings for user-supplied templates — no arbitrary code execution.
+tmpl = Template("Hello, $name! You have $count messages.")
+result = tmpl.substitute(name="Ada", count=5)
+print(result)   # Hello, Ada! You have 5 messages.
+
+# safe_substitute: leaves $vars as-is if key is missing instead of raising.
+partial = Template("Hello, $name! $missing_var")
+print(partial.safe_substitute(name="Linus"))  # Hello, Linus! $missing_var`,
+    explanation: "Use Template instead of f-strings when the template itself comes from user input or a config file — f-string evaluation can execute arbitrary code.",
+  },
+  {
+    id: "py-re-basics",
+    language: "python",
+    title: "re module basics",
+    tag: "snippet",
+    code: `import re
+
+# re.match: anchored at start; re.search: anywhere in string.
+print(re.match(r"\d+", "123abc").group())     # 123
+print(re.search(r"\d+", "abc123xyz").group()) # 123
+
+# re.findall: list of all matches.
+print(re.findall(r"\d+", "10 cats and 20 dogs"))  # ['10', '20']
+
+# Compile for reuse:
+pattern = re.compile(r"\b[A-Z][a-z]+\b")
+print(pattern.findall("Hello World, from Ada"))   # ['Hello', 'World', 'Ada']`,
+    explanation: "Always use raw strings (r'...') for regex patterns to avoid double-escaping backslashes. Compile patterns that are used more than once.",
+  },
+  {
+    id: "py-contextmanager-stack",
+    language: "python",
+    title: "contextlib.ExitStack",
+    tag: "snippet",
+    code: `from contextlib import ExitStack
+
+files = ["a.txt", "b.txt", "c.txt"]
+
+# ExitStack manages a dynamic number of context managers.
+# All are closed on exit, even if some fail.
+with ExitStack() as stack:
+    handles = [stack.enter_context(open(f, "w")) for f in files]
+    for i, f in enumerate(handles):
+        f.write(f"file {i}")
+# All three files closed here`,
+    explanation: "ExitStack is the solution when you don't know at write time how many context managers you'll need. It's also useful for conditionally enabling context managers.",
+  },
+  {
+    id: "py-dataclass-field",
+    language: "python",
+    title: "dataclass field() for defaults",
+    tag: "snippet",
+    code: `from dataclasses import dataclass, field
+
+@dataclass
+class Config:
+    host: str = "localhost"
+    port: int = 5432
+    tags: list[str] = field(default_factory=list)   # fresh list per instance
+    metadata: dict = field(default_factory=dict)
+
+c1 = Config()
+c2 = Config()
+c1.tags.append("prod")
+print(c1.tags)   # ['prod']
+print(c2.tags)   # []  — independent lists`,
+    explanation: "Use field(default_factory=...) for mutable defaults in dataclasses. A shared default_factory is called fresh for each instance — no mutable-default-arg trap.",
+  },
+  {
+    id: "py-slots-dataclass",
+    language: "python",
+    title: "dataclass with __slots__",
+    tag: "snippet",
+    code: `from dataclasses import dataclass
+
+# slots=True (Python 3.10+): generates __slots__ automatically on a dataclass.
+@dataclass(slots=True)
+class Point:
+    x: float
+    y: float
+
+p = Point(1.0, 2.0)
+print(p.x, p.y)   # 1.0 2.0
+# p.z = 3.0       # AttributeError — no __dict__
+
+import sys
+print(sys.getsizeof(p))   # ~56 bytes vs ~232 for regular dataclass`,
+    explanation: "slots=True in Python 3.10+ gives you the memory savings of __slots__ with the ergonomics of @dataclass. Requires Python 3.10+.",
+  },
+  {
+    id: "py-dataclass-post-init",
+    language: "python",
+    title: "dataclass __post_init__",
+    tag: "classes",
+    code: `from dataclasses import dataclass
+
+@dataclass
+class BoundedInt:
+    value: int
+    lo: int = 0
+    hi: int = 100
+
+    def __post_init__(self):
+        # Runs after __init__ is generated — good for validation.
+        if not (self.lo <= self.value <= self.hi):
+            raise ValueError(f"{self.value} not in [{self.lo}, {self.hi}]")
+
+b = BoundedInt(50)
+print(b.value)         # 50
+# BoundedInt(200)      # ValueError: 200 not in [0, 100]`,
+    explanation: "__post_init__ is the hook for validation and derived-field computation in dataclasses. It runs after the auto-generated __init__ sets all fields.",
+  },
+  {
+    id: "py-typing-overload",
+    language: "python",
+    title: "@overload for multiple call signatures",
+    tag: "types",
+    code: `from typing import overload
+
+# @overload declares separate type signatures for different call patterns.
+# Only the last implementation (without @overload) executes.
+@overload
+def process(value: int) -> int: ...
+@overload
+def process(value: str) -> str: ...
+
+def process(value):   # implementation — no annotation needed
+    if isinstance(value, int):
+        return value * 2
+    return value.upper()
+
+print(process(5))       # 10
+print(process("hi"))    # HI`,
+    explanation: "@overload lets type checkers understand multiple valid call signatures. At runtime only the non-decorated implementation exists — the stubs are stripped out.",
+  },
+  {
+    id: "py-pep695-generics",
+    language: "python",
+    title: "Type parameter syntax (3.12)",
+    tag: "types",
+    code: `# Python 3.12+: built-in type parameter syntax — no TypeVar imports.
+def first[T](items: list[T]) -> T | None:
+    return items[0] if items else None
+
+class Stack[T]:
+    def __init__(self) -> None: self._items: list[T] = []
+    def push(self, item: T) -> None: self._items.append(item)
+    def pop(self) -> T: return self._items.pop()
+
+s: Stack[int] = Stack()
+s.push(1)
+print(s.pop())   # 1`,
+    explanation: "Python 3.12 adds [T] syntax to def and class — no need to import TypeVar. The type parameter is scoped to the function or class definition.",
+  },
+  {
+    id: "py-protocol-runtime",
+    language: "python",
+    title: "Runtime-checkable Protocol",
+    tag: "types",
+    code: `from typing import Protocol, runtime_checkable
+
+# @runtime_checkable makes isinstance() work with Protocols.
+@runtime_checkable
+class Sized(Protocol):
+    def __len__(self) -> int: ...
+
+print(isinstance([1, 2, 3], Sized))   # True — lists have __len__
+print(isinstance("hello", Sized))     # True — strings have __len__
+print(isinstance(42, Sized))          # False — ints don't
+
+# Without @runtime_checkable, isinstance raises TypeError.`,
+    explanation: "runtime_checkable Protocols support isinstance() checks at the cost of only checking method existence (not signatures). Use it sparingly — structural typing is the real benefit.",
+  },
+  {
+    id: "py-typevar-constraints",
+    language: "python",
+    title: "TypeVar with explicit constraints",
+    tag: "types",
+    code: `from typing import TypeVar
+
+# Constrained TypeVar: T can only be int or str — not float, not list.
+Number = TypeVar("Number", int, float)
+Text   = TypeVar("Text",   str, bytes)
+
+def double(x: Number) -> Number:
+    return x * 2
+
+print(double(5))     # 10
+print(double(2.5))   # 5.0
+# double([1, 2])     # type error — list not in constraints`,
+    explanation: "Constrained TypeVars restrict T to a finite set of types (unlike bound=, which allows any subtype). The return type is the exact type passed in.",
+  },
+  {
+    id: "py-abc-register",
+    language: "python",
+    title: "ABC.register — virtual subclasses",
+    tag: "classes",
+    code: `from abc import ABC
+
+class Drawable(ABC): pass
+
+class Widget: pass        # doesn't inherit Drawable
+
+# Register Widget as a virtual subclass of Drawable.
+Drawable.register(Widget)
+
+print(isinstance(Widget(), Drawable))   # True
+print(issubclass(Widget, Drawable))     # True
+
+# Widget still doesn't inherit any Drawable methods —
+# it just passes the isinstance check.`,
+    explanation: "register() makes existing classes (including third-party ones) satisfy a protocol check without touching their source code. Useful for adapting legacy code to new ABCs.",
+  },
+  {
+    id: "py-class-getitem",
+    language: "python",
+    title: "__class_getitem__ for subscript syntax",
+    tag: "classes",
+    code: `# __class_getitem__ enables Type[arg] subscript syntax on custom classes.
+class TypedList:
+    def __init__(self, type_):
+        self._type = type_
+        self._items = []
+
+    def append(self, item):
+        if not isinstance(item, self._type):
+            raise TypeError(f"expected {self._type.__name__}")
+        self._items.append(item)
+
+    def __class_getitem__(cls, item):
+        return cls(item)
+
+ints = TypedList[int]
+ints.append(5)
+# ints.append("x")   # TypeError`,
+    explanation: "__class_getitem__ is how list[int], dict[str, int] etc. work — it returns a runtime annotation object. You can use it to build runtime-typed containers.",
+  },
+  {
+    id: "py-comprehension-walrus",
+    language: "python",
+    title: "Walrus in comprehensions",
+    tag: "snippet",
+    code: `import re
+
+# Walrus operator (:=) lets you capture intermediate results in a comprehension.
+data = ["100px", "invalid", "200em", "300px", "bad"]
+
+# Without walrus: need to call re.match twice or use a helper.
+# With walrus: match once, filter and extract in one expression.
+parsed = [
+    (m.group(1), m.group(2))
+    for s in data
+    if (m := re.match(r"(\d+)(px|em)", s))
+]
+print(parsed)   # [('100', 'px'), ('200', 'em'), ('300', 'px')]`,
+    explanation: "The walrus operator in comprehension filters lets you compute an expensive expression once and use the result in both the condition and the output expression.",
+  },
+  {
+    id: "py-conditional-expression-chain",
+    language: "python",
+    title: "Avoid chained ternaries",
+    tag: "caveats",
+    code: `score = 75
+
+# READABLE: plain if/elif/else
+if score >= 90:   grade = "A"
+elif score >= 80: grade = "B"
+elif score >= 70: grade = "C"
+else:             grade = "F"
+
+# UNREADABLE: chained ternaries — don't do this.
+grade2 = "A" if score >= 90 else "B" if score >= 80 else "C" if score >= 70 else "F"
+
+# A lookup dict is often the best approach for grade tables:
+import bisect
+breakpoints, grades = [70, 80, 90], ["C", "B", "A"]
+grade3 = grades[bisect.bisect_left(breakpoints, score)] if score >= 70 else "F"`,
+    explanation: "Ternaries are fine for simple two-way choices. Chained ternaries are hard to read and should be replaced with if/elif chains or data-driven lookup tables.",
+  },
+  {
+    id: "py-unpacking-assignment",
+    language: "python",
+    title: "Tuple unpacking patterns",
+    tag: "snippet",
+    code: `# Basic unpacking
+a, b = 1, 2
+
+# Swap without temp variable
+a, b = b, a
+print(a, b)   # 2 1
+
+# Nested unpacking
+(x, y), z = (1, 2), 3
+print(x, y, z)   # 1 2 3
+
+# Discard with _
+first, _, last = [10, 20, 30]
+print(first, last)   # 10 30
+
+# Extended: first, *rest
+head, *rest = range(5)
+print(head, rest)   # 0 [1, 2, 3, 4]`,
+    explanation: "Python's unpacking is powerful and composable. The _ convention for discarded variables is widely recognised but any valid name works.",
+  },
+  {
+    id: "py-walrus-while",
+    language: "python",
+    title: "Walrus in while loops",
+    tag: "snippet",
+    code: `import io
+
+# Walrus is ideal for 'read until empty' patterns.
+data = io.BytesIO(b"hello world")
+
+# Without walrus: must initialise before the loop.
+# chunk = data.read(4)
+# while chunk:
+#     process(chunk)
+#     chunk = data.read(4)
+
+# With walrus: read-and-test in one expression.
+while chunk := data.read(4):
+    print(chunk)
+# b'hell'
+# b'o wo'
+# b'rld'`,
+    explanation: "The walrus operator was designed for this exact pattern. It's cleaner than the read-first-then-loop setup that requires the read call to appear twice.",
+  },
+  {
+    id: "py-exception-groups",
+    language: "python",
+    title: "Exception groups (3.11+)",
+    tag: "caveats",
+    code: `# ExceptionGroup bundles multiple exceptions — useful for async concurrent errors.
+try:
+    raise ExceptionGroup("batch", [
+        ValueError("bad value"),
+        TypeError("bad type"),
+        KeyError("bad key"),
+    ])
+except* ValueError as eg:
+    print(f"ValueErrors: {[str(e) for e in eg.exceptions]}")
+except* TypeError as eg:
+    print(f"TypeErrors: {[str(e) for e in eg.exceptions]}")
+
+# 'except*' matches a subset of the group; others re-raise automatically.`,
+    explanation: "ExceptionGroup and 'except*' (Python 3.11+) handle scenarios where multiple concurrent tasks each raise — asyncio.TaskGroup uses this mechanism.",
+  },
+  {
+    id: "py-match-guards",
+    language: "python",
+    title: "match with guards",
+    tag: "snippet",
+    code: `def classify(point):
+    match point:
+        case (x, y) if x == y:
+            return f"diagonal at {x}"
+        case (x, y) if x == 0:
+            return f"y-axis at {y}"
+        case (x, y) if y == 0:
+            return f"x-axis at {x}"
+        case (x, y):
+            return f"general ({x}, {y})"
+
+print(classify((3, 3)))    # diagonal at 3
+print(classify((0, 5)))    # y-axis at 5
+print(classify((4, 0)))    # x-axis at 4
+print(classify((2, 7)))    # general (2, 7)`,
+    explanation: "Guards (if-clauses after a pattern) add arbitrary conditions to pattern matching. They're evaluated only if the structural pattern matches first.",
+  },
+  {
+    id: "py-slots-inheritance",
+    language: "python",
+    title: "__slots__ with inheritance",
+    tag: "classes",
+    code: `# If a parent has __dict__, the child also has __dict__ — slots savings disappear.
+# To preserve savings, ALL classes in the hierarchy need __slots__.
+
+class Base:
+    __slots__ = ("x",)
+    def __init__(self, x): self.x = x
+
+class Child(Base):
+    __slots__ = ("y",)   # only new attributes here
+    def __init__(self, x, y):
+        super().__init__(x)
+        self.y = y
+
+c = Child(1, 2)
+print(c.x, c.y)   # 1 2
+# c.z = 3          # AttributeError — no __dict__`,
+    explanation: "Each class in a slots hierarchy only declares its own new slots. If any ancestor has __dict__, the subclass will too — defeating the purpose.",
+  },
+  {
+    id: "py-contextlib-suppress",
+    language: "python",
+    title: "contextlib.suppress",
+    tag: "snippet",
+    code: `from contextlib import suppress
+
+# suppress(ExcType) silently ignores the specified exception within the block.
+with suppress(FileNotFoundError):
+    import os
+    os.remove("/tmp/non_existent_file.txt")
+# No crash — cleaner than try/except/pass
+
+with suppress(KeyError, IndexError):
+    d = {}
+    print(d["missing"])   # KeyError suppressed — execution continues after the block`,
+    explanation: "contextlib.suppress is the idiomatic way to write 'ignore this exception'. It's cleaner than try/except/pass and explicitly names the suppressed type.",
+  },
+  {
+    id: "py-io-stringio",
+    language: "python",
+    title: "io.StringIO — in-memory text file",
+    tag: "structures",
+    code: `import io
+
+# StringIO behaves like an open text file — useful for testing.
+buf = io.StringIO()
+buf.write("line one\n")
+buf.write("line two\n")
+
+buf.seek(0)                     # rewind to start
+print(buf.read())               # line one\nline two\n
+print(buf.getvalue())           # same as read() after rewind
+
+# Capture print() output:
+import sys
+old_stdout = sys.stdout
+sys.stdout = io.StringIO()
+print("captured")
+output = sys.stdout.getvalue()
+sys.stdout = old_stdout
+print(f"got: {output!r}")       # got: 'captured\n'`,
+    explanation: "StringIO (and BytesIO) let you test code that writes to files without touching the filesystem. Swap sys.stdout to capture print() output in tests.",
+  },
+  {
+    id: "py-dataclass-kw-only",
+    language: "python",
+    title: "dataclass kw_only",
+    tag: "classes",
+    code: `from dataclasses import dataclass
+
+# kw_only=True forces all fields to be keyword-only arguments in __init__.
+@dataclass(kw_only=True)
+class Connection:
+    host: str
+    port: int = 5432
+    ssl: bool = False
+
+# c = Connection("localhost")     # TypeError — must use keywords
+c = Connection(host="localhost", ssl=True)
+print(c)   # Connection(host='localhost', port=5432, ssl=True)`,
+    explanation: "kw_only=True (Python 3.10+) prevents accidental positional passing of fields and makes calls self-documenting. Can also be set per-field with field(kw_only=True).",
+  },
+  {
+    id: "py-match-class-patterns",
+    language: "python",
+    title: "match class patterns",
+    tag: "snippet",
+    code: `from dataclasses import dataclass
+
+@dataclass
+class Point: x: float; y: float
+@dataclass
+class Circle: center: Point; radius: float
+
+def describe(shape):
+    match shape:
+        case Circle(center=Point(x=0, y=0), radius=r):
+            return f"circle at origin, r={r}"
+        case Circle(center=Point(x=cx, y=cy), radius=r):
+            return f"circle at ({cx},{cy}), r={r}"
+        case Point(x=0, y=0):
+            return "origin"
+        case _:
+            return "unknown"
+
+print(describe(Circle(Point(0,0), 5)))      # circle at origin, r=5
+print(describe(Circle(Point(1,2), 3)))      # circle at (1,2), r=3`,
+    explanation: "Class patterns match by type and can destructure fields by name. Nesting class patterns handles tree-shaped data without recursion.",
+  },
+  {
+    id: "py-re-groups",
+    language: "python",
+    title: "Named capture groups in regex",
+    tag: "snippet",
+    code: `import re
+
+# (?P<name>...) creates a named group accessible via .group(name).
+pattern = re.compile(r"(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})")
+m = pattern.match("2024-06-15")
+
+if m:
+    print(m.group("year"))    # 2024
+    print(m.group("month"))   # 06
+    print(m.groupdict())      # {'year': '2024', 'month': '06', 'day': '15'}`,
+    explanation: "Named groups make regex results self-documenting. groupdict() returns a plain dict — easy to pass to datetime() or other constructors.",
+  },
+  {
+    id: "py-json-module",
+    language: "python",
+    title: "json module basics",
+    tag: "snippet",
+    code: `import json
+
+data = {"name": "Ada", "scores": [95, 87, 92], "active": True}
+
+# Serialise to string:
+s = json.dumps(data, indent=2)
+print(s)
+
+# Deserialise back:
+loaded = json.loads(s)
+print(loaded["name"])   # Ada
+
+# File I/O:
+# with open("data.json", "w") as f: json.dump(data, f, indent=2)
+# with open("data.json") as f: loaded = json.load(f)`,
+    explanation: "json.dumps/loads for strings; json.dump/load for files. Python dicts, lists, strings, numbers, booleans, and None map directly to JSON types.",
+  },
+  {
+    id: "py-subprocess-run",
+    language: "python",
+    title: "subprocess.run",
+    tag: "snippet",
+    code: `import subprocess
+
+# subprocess.run: run a command, wait for it to finish, return CompletedProcess.
+result = subprocess.run(
+    ["echo", "hello world"],
+    capture_output=True,
+    text=True,
+    check=True,         # raises CalledProcessError on non-zero exit code
+)
+print(result.stdout)     # hello world
+print(result.returncode) # 0
+
+# Never use shell=True with user-supplied input — command injection risk.`,
+    explanation: "subprocess.run is the modern API for running external commands. capture_output=True captures stdout/stderr. check=True raises on failure — fail-fast by default.",
+  },
+  {
+    id: "py-logging-basics",
+    language: "python",
+    title: "logging module basics",
+    tag: "snippet",
+    code: `import logging
+
+# Configure once at startup.
+logging.basicConfig(level=logging.DEBUG, format="%(levelname)s %(name)s: %(message)s")
+log = logging.getLogger(__name__)
+
+log.debug("debug detail")   # DEBUG __main__: debug detail
+log.info("started")         # INFO  __main__: started
+log.warning("low disk")     # WARNING __main__: low disk
+log.error("connection lost")
+
+# Never use print() for application logging — levels, handlers, and formatters
+# make the logging module worth the boilerplate.`,
+    explanation: "Use logging, not print(), for diagnostics. Levels let you filter verbosity at runtime without changing code. Libraries should use getLogger(__name__).",
+  },
+  {
+    id: "py-pathlib-glob",
+    language: "python",
+    title: "pathlib glob and rglob",
+    tag: "stdlib",
+    code: `from pathlib import Path
+
+p = Path(".")
+# glob: matches within this directory.
+py_files = list(p.glob("*.py"))
+
+# rglob: recursive — same as glob("**/*.py").
+all_py = list(p.rglob("*.py"))
+
+# Path.iterdir(): iterate directory entries (non-recursive).
+for entry in p.iterdir():
+    if entry.is_dir():
+        print(f"dir:  {entry.name}")
+    else:
+        print(f"file: {entry.name}")`,
+    explanation: "pathlib.glob/rglob return generators of Path objects — composable with any Path methods. rglob is glob('**/<pattern>') — much cleaner than os.walk.",
+  },
+  {
+    id: "py-collections-namedtuple-defaults",
+    language: "python",
+    title: "NamedTuple with defaults",
+    tag: "structures",
+    code: `from typing import NamedTuple
+
+class Config(NamedTuple):
+    host: str
+    port: int = 5432
+    ssl:  bool = False
+
+c = Config("localhost")
+print(c)           # Config(host='localhost', port=5432, ssl=False)
+print(c._asdict()) # {'host': 'localhost', 'port': 5432, 'ssl': False}
+
+# _replace: non-destructive update (like dataclass 'with' expression).
+c2 = c._replace(ssl=True)
+print(c2)          # Config(host='localhost', port=5432, ssl=True)`,
+    explanation: "typing.NamedTuple supports default values and type annotations. _replace() and _asdict() are the canonical mutation and serialisation methods.",
+  },
+  {
+    id: "py-classvar",
+    language: "python",
+    title: "ClassVar — typed class attributes",
+    tag: "types",
+    code: `from typing import ClassVar
+from dataclasses import dataclass
+
+@dataclass
+class Counter:
+    # ClassVar: tells type checkers this is a class-level attribute, not an instance field.
+    # dataclass won't generate __init__ parameters for ClassVar fields.
+    count: ClassVar[int] = 0
+    name: str
+
+    def __post_init__(self):
+        Counter.count += 1
+
+a = Counter("a")
+b = Counter("b")
+print(Counter.count)   # 2
+print(Counter.count == a.count)  # True — both read the class var`,
+    explanation: "ClassVar marks a field as shared state — dataclass skips it in __init__. Without ClassVar, dataclass would try to pass count as a constructor argument.",
+  },
+  {
+    id: "py-iobase-protocol",
+    language: "python",
+    title: "Duck typing with file-like objects",
+    tag: "families",
+    code: `import io
+
+# Any object with .read() / .write() behaves as a file.
+# This is the duck-typed file protocol.
+def process(stream):
+    return stream.read().upper()
+
+# Works with real files, StringIO, BytesIO, network sockets, etc.
+print(process(io.StringIO("hello")))     # HELLO
+
+# The abstract base io.IOBase / io.RawIOBase / io.TextIOBase
+# can be used in isinstance() checks:
+f = io.StringIO()
+print(isinstance(f, io.IOBase))   # True`,
+    explanation: "Python's I/O is built on duck typing — any object with the right methods is a file. Always accept a 'file-like object' rather than forcing callers to use a real file.",
+  },
+  {
+    id: "py-operator-module",
+    language: "python",
+    title: "operator module for functional code",
+    tag: "snippet",
+    code: `import operator
+
+# operator functions are faster and cleaner than lambdas for common operations.
+from functools import reduce
+
+nums = [1, 2, 3, 4, 5]
+print(reduce(operator.add, nums))   # 15 — same as sum()
+print(reduce(operator.mul, nums))   # 120
+
+# itemgetter and attrgetter for sorted() / map():
+records = [{"name": "b", "age": 2}, {"name": "a", "age": 1}]
+print(sorted(records, key=operator.itemgetter("name")))`,
+    explanation: "operator module functions are faster than equivalent lambdas because they avoid Python function-call overhead. Use them with map(), filter(), reduce(), and sorted().",
+  },
+  {
+    id: "py-textwrap-module",
+    language: "python",
+    title: "textwrap for text formatting",
+    tag: "snippet",
+    code: `import textwrap
+
+text = "Python is a versatile, high-level programming language known for its readable syntax."
+
+print(textwrap.fill(text, width=40))
+# Python is a versatile, high-level
+# programming language known for its
+# readable syntax.
+
+# dedent: strips common leading whitespace from all lines.
+code = """
+    def hello():
+        print("hi")
+"""
+print(textwrap.dedent(code).strip())`,
+    explanation: "textwrap.fill wraps paragraphs to a given width; dedent removes consistent indentation from multi-line strings. Useful for CLIs and docstrings.",
+  },
+  {
+    id: "py-functools-cache-property",
+    language: "python",
+    title: "functools.cached_property",
+    tag: "snippet",
+    code: `from functools import cached_property
+
+class Circle:
+    def __init__(self, radius: float):
+        self.radius = radius
+
+    @cached_property
+    def area(self) -> float:
+        # Computed once; stored in the instance dict. Subsequent accesses are O(1).
+        import math
+        print("computing area")
+        return math.pi * self.radius ** 2
+
+c = Circle(5)
+print(c.area)    # computing area / 78.539...
+print(c.area)    # 78.539...   — no 'computing area' this time`,
+    explanation: "cached_property computes the value on first access and stores it as a plain instance attribute. Unlike @property, there's no function call overhead on subsequent accesses.",
+  },
+  {
+    id: "py-typing-self",
+    language: "python",
+    title: "Self type for fluent interfaces",
+    tag: "types",
+    code: `from __future__ import annotations
+from typing import Self
+
+class Builder:
+    def __init__(self):
+        self._parts: list[str] = []
+
+    def add(self, part: str) -> Self:
+        self._parts.append(part)
+        return self   # Self preserves subclass type
+
+    def build(self) -> str:
+        return ", ".join(self._parts)
+
+class ExtendedBuilder(Builder):
+    def add_many(self, *parts: str) -> Self:
+        for p in parts: self.add(p)
+        return self
+
+result = ExtendedBuilder().add("a").add_many("b", "c").build()
+print(result)   # a, b, c`,
+    explanation: "Self (Python 3.11+ built-in, or from typing for 3.10-) preserves the exact subclass type in return annotations. Without it, Builder.add would return Builder, losing subclass info.",
+  },
+  {
+    id: "py-abc-classmethod",
+    language: "python",
+    title: "Abstract class methods and properties",
+    tag: "classes",
+    code: `from abc import ABC, abstractmethod
+
+class Serialisable(ABC):
+    @classmethod
+    @abstractmethod
+    def from_dict(cls, data: dict) -> "Serialisable": ...
+
+    @abstractmethod
+    def to_dict(self) -> dict: ...
+
+class User(Serialisable):
+    def __init__(self, name: str, age: int):
+        self.name = name; self.age = age
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "User":
+        return cls(data["name"], data["age"])
+
+    def to_dict(self) -> dict:
+        return {"name": self.name, "age": self.age}
+
+u = User.from_dict({"name": "Ada", "age": 36})
+print(u.to_dict())   # {'name': 'Ada', 'age': 36}`,
+    explanation: "Stack @classmethod above @abstractmethod to require subclasses to implement a class-level factory. Order matters — @classmethod must be outermost.",
+  },
+  {
+    id: "py-type-narrowing",
+    language: "python",
+    title: "Type narrowing with isinstance",
+    tag: "types",
+    code: `def process(value: int | str | list[int]) -> str:
+    if isinstance(value, int):
+        # In this branch, type checkers know 'value' is int.
+        return str(value * 2)
+    elif isinstance(value, str):
+        # Here, 'value' is str.
+        return value.upper()
+    else:
+        # Here, 'value' is list[int].
+        return str(sum(value))
+
+print(process(5))           # 10
+print(process("hi"))        # HI
+print(process([1, 2, 3]))   # 6`,
+    explanation: "isinstance checks 'narrow' the type within each branch. Type checkers track these guards — code after an isinstance check can safely use type-specific methods.",
+  },
+  {
+    id: "py-type-guard",
+    language: "python",
+    title: "TypeGuard for custom narrowing",
+    tag: "types",
+    code: `from typing import TypeGuard
+
+def is_str_list(val: list) -> TypeGuard[list[str]]:
+    return all(isinstance(x, str) for x in val)
+
+def process(items: list) -> str:
+    if is_str_list(items):
+        # Type checkers know 'items' is list[str] inside this block.
+        return ", ".join(items)
+    return str(items)
+
+print(process(["a", "b", "c"]))   # a, b, c
+print(process([1, 2, 3]))          # [1, 2, 3]`,
+    explanation: "TypeGuard lets you write custom isinstance-equivalent functions that type checkers understand for narrowing. The function must return bool; the TypeGuard annotation documents what's guaranteed on True.",
+  },
+  {
+    id: "py-never-type",
+    language: "python",
+    title: "Never — exhaustive match",
+    tag: "types",
+    code: `from typing import Never
+
+def assert_never(x: Never) -> Never:
+    raise AssertionError(f"unhandled case: {x!r}")
+
+type Shape = "circle" | "square" | "triangle"
+
+def area(shape: Shape, size: float) -> float:
+    if shape == "circle":
+        return 3.14159 * size ** 2
+    elif shape == "square":
+        return size ** 2
+    elif shape == "triangle":
+        return 0.5 * size ** 2
+    else:
+        assert_never(shape)  # type checkers warn here if a case is missing`,
+    explanation: "assert_never(x: Never) is a type-safe exhaustiveness check. If you add a new Shape variant and forget to handle it, the type checker flags the assert_never call.",
+  },
+  {
+    id: "py-concurrent-futures",
+    language: "python",
+    title: "concurrent.futures for parallelism",
+    tag: "snippet",
+    code: `from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+import time
+
+def task(n):
+    time.sleep(0.01)
+    return n * n
+
+# ThreadPoolExecutor: I/O-bound tasks (network, files).
+with ThreadPoolExecutor(max_workers=4) as ex:
+    results = list(ex.map(task, range(8)))
+print(results)   # [0, 1, 4, 9, 16, 25, 36, 49]
+
+# ProcessPoolExecutor: CPU-bound tasks (bypasses the GIL).
+# with ProcessPoolExecutor() as ex:
+#     results = list(ex.map(cpu_heavy_task, data))`,
+    explanation: "ThreadPoolExecutor for I/O parallelism (GIL released on blocking calls); ProcessPoolExecutor for CPU parallelism (separate processes). Both have the same map() API.",
+  },
+  {
+    id: "py-asyncio-gather",
+    language: "python",
+    title: "asyncio.gather for concurrent tasks",
+    tag: "snippet",
+    code: `import asyncio
+
+async def fetch(url: str) -> str:
+    await asyncio.sleep(0.1)   # simulate network I/O
+    return f"data from {url}"
+
+async def main():
+    # Run three coroutines CONCURRENTLY — total ~0.1s, not 0.3s.
+    results = await asyncio.gather(
+        fetch("api/users"),
+        fetch("api/posts"),
+        fetch("api/comments"),
+    )
+    for r in results:
+        print(r)
+
+asyncio.run(main())`,
+    explanation: "asyncio.gather starts all coroutines concurrently and waits for all to finish. It's the standard way to fan-out multiple I/O operations in async Python.",
+  },
+  {
+    id: "py-async-context-manager",
+    language: "python",
+    title: "Async context managers",
+    tag: "snippet",
+    code: `import asyncio
+
+class AsyncDB:
+    async def __aenter__(self):
+        print("connecting...")
+        await asyncio.sleep(0)   # simulate async connection
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        print("disconnecting...")
+        await asyncio.sleep(0)
+
+    async def query(self, sql: str) -> list:
+        return [{"id": 1}]
+
+async def main():
+    async with AsyncDB() as db:
+        rows = await db.query("SELECT 1")
+        print(rows)
+
+asyncio.run(main())`,
+    explanation: "Async context managers use __aenter__ and __aexit__. Use them for async resources (database connections, HTTP sessions) that need setup and teardown.",
+  },
+  {
+    id: "py-dataclass-init-false",
+    language: "python",
+    title: "dataclass field(init=False)",
+    tag: "classes",
+    code: `from dataclasses import dataclass, field
+import uuid
+
+@dataclass
+class Order:
+    item: str
+    quantity: int
+    # init=False: excluded from __init__; set in __post_init__ instead.
+    id: str = field(default="", init=False, repr=True)
+
+    def __post_init__(self):
+        self.id = str(uuid.uuid4())[:8]
+
+o = Order("book", 2)
+print(o)          # Order(item='book', quantity=2, id='a1b2c3d4')
+print(o.id)       # some UUID prefix`,
+    explanation: "init=False excludes a field from the constructor but keeps it in the dataclass. Used for computed identifiers, timestamps, and internal state set in __post_init__.",
+  },
+  {
+    id: "py-singleton-pattern",
+    language: "python",
+    title: "Module-level singleton",
+    tag: "classes",
+    code: `# In Python, modules ARE singletons — they're loaded once and cached.
+# The simplest singleton is just module-level state.
+
+# config.py (conceptually):
+_settings = {
+    "debug": False,
+    "host": "localhost",
+}
+
+def get(key: str):
+    return _settings[key]
+
+def set(key: str, value) -> None:
+    _settings[key] = value
+
+# Callers import the module and get the same state:
+# import config
+# config.set("debug", True)`,
+    explanation: "Module-level state is the Pythonic singleton. The module is loaded once; all importers share the same namespace. Only reach for __new__-based singletons for class-based APIs.",
+  },
+  {
+    id: "py-dataclass-compare",
+    language: "python",
+    title: "dataclass ordering",
+    tag: "classes",
+    code: `from dataclasses import dataclass
+
+# order=True generates __lt__, __le__, __gt__, __ge__ in field order.
+@dataclass(order=True)
+class Version:
+    major: int
+    minor: int
+    patch: int
+
+v1 = Version(1, 9, 0)
+v2 = Version(2, 0, 0)
+v3 = Version(1, 9, 1)
+
+print(v1 < v2)               # True
+print(sorted([v2, v1, v3]))  # [Version(1,9,0), Version(1,9,1), Version(2,0,0)]`,
+    explanation: "order=True on a dataclass generates comparison methods that compare fields left-to-right — like tuples. The comparison order is determined by field declaration order.",
+  },
+  {
+    id: "py-iter-protocol",
+    language: "python",
+    title: "__iter__ and __next__ protocol",
+    tag: "classes",
+    code: `# An iterator has __iter__ (returns self) and __next__ (returns next value).
+class Countdown:
+    def __init__(self, start: int):
+        self._n = start
+
+    def __iter__(self):
+        return self    # iterators return themselves
+
+    def __next__(self) -> int:
+        if self._n < 0:
+            raise StopIteration
+        val = self._n
+        self._n -= 1
+        return val
+
+for n in Countdown(3):
+    print(n, end=" ")   # 3 2 1 0`,
+    explanation: "The iterator protocol requires __iter__ returning self and __next__ raising StopIteration when done. Python's for loop calls these under the hood.",
+  },
+  {
+    id: "py-generator-send",
+    language: "python",
+    title: "Generator send() — coroutine pattern",
+    tag: "classes",
+    code: `# Generators can receive values via .send().
+def accumulator():
+    total = 0
+    while True:
+        value = yield total   # yield sends total OUT, receives value IN
+        if value is None:
+            break
+        total += value
+
+gen = accumulator()
+next(gen)        # prime the generator — run to first yield
+print(gen.send(10))   # 10
+print(gen.send(20))   # 30
+print(gen.send(5))    # 35`,
+    explanation: "Generator .send(value) resumes the generator and passes value as the result of the yield expression. This is the foundation of native coroutines (async/await).",
+  },
+  {
+    id: "py-defaultdict-nested",
+    language: "python",
+    title: "Nested defaultdict",
+    tag: "structures",
+    code: `from collections import defaultdict
+
+# defaultdict of defaultdict for multi-level auto-init.
+nested = defaultdict(lambda: defaultdict(int))
+
+# Count word occurrences per document.
+docs = {"doc1": ["apple", "banana", "apple"], "doc2": ["banana", "cherry"]}
+for doc, words in docs.items():
+    for w in words:
+        nested[doc][w] += 1
+
+print(dict(nested["doc1"]))   # {'apple': 2, 'banana': 1}
+print(dict(nested["doc2"]))   # {'banana': 1, 'cherry': 1}`,
+    explanation: "Nested defaultdicts eliminate the 'if key not in dict' pattern at multiple levels. The lambda creates a fresh defaultdict(int) for each new outer key.",
+  },
+  {
+    id: "py-dataclass-frozen",
+    language: "python",
+    title: "frozen dataclass — immutable and hashable",
+    tag: "structures",
+    code: `from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class Point:
+    x: float
+    y: float
+
+p1 = Point(1.0, 2.0)
+# p1.x = 99   # FrozenInstanceError — immutable
+
+# frozen=True adds __hash__ based on all fields.
+print(hash(p1))            # some integer
+points = {p1, Point(3.0, 4.0), Point(1.0, 2.0)}
+print(len(points))         # 2 — Point(1,2) is deduplicated`,
+    explanation: "frozen=True makes a dataclass immutable and hashable — suitable as dict keys and set elements. Trying to set an attribute raises FrozenInstanceError at runtime.",
+  },
+  {
+    id: "py-enum-auto",
+    language: "python",
+    title: "Enum with auto()",
+    tag: "structures",
+    code: `from enum import Enum, auto
+
+# auto() assigns values automatically starting from 1.
+class Direction(Enum):
+    NORTH = auto()   # 1
+    SOUTH = auto()   # 2
+    EAST  = auto()   # 3
+    WEST  = auto()   # 4
+
+print(Direction.NORTH.value)   # 1
+print(list(Direction))         # all four
+
+# Override _generate_next_value_ for custom auto behaviour:
+class Color(Enum):
+    def _generate_next_value_(name, start, count, last_values):
+        return name.lower()   # value becomes the lowercase name
+
+    RED   = auto()   # 'red'
+    GREEN = auto()   # 'green'`,
+    explanation: "auto() removes the need to manually assign incremented numbers. Override _generate_next_value_ when you want meaningful automatic values like lowercase names.",
+  },
+  {
+    id: "py-class-body-scope",
+    language: "python",
+    title: "Class body scope is not a closure",
+    tag: "caveats",
+    code: `# Class body runs once, but it doesn't create a closure scope.
+# Comprehensions inside class bodies can't see class-level names.
+
+class Broken:
+    x = 10
+    # squares = [x * i for i in range(3)]  # NameError: x is not defined
+    # The list comp has its own scope; class 'x' is not inherited.
+
+class Fixed:
+    x = 10
+    squares = [x * i for x in [10] for i in range(3)]  # awkward workaround
+
+# Simpler: use __init_subclass__ or a classmethod for complex class-level logic.`,
+    explanation: "Class-body comprehensions can't access class-level names because Python's scoping rules don't make class bodies part of the enclosing scope for comprehensions.",
+  },
+  {
+    id: "py-slots-and-weak",
+    language: "python",
+    title: "__slots__ and weakref support",
+    tag: "classes",
+    code: `import weakref
+
+class NoWeakref:
+    __slots__ = ("x",)
+
+class WithWeakref:
+    __slots__ = ("x", "__weakref__")   # __weakref__ enables weak references
+
+a = NoWeakref()
+# ref = weakref.ref(a)   # TypeError: cannot create weak reference
+
+b = WithWeakref()
+b.x = 1
+ref = weakref.ref(b)
+print(ref())   # <WithWeakref object>`,
+    explanation: "Objects with __slots__ lose weakref support unless you explicitly include '__weakref__' in the slots. Needed when your slotted class is used in weak-reference caches.",
+  },
+  {
+    id: "py-property-delete",
+    language: "python",
+    title: "@property deleter",
+    tag: "classes",
+    code: `class User:
+    def __init__(self, name: str):
+        self._name = name
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @name.setter
+    def name(self, value: str):
+        if not value:
+            raise ValueError("name can't be empty")
+        self._name = value
+
+    @name.deleter
+    def name(self):
+        print("deleting name")
+        del self._name
+
+u = User("Ada")
+print(u.name)    # Ada
+u.name = "Linus"
+del u.name       # deleting name`,
+    explanation: "The @deleter decorator defines what happens when 'del obj.attr' is called on a property. Useful for lazy cleanup, cache invalidation, or logging deletions.",
+  },
+  {
+    id: "py-suppress-exception-groups",
+    language: "python",
+    title: "Exception chaining with from",
+    tag: "caveats",
+    code: `# 'raise X from Y' sets __cause__ — explicit chaining.
+# 'raise X from None' suppresses the original context.
+
+def parse_config(raw: str) -> dict:
+    try:
+        import json
+        return json.loads(raw)
+    except json.JSONDecodeError as e:
+        raise ValueError("invalid config") from e   # preserves cause
+
+try:
+    parse_config("not json")
+except ValueError as e:
+    print(e)             # invalid config
+    print(e.__cause__)   # Expecting value: line 1 column 1 (char 0)`,
+    explanation: "'raise X from Y' is the explicit way to chain exceptions — callers see both errors. 'raise X from None' hides the original exception (use sparingly).",
+  },
+  {
+    id: "py-pep563-annotations",
+    language: "python",
+    title: "from __future__ import annotations",
+    tag: "types",
+    code: `# Defers annotation evaluation — enables forward references without quotes.
+from __future__ import annotations
+
+class Node:
+    def __init__(self, value: int, next: Node | None = None):
+        # Without 'from __future__', 'Node' here is a NameError at class definition.
+        self.value = value
+        self.next  = next
+
+n = Node(1, Node(2))
+print(n.value, n.next.value)   # 1 2`,
+    explanation: "from __future__ import annotations (PEP 563) makes all annotations strings — evaluated lazily. This allows forward references and speeds up import time. Default in Python 3.14+.",
+  },
+  {
+    id: "py-str-encode-error",
+    language: "python",
+    title: "Encoding error handlers",
+    tag: "types",
+    code: `# str.encode and bytes.decode accept an 'errors' argument.
+text = "café"   # 'café'
+
+# strict (default): raise on unencodable characters.
+# replace: substitute with ?
+# ignore: drop the character
+# xmlcharrefreplace: &#...; entity
+print(text.encode("ascii", errors="replace"))         # b'caf?'
+print(text.encode("ascii", errors="ignore"))          # b'caf'
+print(text.encode("ascii", errors="xmlcharrefreplace")) # b'caf&#233;'`,
+    explanation: "Always handle encoding errors explicitly. The default 'strict' is correct for most cases — it forces you to pick the right encoding. 'ignore' silently loses data.",
+  },
+  {
+    id: "py-typed-namedtuple-methods",
+    language: "python",
+    title: "Adding methods to NamedTuple",
+    tag: "classes",
+    code: `from typing import NamedTuple
+import math
+
+class Vector(NamedTuple):
+    x: float
+    y: float
+
+    def magnitude(self) -> float:
+        return math.sqrt(self.x ** 2 + self.y ** 2)
+
+    def normalise(self) -> "Vector":
+        m = self.magnitude()
+        return Vector(self.x / m, self.y / m)
+
+v = Vector(3.0, 4.0)
+print(v.magnitude())    # 5.0
+print(v.normalise())    # Vector(x=0.6, y=0.8)`,
+    explanation: "NamedTuple supports regular methods while remaining immutable and tuple-compatible. Cleaner than inheriting from tuple directly.",
+  },
+  {
+    id: "py-pep544-structural",
+    language: "python",
+    title: "Structural subtyping (duck typing + types)",
+    tag: "families",
+    code: `from typing import Protocol
+
+class Comparable(Protocol):
+    def __lt__(self, other: "Comparable") -> bool: ...
+
+def min_of_two(a: Comparable, b: Comparable) -> Comparable:
+    return a if a < b else b
+
+# Works with ANY type that has __lt__ — no inheritance needed.
+print(min_of_two(3, 5))             # 3
+print(min_of_two("banana", "apple")) # apple — str has __lt__
+print(min_of_two((1, 2), (1, 3)))   # (1, 2) — tuples compare lexicographically`,
+    explanation: "Protocols + structural subtyping bring formal duck typing to Python. Any class with the right method signatures satisfies the Protocol — no registration or inheritance required.",
+  },
+  {
+    id: "py-dataclass-inheritance",
+    language: "python",
+    title: "dataclass inheritance",
+    tag: "classes",
+    code: `from dataclasses import dataclass
+
+@dataclass
+class Animal:
+    name: str
+    sound: str
+
+    def speak(self) -> str:
+        return f"{self.name} says {self.sound}"
+
+@dataclass
+class Dog(Animal):
+    breed: str = "unknown"
+
+    def fetch(self) -> str:
+        return f"{self.name} fetches the ball"
+
+d = Dog(name="Rex", sound="woof", breed="Lab")
+print(d.speak())   # Rex says woof
+print(d.fetch())   # Rex fetches the ball`,
+    explanation: "dataclass inheritance works naturally — subclass adds new fields after parent fields. All parent fields must come before any fields with defaults in MRO order.",
+  },
+  {
+    id: "py-abstract-factory",
+    language: "python",
+    title: "Abstract factory via classmethods",
+    tag: "classes",
+    code: `from abc import ABC, abstractmethod
+
+class Parser(ABC):
+    @abstractmethod
+    def parse(self, data: str) -> dict: ...
+
+    @classmethod
+    def for_format(cls, fmt: str) -> "Parser":
+        registry = {"json": JsonParser, "csv": CsvParser}
+        if fmt not in registry:
+            raise ValueError(f"unknown format: {fmt}")
+        return registry[fmt]()
+
+class JsonParser(Parser):
+    def parse(self, data: str) -> dict:
+        import json; return json.loads(data)
+
+class CsvParser(Parser):
+    def parse(self, data: str) -> dict:
+        return {"rows": data.split("\\n")}
+
+p = Parser.for_format("json")
+print(p.parse('{"x": 1}'))   # {'x': 1}`,
+    explanation: "A class method on the ABC doubles as an abstract factory. Callers don't need to import concrete subclasses — the factory maps format strings to the right implementation.",
+  },
+  {
+    id: "py-typing-overload-method",
+    language: "python",
+    title: "Overloaded class methods",
+    tag: "types",
+    code: `from typing import overload
+
+class Connection:
+    def __init__(self, url: str): self.url = url
+
+    @overload
+    @classmethod
+    def create(cls, host: str, port: int) -> "Connection": ...
+    @overload
+    @classmethod
+    def create(cls, url: str) -> "Connection": ...
+
+    @classmethod
+    def create(cls, host_or_url, port=None):
+        if port is not None:
+            return cls(f"tcp://{host_or_url}:{port}")
+        return cls(host_or_url)
+
+c1 = Connection.create("localhost", 5432)
+c2 = Connection.create("tcp://db:5432")`,
+    explanation: "@overload on a classmethod gives type checkers two distinct signatures to check against. The un-decorated implementation handles both cases at runtime.",
+  },
+  {
+    id: "py-contextlib-asynccontextmanager",
+    language: "python",
+    title: "@asynccontextmanager",
+    tag: "classes",
+    code: `from contextlib import asynccontextmanager
+import asyncio
+
+@asynccontextmanager
+async def managed_connection(url: str):
+    print(f"connecting to {url}")
+    conn = {"url": url, "open": True}   # simulate connection object
+    try:
+        yield conn
+    finally:
+        conn["open"] = False
+        print(f"closed {url}")
+
+async def main():
+    async with managed_connection("db://localhost") as conn:
+        print(f"using {conn}")
+
+asyncio.run(main())`,
+    explanation: "@asynccontextmanager does for async what @contextmanager does for sync — turns an async generator into an async context manager without writing __aenter__/__aexit__.",
+  },
+  {
+    id: "py-typing-final-class",
+    language: "python",
+    title: "@final class prevents subclassing",
+    tag: "types",
+    code: `from typing import final
+
+@final
+class Sentinel:
+    """A unique marker value — should never be subclassed."""
+    _instance = None
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+# Type checkers flag any attempt to subclass:
+# class MySentinel(Sentinel): pass  # error: cannot inherit from final class
+
+s1 = Sentinel()
+s2 = Sentinel()
+print(s1 is s2)   # True — singleton`,
+    explanation: "@final (from typing) tells type checkers a class must not be subclassed. It doesn't prevent inheritance at runtime — it's a static analysis marker.",
+  },
+  {
+    id: "py-getattr-setattr",
+    language: "python",
+    title: "getattr, setattr, hasattr, delattr",
+    tag: "classes",
+    code: `class Config:
+    host = "localhost"
+    port = 5432
+
+# getattr: access attribute by name — supports default.
+print(getattr(Config, "host"))           # localhost
+print(getattr(Config, "missing", None))  # None — no AttributeError
+
+# setattr: set attribute by name.
+setattr(Config, "debug", True)
+print(Config.debug)   # True
+
+# hasattr: check without try/except.
+print(hasattr(Config, "host"))     # True
+print(hasattr(Config, "missing"))  # False`,
+    explanation: "getattr/setattr/hasattr are essential for dynamic attribute access and meta-programming. They're how serialisation libraries, ORMs, and test frameworks inspect objects.",
+  },
+  {
+    id: "py-vars-dir",
+    language: "python",
+    title: "vars() and dir() for introspection",
+    tag: "snippet",
+    code: `class Dog:
+    species = "Canis lupus"
+    def __init__(self, name):
+        self.name = name
+
+d = Dog("Rex")
+
+# vars(obj): returns __dict__ — instance attributes only.
+print(vars(d))          # {'name': 'Rex'}
+
+# dir(obj): all accessible names including inherited ones.
+names = [n for n in dir(d) if not n.startswith("_")]
+print(names)   # ['name', 'species']
+
+# vars() on a class returns class attributes:
+print(vars(Dog)["species"])   # Canis lupus`,
+    explanation: "vars() is a fast way to see an object's instance dictionary. dir() is broader — useful for REPL exploration. Neither is stable across Python versions for internal attributes.",
+  },
+  {
+    id: "py-dunder-enter-exit",
+    language: "python",
+    title: "__enter__ and __exit__ protocol",
+    tag: "classes",
+    code: `class Timer:
+    import time
+
+    def __enter__(self):
+        self._start = __import__("time").perf_counter()
+        return self   # bound to 'as' variable
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        elapsed = __import__("time").perf_counter() - self._start
+        print(f"elapsed: {elapsed:.4f}s")
+        return False   # don't suppress exceptions
+
+with Timer() as t:
+    total = sum(range(1_000_000))
+
+print(total)   # 499999500000`,
+    explanation: "__exit__ receives exception info — return True to suppress, False (or None) to propagate. The 'as' variable gets whatever __enter__ returns.",
+  },
+  {
+    id: "py-import-system",
+    language: "python",
+    title: "importlib for dynamic imports",
+    tag: "snippet",
+    code: `import importlib
+
+# Import a module by name string — useful for plugins and config-driven loading.
+json_mod = importlib.import_module("json")
+print(json_mod.dumps({"x": 1}))   # {"x": 1}
+
+# Reload a module after modification (useful in interactive sessions):
+# importlib.reload(my_module)
+
+# Access a named attribute from a module:
+dumps = getattr(importlib.import_module("json"), "dumps")
+print(dumps([1, 2]))   # [1, 2]`,
+    explanation: "importlib.import_module is the clean way to import by name string. Used by plugin systems, auto-discovery, and configuration-driven app frameworks.",
+  },
+  {
+    id: "py-pprint-module",
+    language: "python",
+    title: "pprint for readable output",
+    tag: "snippet",
+    code: `import pprint
+
+data = {
+    "users": [{"id": i, "name": f"User{i}", "active": i % 2 == 0} for i in range(3)],
+    "total": 3,
+    "filters": {"role": "admin", "status": "active"},
+}
+
+# pprint formats nested structures with aligned indentation.
+pprint.pprint(data, width=50, sort_dicts=False)
+
+# pp() shorthand (Python 3.8+):
+pp = pprint.pp
+pp(data)`,
+    explanation: "pprint is the built-in pretty-printer for nested Python objects. Invaluable for debugging large dicts, API responses, and complex data structures in the REPL.",
+  },
+  {
+    id: "py-weakref-finalize",
+    language: "python",
+    title: "weakref.finalize — cleanup callbacks",
+    tag: "classes",
+    code: `import weakref
+
+class Resource:
+    def __init__(self, name):
+        self.name = name
+
+def on_cleanup(name):
+    print(f"cleanup: {name}")
+
+r = Resource("db-conn")
+
+# finalize registers a callback to run when 'r' is garbage-collected.
+# The callback itself doesn't prevent collection.
+fin = weakref.finalize(r, on_cleanup, r.name)
+
+del r   # triggers: cleanup: db-conn
+print(fin.alive)  # False — already called`,
+    explanation: "weakref.finalize is more reliable than __del__ for cleanup callbacks — it runs even if __del__ is skipped, and it doesn't prevent garbage collection like __del__ can.",
+  },
+  {
+    id: "py-heapq-custom-key",
+    language: "python",
+    title: "heapq with custom sort key",
+    tag: "structures",
+    code: `import heapq
+
+# heapq works on lists of tuples — first element determines order.
+tasks = []
+
+# Priority queue: (priority, item). Lower number = higher priority.
+heapq.heappush(tasks, (3, "low priority task"))
+heapq.heappush(tasks, (1, "urgent task"))
+heapq.heappush(tasks, (2, "medium priority task"))
+
+while tasks:
+    priority, task = heapq.heappop(tasks)
+    print(f"[{priority}] {task}")
+# [1] urgent task
+# [2] medium priority task
+# [3] low priority task`,
+    explanation: "Push (priority, item) tuples to simulate a priority queue. If priorities tie, the second element determines order — make sure it's comparable, or add a counter as tiebreaker.",
+  },
+  {
+    id: "py-enum-iteration",
+    language: "python",
+    title: "Enum iteration and lookup",
+    tag: "structures",
+    code: `from enum import Enum
+
+class Color(Enum):
+    RED   = 1
+    GREEN = 2
+    BLUE  = 3
+
+# Iterate all members:
+for c in Color:
+    print(c.name, c.value)
+
+# Look up by value:
+print(Color(2))         # Color.GREEN
+# Look up by name:
+print(Color["BLUE"])    # Color.BLUE
+
+# Membership test:
+print(Color.RED in Color)   # True`,
+    explanation: "Enum members are iterable in definition order. Color(2) is by-value lookup; Color['NAME'] is by-name lookup. Both raise ValueError/KeyError on miss.",
+  },
+  {
+    id: "py-re-sub-function",
+    language: "python",
+    title: "re.sub with a function replacement",
+    tag: "snippet",
+    code: `import re
+
+# re.sub can take a callable — called with each Match object.
+def to_upper(m: re.Match) -> str:
+    return m.group(0).upper()
+
+result = re.sub(r"[aeiou]", to_upper, "hello world")
+print(result)   # hEllO wOrld
+
+# Use for complex transformations that can't be expressed as a template string.
+def double_digits(m: re.Match) -> str:
+    return str(int(m.group(0)) * 2)
+
+print(re.sub(r"\d+", double_digits, "10 cats and 5 dogs"))
+# 20 cats and 10 dogs`,
+    explanation: "re.sub with a function replacement enables arbitrary per-match transformations. The function receives a Match object and must return a string.",
+  },
+  {
+    id: "py-class-slots-inheritance-bug",
+    language: "python",
+    title: "slots and multiple inheritance",
+    tag: "caveats",
+    code: `# When using __slots__ with multiple inheritance, all bases must also have __slots__
+# otherwise the child still gets __dict__ from the non-slots parent.
+
+class A:
+    __slots__ = ("x",)
+
+class B:
+    pass   # has __dict__
+
+class C(A, B):
+    __slots__ = ("z",)
+
+c = C()
+# C still has __dict__ because B has it.
+c.surprise = "unexpected"   # works — __dict__ from B
+print(c.surprise)   # unexpected`,
+    explanation: "Slots savings disappear if any base class has __dict__. For full benefits, all classes in the MRO must use __slots__. Use object explicitly as the base if needed.",
+  },
+  {
+    id: "py-string-partition",
+    language: "python",
+    title: "str.partition and str.rpartition",
+    tag: "snippet",
+    code: `# partition(sep) splits at the FIRST occurrence; returns 3-tuple: (before, sep, after).
+text = "host:port/path"
+before, sep, after = text.partition(":")
+print(before, sep, after)   # host : port/path
+
+# rpartition: split at the LAST occurrence.
+left, sep, right = "a.b.c.d".rpartition(".")
+print(left, sep, right)     # a.b.c . d
+
+# Unlike split, partition always returns exactly 3 parts.
+# If sep not found: ('original', '', '')`,
+    explanation: "partition is cleaner than split(sep, 1) for two-part splits. It always returns a 3-tuple so you never get an unexpected-length list.",
+  },
+  {
+    id: "py-abc-mixin-example",
+    language: "python",
+    title: "ABC mixin with concrete implementation",
+    tag: "families",
+    code: `from abc import ABC, abstractmethod
+
+class ComparableMixin(ABC):
+    @abstractmethod
+    def _key(self): ...   # subclasses provide the comparison key
+
+    def __lt__(self, other): return self._key() < other._key()
+    def __le__(self, other): return self._key() <= other._key()
+    def __gt__(self, other): return self._key() > other._key()
+    def __eq__(self, other): return self._key() == other._key()
+
+class Student(ComparableMixin):
+    def __init__(self, name, gpa):
+        self.name = name; self.gpa = gpa
+    def _key(self): return self.gpa
+
+students = [Student("Ada", 3.9), Student("Linus", 4.0), Student("Grace", 3.7)]
+print(min(students).name)   # Grace
+print(max(students).name)   # Linus`,
+    explanation: "An ABC mixin can implement many concrete methods based on a single abstract one. ComparableMixin pattern gives six comparison operators from just _key().",
+  },
+  {
+    id: "py-zip-dict-constructor",
+    language: "python",
+    title: "dict() from two lists with zip",
+    tag: "snippet",
+    code: `keys   = ["host", "port", "ssl"]
+values = ["localhost", 5432, True]
+
+# dict(zip(keys, values)) pairs them up into a dictionary.
+config = dict(zip(keys, values))
+print(config)   # {'host': 'localhost', 'port': 5432, 'ssl': True}
+
+# Round-trip: separate a dict into parallel lists.
+k, v = zip(*config.items())
+print(list(k))   # ['host', 'port', 'ssl']
+print(list(v))   # ['localhost', 5432, True]`,
+    explanation: "dict(zip(keys, values)) is the idiom for building a dict from two parallel sequences. The reverse — zip(*dict.items()) — unzips it back.",
+  },
+  {
+    id: "py-typing-protocols-callable",
+    language: "python",
+    title: "Protocol with __call__",
+    tag: "types",
+    code: `from typing import Protocol
+
+# Use Protocol to type-annotate callable objects (not just plain functions).
+class Handler(Protocol):
+    def __call__(self, request: str) -> str: ...
+
+def dispatch(route: str, handler: Handler) -> str:
+    return handler(route)
+
+def simple_handler(req: str) -> str:
+    return f"handled: {req}"
+
+class ClassHandler:
+    def __call__(self, req: str) -> str:
+        return f"class: {req}"
+
+print(dispatch("/home", simple_handler))    # handled: /home
+print(dispatch("/api", ClassHandler()))     # class: /api`,
+    explanation: "A Protocol with __call__ lets you accept any callable with a specific signature — plain functions, lambdas, and callable objects all qualify structurally.",
+  },
+  {
+    id: "py-partial-method",
+    language: "python",
+    title: "partialmethod for class method defaults",
+    tag: "classes",
+    code: `from functools import partialmethod
+
+class Animal:
+    def set_sound(self, sound, volume=50):
+        self.sound = sound
+        self.volume = volume
+
+    # partialmethod creates a bound partial — works inside class bodies.
+    bark  = partialmethod(set_sound, "woof")
+    meow  = partialmethod(set_sound, "meow", volume=30)
+
+a = Animal()
+a.bark()
+print(a.sound, a.volume)   # woof 50
+
+a.meow()
+print(a.sound, a.volume)   # meow 30`,
+    explanation: "partialmethod is like partial but designed for class bodies. It creates a descriptor that properly handles self-binding when the class is instantiated.",
+  },
+  {
+    id: "py-itemgetter-multi",
+    language: "python",
+    title: "itemgetter for multi-key sort",
+    tag: "snippet",
+    code: `from operator import itemgetter
+
+people = [
+    {"name": "Ada",   "age": 36, "city": "London"},
+    {"name": "Linus", "age": 54, "city": "Portland"},
+    {"name": "Grace", "age": 36, "city": "Arlington"},
+]
+
+# Sort by age, then by name within the same age.
+by_age_name = sorted(people, key=itemgetter("age", "name"))
+for p in by_age_name:
+    print(p["age"], p["name"])
+# 36 Ada
+# 36 Grace
+# 54 Linus`,
+    explanation: "itemgetter with multiple keys returns a tuple, which sorts lexicographically — first key is primary, second is tiebreaker. Faster and more readable than a lambda.",
+  },
 ];
+
+
 
 
 

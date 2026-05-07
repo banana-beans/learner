@@ -13332,4 +13332,2581 @@ asyncio.run(main())`,
     explanation: "asyncio.Semaphore limits the number of coroutines that can be in a critical section simultaneously — useful for rate limiting API calls, database connections, or any bounded-resource access.",
   },
 
+// === PYTHON BATCH 3 ===
+  {
+    id: "py-list-comprehension-conditional",
+    language: "python",
+    title: "List comprehension with conditional expression",
+    tag: "snippet",
+    code: `numbers = range(10)
+# Conditional expression in the output expression
+result = ["even" if n % 2 == 0 else "odd" for n in numbers]
+print(result[:4])
+# ['even', 'odd', 'even', 'odd']
+
+# Filtering (condition at the end) vs mapping (condition at the start)
+evens   = [n for n in numbers if n % 2 == 0]       # filter
+labeled = ["even" if n % 2 == 0 else "odd" for n in numbers]  # map`,
+    explanation: "Place `if` after `for` to filter items; place `x if cond else y` before `for` to transform items. These are different operations — mixing them up is a common beginner mistake.",
+  },
+  {
+    id: "py-dict-comprehension",
+    language: "python",
+    title: "Dictionary comprehension patterns",
+    tag: "snippet",
+    code: `# Build a dict from two iterables
+keys   = ["a", "b", "c"]
+values = [1, 2, 3]
+d = {k: v for k, v in zip(keys, values)}
+print(d)   # {'a': 1, 'b': 2, 'c': 3}
+
+# Invert a dict (assuming unique values)
+inv = {v: k for k, v in d.items()}
+print(inv) # {1: 'a', 2: 'b', 3: 'c'}
+
+# Conditional: keep only positive values
+scores = {"alice": 5, "bob": -1, "carol": 3}
+positive = {name: s for name, s in scores.items() if s > 0}`,
+    explanation: "Dict comprehensions are `{key_expr: val_expr for ...}`. They replace loops that build dicts and read almost like English: 'for each pair, yield this key mapped to this value'.",
+  },
+  {
+    id: "py-set-comprehension",
+    language: "python",
+    title: "Set comprehension and set literals",
+    tag: "snippet",
+    code: `# Set literal (note: {} without key:value is a set, not a dict)
+vowels = {"a", "e", "i", "o", "u"}
+
+# Set comprehension: deduplicated results
+words = ["apple", "banana", "avocado", "blueberry"]
+first_letters = {w[0] for w in words}
+print(first_letters)   # {'a', 'b'}  (order not guaranteed)
+
+# Empty set: must use set(), not {}
+empty = set()
+print(type(empty))   # <class 'set'>
+print(type({}))      # <class 'dict'>`,
+    explanation: "Set comprehensions use `{expr for ...}`. Unlike list comprehensions they automatically deduplicate. The gotcha: `{}` creates an empty dict, not an empty set — use `set()` for an empty set.",
+  },
+  {
+    id: "py-generator-expression",
+    language: "python",
+    title: "Generator expressions",
+    tag: "snippet",
+    code: `# Generator expression (lazy) vs list comprehension (eager)
+gen = (x**2 for x in range(10))   # no computation yet
+lst = [x**2 for x in range(10)]   # computed immediately
+
+print(sum(gen))    # 285 — iterates on demand
+print(sum(lst))    # 285 — same result
+
+# Generator can only be iterated once
+gen2 = (x for x in range(3))
+print(list(gen2))   # [0, 1, 2]
+print(list(gen2))   # [] — exhausted
+
+# Pass directly to functions that accept iterables:
+total = sum(x**2 for x in range(1000))  # no list created`,
+    explanation: "Generator expressions use `()` instead of `[]`. They are lazy — values computed on demand — and use O(1) memory. Use them when you only need to iterate once; prefer list comprehensions when you need random access or multiple passes.",
+  },
+  {
+    id: "py-zip-unequal",
+    language: "python",
+    title: "zip with unequal lengths and zip_longest",
+    tag: "snippet",
+    code: `from itertools import zip_longest
+
+a = [1, 2, 3, 4]
+b = ["x", "y"]
+
+# zip stops at the shortest
+print(list(zip(a, b)))   # [(1, 'x'), (2, 'y')]
+
+# zip_longest fills missing values with fillvalue
+print(list(zip_longest(a, b, fillvalue=None)))
+# [(1, 'x'), (2, 'y'), (3, None), (4, None)]
+
+# zip with strict=True raises ValueError on length mismatch (Python 3.10+)
+try:
+    list(zip(a, b, strict=True))
+except ValueError as e:
+    print(e)   # zip() has arguments with different lengths`,
+    explanation: "`zip` silently truncates to the shortest iterable. Use `zip_longest` to keep all elements with a fill value. Use `strict=True` when mismatched lengths indicate a bug.",
+  },
+  {
+    id: "py-map-filter-builtin",
+    language: "python",
+    title: "map() and filter() builtins",
+    tag: "snippet",
+    code: `nums = [1, 2, 3, 4, 5, 6]
+
+# map applies a function to every element (lazy iterator)
+doubled = list(map(lambda x: x * 2, nums))
+print(doubled)    # [2, 4, 6, 8, 10, 12]
+
+# filter keeps elements where the function is truthy
+evens = list(filter(lambda x: x % 2 == 0, nums))
+print(evens)      # [2, 4, 6]
+
+# map with multiple iterables
+pairs = list(map(lambda x, y: x + y, [1, 2, 3], [10, 20, 30]))
+print(pairs)      # [11, 22, 33]
+
+# In modern Python, list comprehensions often read better:
+doubled2 = [x * 2 for x in nums]`,
+    explanation: "`map` and `filter` return lazy iterators in Python 3. They pair naturally with `list()`, `sum()`, etc. When passing a named function (not a lambda), they can be cleaner than comprehensions: `map(str, nums)`.",
+  },
+  {
+    id: "py-sorted-key",
+    language: "python",
+    title: "sorted() with key functions",
+    tag: "snippet",
+    code: `words = ["banana", "apple", "cherry", "date"]
+
+# Default: lexicographic order
+print(sorted(words))    # ['apple', 'banana', 'cherry', 'date']
+
+# Sort by length
+print(sorted(words, key=len))   # ['date', 'apple', 'banana', 'cherry']
+
+# Sort by last character
+print(sorted(words, key=lambda w: w[-1]))
+
+# Sort tuples by second element, then first
+pairs = [(2, "b"), (1, "c"), (1, "a")]
+print(sorted(pairs, key=lambda p: (p[1], p[0])))
+# [(1, 'a'), (2, 'b'), (1, 'c')]
+
+# Reverse sort
+print(sorted(words, key=len, reverse=True))`,
+    explanation: "`key=` specifies a function applied to each item before comparison. This is faster than a custom comparator because it's called once per item. Use `operator.attrgetter` or `operator.itemgetter` for attribute/index access.",
+  },
+  {
+    id: "py-any-all-builtins",
+    language: "python",
+    title: "any() and all() short-circuit builtins",
+    tag: "snippet",
+    code: `nums = [2, 4, 6, 8]
+words = ["hello", "", "world"]
+
+# all: True only if every element is truthy
+print(all(n % 2 == 0 for n in nums))   # True
+print(all(words))                        # False (empty string)
+
+# any: True if at least one element is truthy
+print(any(n > 5 for n in nums))         # True
+print(any(words))                        # True ("hello" is truthy)
+
+# Both short-circuit:
+def check(x):
+    print(f"checking {x}")
+    return x > 0
+
+# stops after first False (for all) or first True (for any)
+print(all(check(x) for x in [-1, 2, 3]))  # stops at -1`,
+    explanation: "`any` and `all` short-circuit just like `or`/`and`. Pass a generator expression (not a list comprehension) to get short-circuit behaviour — with a list, all items are evaluated before `any`/`all` is called.",
+  },
+  {
+    id: "py-enumerate-start",
+    language: "python",
+    title: "enumerate() start parameter",
+    tag: "snippet",
+    code: `items = ["apple", "banana", "cherry"]
+
+# Default: starts at 0
+for i, item in enumerate(items):
+    print(i, item)
+# 0 apple  1 banana  2 cherry
+
+# start=1 for 1-based numbering
+for i, item in enumerate(items, start=1):
+    print(f"{i}. {item}")
+# 1. apple  2. banana  3. cherry
+
+# Any start value works
+for i, item in enumerate(items, start=100):
+    print(i, item)
+# 100 apple  101 banana  102 cherry`,
+    explanation: "The `start` parameter to `enumerate` shifts the counter. Use `start=1` for user-facing output. This is cleaner than `i = 1; for item in items: ...; i += 1`.",
+  },
+  {
+    id: "py-reversed-builtin",
+    language: "python",
+    title: "reversed() and __reversed__",
+    tag: "snippet",
+    code: `nums = [1, 2, 3, 4, 5]
+
+# reversed() returns an iterator (lazy)
+rev = reversed(nums)
+print(list(rev))   # [5, 4, 3, 2, 1]
+
+# Slicing [::-1] creates a new reversed list (not lazy)
+rev_copy = nums[::-1]
+print(rev_copy)    # [5, 4, 3, 2, 1]
+
+# reversed() works on any sequence (list, tuple, str) or custom class with __reversed__
+print(list(reversed("hello")))   # ['o', 'l', 'l', 'e', 'h']
+print(list(reversed((1, 2, 3)))) # [3, 2, 1]
+
+# Use reversed() in loops to avoid a copy:
+for x in reversed(nums):
+    print(x, end=" ")  # 5 4 3 2 1`,
+    explanation: "`reversed()` returns a lazy iterator and works on sequences and objects implementing `__reversed__`. Prefer it over `[::-1]` in loops to avoid creating a copy. Use `[::-1]` only when you need the reversed sequence as a list.",
+  },
+  {
+    id: "py-min-max-key",
+    language: "python",
+    title: "min() and max() with key argument",
+    tag: "snippet",
+    code: `words = ["banana", "apple", "cherry", "kiwi"]
+
+print(min(words))              # 'apple' (lexicographic)
+print(max(words, key=len))     # 'banana' (longest)
+print(min(words, key=len))     # 'kiwi'  (shortest)
+
+# Works on any iterable of items
+students = [{"name": "Alice", "gpa": 3.8}, {"name": "Bob", "gpa": 3.5}]
+best = max(students, key=lambda s: s["gpa"])
+print(best["name"])   # Alice
+
+# default argument for empty iterables (Python 3.4+)
+print(min([], default=0))   # 0 (avoids ValueError)`,
+    explanation: "`key=` in `min`/`max` works the same as in `sorted`. The `default` parameter prevents a `ValueError` on empty iterables, which is cleaner than a try/except or pre-checking length.",
+  },
+  {
+    id: "py-sum-with-start",
+    language: "python",
+    title: "sum() with start value",
+    tag: "snippet",
+    code: `nums = [1, 2, 3, 4, 5]
+
+print(sum(nums))        # 15
+print(sum(nums, 100))   # 115  (100 is the initial accumulator)
+
+# Concatenate lists using sum with start=[]  (works but is slow)
+lists = [[1, 2], [3, 4], [5]]
+flat = sum(lists, [])        # [[1,2]+[3,4]+[5]] = [1,2,3,4,5]
+print(flat)
+
+# Better: use itertools.chain.from_iterable or list comprehension
+import itertools
+flat2 = list(itertools.chain.from_iterable(lists))`,
+    explanation: "The second argument to `sum()` is the start value (default 0). Concatenating lists with `sum(lists, [])` works but is O(n²) because each `+` copies. Use `itertools.chain.from_iterable` for linear performance.",
+  },
+  {
+    id: "py-vars-dir-builtins",
+    language: "python",
+    title: "vars(), dir(), and hasattr()",
+    tag: "understanding",
+    code: `class Dog:
+    species = "Canis lupus"
+    def __init__(self, name):
+        self.name = name
+    def bark(self):
+        return "Woof!"
+
+d = Dog("Rex")
+
+# vars() returns an object's __dict__
+print(vars(d))         # {'name': 'Rex'}
+print(vars(Dog))       # includes species, bark, __init__, ...
+
+# dir() lists all attributes including inherited ones
+print("bark" in dir(d))       # True
+print("__class__" in dir(d))  # True
+
+# hasattr() safe attribute check
+print(hasattr(d, "name"))       # True
+print(hasattr(d, "missing"))    # False`,
+    explanation: "`vars()` returns the `__dict__`; `dir()` returns all names including inherited ones; `hasattr()` is a safe existence check. Prefer `hasattr` over `try/except AttributeError` for a single check.",
+  },
+  {
+    id: "py-callable-type-check",
+    language: "python",
+    title: "callable() check and __call__",
+    tag: "understanding",
+    code: `def greet(name):
+    return f"Hello, {name}"
+
+class Adder:
+    def __init__(self, n):
+        self.n = n
+    def __call__(self, x):
+        return x + self.n
+
+add5 = Adder(5)
+
+print(callable(greet))     # True
+print(callable(add5))      # True (has __call__)
+print(callable(42))        # False
+print(callable(str))       # True (class is callable)
+print(callable(str.upper)) # True (method is callable)
+
+result = add5(10)          # 15`,
+    explanation: "`callable(obj)` returns True if the object has a `__call__` method. Classes, functions, methods, and instances of classes with `__call__` are all callable. This is more reliable than `isinstance(obj, Callable)` in some edge cases.",
+  },
+  {
+    id: "py-id-is-comparison",
+    language: "python",
+    title: "id(), identity vs equality",
+    tag: "understanding",
+    code: `a = [1, 2, 3]
+b = a           # b is the SAME object
+c = [1, 2, 3]  # c is a DIFFERENT object with same contents
+
+print(a == c)             # True  (equality)
+print(a is c)             # False (identity)
+print(a is b)             # True  (same object)
+print(id(a) == id(b))     # True  (same memory address)
+
+# Small integers and interned strings may share identity:
+x = 42
+y = 42
+print(x is y)   # True (CPython caches small ints -5 to 256)
+
+# Don't rely on 'is' for value comparison — use ==
+# Exception: 'is None' is idiomatic and correct`,
+    explanation: "`is` tests identity (same object in memory); `==` tests equality (same value). The only safe use of `is` for values is `is None` / `is not None`. Small integer and string interning in CPython can make `is` pass unexpectedly.",
+  },
+  {
+    id: "py-isinstance-tuple",
+    language: "python",
+    title: "isinstance() with tuple of types",
+    tag: "understanding",
+    code: `value = 3.14
+
+# Check against multiple types at once
+if isinstance(value, (int, float)):
+    print("numeric")   # numeric
+
+# isinstance respects inheritance
+class Animal: pass
+class Dog(Animal): pass
+
+d = Dog()
+print(isinstance(d, Dog))     # True
+print(isinstance(d, Animal))  # True  (Dog IS-A Animal)
+print(type(d) is Animal)      # False (exact type check)
+
+# Avoid using type() == for type checks in general
+# isinstance handles subclasses correctly`,
+    explanation: "`isinstance(obj, (A, B))` returns True if obj is an instance of A or B (or a subclass). It's the idiomatic way to check type compatibility. Use `type(obj) is T` only when you need to exclude subclasses.",
+  },
+  {
+    id: "py-mutable-default-argument",
+    language: "python",
+    title: "Mutable default argument anti-pattern",
+    tag: "caveats",
+    code: `# WRONG: the list is shared across ALL calls
+def append_to(item, target=[]):
+    target.append(item)
+    return target
+
+print(append_to(1))   # [1]
+print(append_to(2))   # [1, 2]  ← unexpected!
+print(append_to(3))   # [1, 2, 3]
+
+# CORRECT: use None as default, create new list each call
+def append_to_fixed(item, target=None):
+    if target is None:
+        target = []
+    target.append(item)
+    return target
+
+print(append_to_fixed(1))  # [1]
+print(append_to_fixed(2))  # [2]`,
+    explanation: "Default argument values are evaluated once when the function is defined, not on each call. A mutable default (list, dict, set) is shared across all calls. Always use `None` as a sentinel and create the object inside the function.",
+  },
+  {
+    id: "py-late-binding-closure",
+    language: "python",
+    title: "Late binding in closures",
+    tag: "caveats",
+    code: `# WRONG: all functions capture the same variable 'i'
+funcs = [lambda: i for i in range(3)]
+print([f() for f in funcs])   # [2, 2, 2] — all see i=2
+
+# FIX 1: default argument captures value at creation time
+funcs2 = [lambda i=i: i for i in range(3)]
+print([f() for f in funcs2])  # [0, 1, 2]
+
+# FIX 2: factory function creates a new scope
+def make_fn(n):
+    return lambda: n
+
+funcs3 = [make_fn(i) for i in range(3)]
+print([f() for f in funcs3])  # [0, 1, 2]`,
+    explanation: "Python closures capture variables by reference, not by value. When the variable changes after closure creation (as in a loop), all closures see the final value. Use a default argument or a factory function to capture the current value.",
+  },
+  {
+    id: "py-integer-string-concatenation",
+    language: "python",
+    title: "TypeError: concatenating str and int",
+    tag: "caveats",
+    code: `# This raises TypeError
+# print("Value: " + 42)   # TypeError: can only concatenate str (not "int") to str
+
+# Fix 1: explicit str() conversion
+print("Value: " + str(42))   # Value: 42
+
+# Fix 2: f-string (most idiomatic)
+n = 42
+print(f"Value: {n}")          # Value: 42
+
+# Fix 3: comma in print (inserts space)
+print("Value:", 42)           # Value: 42
+
+# Fix 4: %-formatting
+print("Value: %d" % 42)       # Value: 42`,
+    explanation: "Python won't implicitly convert numbers to strings for `+` concatenation — it requires explicit coercion. f-strings are the most readable fix. Only str + str is supported; int + str raises TypeError immediately.",
+  },
+  {
+    id: "py-is-none-pattern",
+    language: "python",
+    title: "Checking for None correctly",
+    tag: "caveats",
+    code: `value = None
+
+# Correct: use 'is None' (identity check)
+if value is None:
+    print("no value")
+
+# Also correct:
+if value is not None:
+    print("has value")
+
+# Wrong: == None works but is fragile
+# An object can define __eq__ to return True for None comparison
+
+# WRONG — empty list is falsy but is not None
+lst = []
+if not lst:       # True (falsy) — but lst is not None
+    print("empty or None")   # misleading
+
+if lst is None:   # False — correct distinction
+    print("actually None")`,
+    explanation: "Use `is None` / `is not None` for None checks — it's idiomatic and unambiguous. Avoid `== None`. Don't conflate None-ness with falsiness: `0`, `''`, `[]`, and `False` are all falsy but are not None.",
+  },
+  {
+    id: "py-type-narrowing",
+    language: "python",
+    title: "Type narrowing with isinstance guards",
+    tag: "types",
+    code: `from typing import Union
+
+def process(value: Union[int, str, list]) -> str:
+    if isinstance(value, int):
+        # type checker knows value: int here
+        return f"integer: {value + 1}"
+    elif isinstance(value, str):
+        # type checker knows value: str here
+        return f"string: {value.upper()}"
+    else:
+        # type checker knows value: list here
+        return f"list of {len(value)}"
+
+print(process(42))         # integer: 43
+print(process("hello"))    # string: HELLO
+print(process([1, 2, 3]))  # list of 3`,
+    explanation: "Type checkers (mypy, pyright) narrow the type inside `isinstance` branches. You get type-safe access to the specific type's methods. This is preferable to casting or `# type: ignore` comments.",
+  },
+  {
+    id: "py-optional-type",
+    language: "python",
+    title: "Optional[T] and None handling",
+    tag: "types",
+    code: `from typing import Optional
+
+# Optional[T] is equivalent to Union[T, None]
+def find_user(user_id: int) -> Optional[str]:
+    users = {1: "Alice", 2: "Bob"}
+    return users.get(user_id)   # returns None if not found
+
+name = find_user(1)
+
+# Type checker forces you to handle the None case
+if name is not None:
+    print(name.upper())   # ALICE — safe
+
+# Pattern: provide a default
+display_name = find_user(99) or "Unknown"
+print(display_name)   # Unknown`,
+    explanation: "`Optional[T]` signals that a function may return `None`. Type checkers enforce that you handle the None case before using the value. In Python 3.10+, you can use `T | None` instead of `Optional[T]`.",
+  },
+  {
+    id: "py-type-union-pipe",
+    language: "python",
+    title: "Union types with | operator (Python 3.10+)",
+    tag: "types",
+    code: `# Python 3.10+: use X | Y instead of Union[X, Y]
+def process(value: int | str | None) -> str:
+    if value is None:
+        return "none"
+    return str(value)
+
+# Works in isinstance too (Python 3.10+)
+x: int | str = 42
+if isinstance(x, int | str):
+    print("int or str")
+
+# In older code you'd write:
+from typing import Union, Optional
+def old_process(value: Union[int, str, None]) -> str:
+    return str(value) if value is not None else "none"`,
+    explanation: "Python 3.10 introduced `X | Y` syntax for union types, directly in annotations and in `isinstance`/`issubclass` checks. It's more readable than `Union[X, Y]` from the `typing` module.",
+  },
+  {
+    id: "py-tuple-type-annotation",
+    language: "python",
+    title: "Annotating tuples precisely",
+    tag: "types",
+    code: `from typing import Tuple
+
+# Fixed-length tuple: Tuple[int, str, float]
+def get_record() -> tuple[int, str, float]:   # Python 3.9+
+    return (1, "Alice", 3.8)
+
+record = get_record()
+# record[0] is int, record[1] is str, record[2] is float
+
+# Variable-length homogeneous tuple: tuple[int, ...]
+def get_scores() -> tuple[int, ...]:
+    return (85, 92, 78)
+
+# In Python 3.8: use Tuple from typing
+def legacy() -> Tuple[int, str]:
+    return (1, "a")`,
+    explanation: "Fixed-length tuples are annotated element-by-element: `tuple[int, str, float]`. For variable-length homogeneous tuples, use `tuple[T, ...]`. The `...` is literally three dots — it means 'zero or more of T'.",
+  },
+  {
+    id: "py-abc-abstract-property",
+    language: "python",
+    title: "Abstract properties with ABC",
+    tag: "classes",
+    code: `from abc import ABC, abstractmethod
+
+class Shape(ABC):
+    @property
+    @abstractmethod
+    def area(self) -> float: ...
+
+    @property
+    @abstractmethod
+    def perimeter(self) -> float: ...
+
+    def describe(self):
+        print(f"Area={self.area:.2f}, Perimeter={self.perimeter:.2f}")
+
+class Circle(Shape):
+    def __init__(self, r): self.r = r
+
+    @property
+    def area(self): return 3.14159 * self.r ** 2
+
+    @property
+    def perimeter(self): return 2 * 3.14159 * self.r
+
+Circle(5).describe()   # Area=78.54, Perimeter=31.42`,
+    explanation: "Stack `@property` above `@abstractmethod` to create abstract properties. Subclasses must provide a concrete `@property` with the same name. Attempting to instantiate the abstract class raises `TypeError`.",
+  },
+  {
+    id: "py-dataclass-post-init",
+    language: "python",
+    title: "Dataclass __post_init__ for validation",
+    tag: "classes",
+    code: `from dataclasses import dataclass
+
+@dataclass
+class Temperature:
+    celsius: float
+
+    def __post_init__(self):
+        if self.celsius < -273.15:
+            raise ValueError(f"Below absolute zero: {self.celsius}")
+        # Derived attribute
+        self.fahrenheit = self.celsius * 9/5 + 32
+
+t = Temperature(100)
+print(t.fahrenheit)   # 212.0
+
+try:
+    Temperature(-300)
+except ValueError as e:
+    print(e)   # Below absolute zero: -300`,
+    explanation: "`__post_init__` runs after the generated `__init__` finishes. Use it for validation, computed attributes, or any setup that needs all fields to be set first. It receives the same arguments as `__init__`.",
+  },
+  {
+    id: "py-class-inheritance-super",
+    language: "python",
+    title: "super() in single and multiple inheritance",
+    tag: "classes",
+    code: `class Animal:
+    def __init__(self, name):
+        self.name = name
+    def speak(self):
+        return f"{self.name} makes a sound"
+
+class Dog(Animal):
+    def __init__(self, name, breed):
+        super().__init__(name)   # calls Animal.__init__
+        self.breed = breed
+    def speak(self):
+        base = super().speak()   # calls Animal.speak
+        return f"{base} (Woof!)"
+
+d = Dog("Rex", "Labrador")
+print(d.speak())
+# Rex makes a sound (Woof!)
+print(d.breed)   # Labrador`,
+    explanation: "`super()` with no arguments is the idiomatic way to call parent implementations. In single inheritance it calls the direct parent. In multiple inheritance it follows the MRO (C3 linearisation), enabling cooperative multiple inheritance.",
+  },
+  {
+    id: "py-classmethod-factory",
+    language: "python",
+    title: "classmethod as alternative constructor",
+    tag: "classes",
+    code: `class Date:
+    def __init__(self, year, month, day):
+        self.year, self.month, self.day = year, month, day
+
+    @classmethod
+    def from_string(cls, s):   # 'cls' is the class itself
+        y, m, d = map(int, s.split("-"))
+        return cls(y, m, d)
+
+    @classmethod
+    def today(cls):
+        import datetime
+        t = datetime.date.today()
+        return cls(t.year, t.month, t.day)
+
+    def __repr__(self):
+        return f"Date({self.year}, {self.month}, {self.day})"
+
+print(Date.from_string("2026-05-07"))   # Date(2026, 5, 7)
+print(Date.today())`,
+    explanation: "`@classmethod` receives `cls` (the class, not the instance) as the first argument. It's the standard way to create alternative constructors (factory methods). Using `cls(...)` instead of the class name makes subclassing work correctly.",
+  },
+  {
+    id: "py-staticmethod-utility",
+    language: "python",
+    title: "staticmethod for utility functions",
+    tag: "classes",
+    code: `class MathUtils:
+    PI = 3.14159
+
+    @staticmethod
+    def is_prime(n):   # no 'self' or 'cls' — pure function
+        if n < 2: return False
+        for i in range(2, int(n**0.5) + 1):
+            if n % i == 0: return False
+        return True
+
+    @staticmethod
+    def gcd(a, b):
+        while b:
+            a, b = b, a % b
+        return a
+
+# Call on class or instance — same behavior
+print(MathUtils.is_prime(17))   # True
+print(MathUtils.gcd(48, 18))    # 6
+print(MathUtils().is_prime(7))  # True`,
+    explanation: "`@staticmethod` is a plain function namespaced inside a class. It receives no implicit first argument. Use it for utility functions that belong conceptually to the class but don't need access to the instance or class.",
+  },
+  {
+    id: "py-property-getter-setter",
+    language: "python",
+    title: "Property getter, setter, and deleter",
+    tag: "classes",
+    code: `class Circle:
+    def __init__(self, radius):
+        self._radius = radius   # private by convention
+
+    @property
+    def radius(self):
+        return self._radius
+
+    @radius.setter
+    def radius(self, value):
+        if value < 0:
+            raise ValueError("radius must be non-negative")
+        self._radius = value
+
+    @radius.deleter
+    def radius(self):
+        del self._radius
+
+c = Circle(5)
+print(c.radius)   # 5
+c.radius = 10     # calls setter
+c.radius = -1     # raises ValueError
+del c.radius      # calls deleter`,
+    explanation: "The `@property` decorator creates a read-only attribute. Stack `@name.setter` and `@name.deleter` to allow writes and deletion. This gives full attribute-like syntax while encapsulating validation and logic.",
+  },
+  {
+    id: "py-dunder-str-repr",
+    language: "python",
+    title: "__str__ vs __repr__",
+    tag: "classes",
+    code: `class Temperature:
+    def __init__(self, celsius):
+        self.celsius = celsius
+
+    def __repr__(self):
+        # For developers: unambiguous, ideally eval()-able
+        return f"Temperature({self.celsius!r})"
+
+    def __str__(self):
+        # For users: readable presentation
+        return f"{self.celsius}°C"
+
+t = Temperature(100)
+print(str(t))    # 100°C       (uses __str__)
+print(repr(t))   # Temperature(100)  (uses __repr__)
+
+# In a container, __repr__ is used:
+temps = [Temperature(0), Temperature(100)]
+print(temps)     # [Temperature(0), Temperature(100)]`,
+    explanation: "`__repr__` is for debugging — it should ideally produce a string you could paste to recreate the object. `__str__` is for display. If only `__repr__` is defined, `str()` falls back to it. Containers always use `__repr__` for elements.",
+  },
+  {
+    id: "py-dunder-eq-hash",
+    language: "python",
+    title: "__eq__ and __hash__ contract",
+    tag: "classes",
+    code: `class Point:
+    def __init__(self, x, y):
+        self.x, self.y = x, y
+
+    def __eq__(self, other):
+        if not isinstance(other, Point):
+            return NotImplemented
+        return self.x == other.x and self.y == other.y
+
+    def __hash__(self):
+        # Must be consistent with __eq__: equal objects must have equal hashes
+        return hash((self.x, self.y))
+
+p1 = Point(1, 2)
+p2 = Point(1, 2)
+print(p1 == p2)      # True
+print(hash(p1) == hash(p2))  # True
+# Can be used in sets and as dict keys:
+s = {p1, p2}
+print(len(s))   # 1`,
+    explanation: "If you define `__eq__`, Python sets `__hash__` to None (making the object unhashable). Define both or neither. The rule: objects that compare equal must have the same hash. Return `NotImplemented` for unknown types in `__eq__`.",
+  },
+  {
+    id: "py-context-manager-class",
+    language: "python",
+    title: "Context manager with __enter__ / __exit__",
+    tag: "classes",
+    code: `class Timer:
+    import time as _time
+    def __enter__(self):
+        self.start = self._time.perf_counter()
+        return self   # bound to 'as' target
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        elapsed = self._time.perf_counter() - self.start
+        print(f"Elapsed: {elapsed:.4f}s")
+        return False  # don't suppress exceptions
+
+import time
+with Timer() as t:
+    time.sleep(0.01)
+# Elapsed: 0.0102s  (approximately)
+
+# __exit__ receives exception info; return True to suppress`,
+    explanation: "`__enter__` sets up the context and returns the value bound to `as`. `__exit__` always runs — return True to swallow any exception, False (or None) to propagate it. This is the full protocol for `with` statements.",
+  },
+  {
+    id: "py-iterator-protocol",
+    language: "python",
+    title: "Iterator protocol: __iter__ and __next__",
+    tag: "classes",
+    code: `class Countdown:
+    def __init__(self, start):
+        self.current = start
+
+    def __iter__(self):
+        return self   # the object is its own iterator
+
+    def __next__(self):
+        if self.current <= 0:
+            raise StopIteration
+        value = self.current
+        self.current -= 1
+        return value
+
+for n in Countdown(5):
+    print(n, end=" ")   # 5 4 3 2 1
+
+# Can also use next() manually:
+it = Countdown(3)
+print(next(it))  # 3
+print(next(it))  # 2`,
+    explanation: "The iterator protocol requires `__iter__` (returns the iterator — often `self`) and `__next__` (returns the next value or raises `StopIteration`). `for` loops call these automatically. Separate iterable/iterator objects allow multiple simultaneous iterations.",
+  },
+  {
+    id: "py-descriptor-protocol",
+    language: "python",
+    title: "Descriptor protocol (__get__, __set__)",
+    tag: "classes",
+    code: `class Validator:
+    def __set_name__(self, owner, name):
+        self.name = name
+
+    def __get__(self, obj, objtype=None):
+        if obj is None:
+            return self   # accessed on class, not instance
+        return obj.__dict__.get(self.name, 0)
+
+    def __set__(self, obj, value):
+        if not isinstance(value, (int, float)):
+            raise TypeError(f"{self.name} must be numeric")
+        obj.__dict__[self.name] = value
+
+class Product:
+    price = Validator()
+    quantity = Validator()
+
+p = Product()
+p.price = 9.99
+p.quantity = 3
+print(p.price, p.quantity)   # 9.99 3`,
+    explanation: "Descriptors implement `__get__`/`__set__`/`__delete__` and are assigned as class attributes. They power `property`, `classmethod`, and `staticmethod` under the hood. Data descriptors (both `__get__` and `__set__`) take precedence over instance `__dict__`.",
+  },
+  {
+    id: "py-multiple-inheritance-mro",
+    language: "python",
+    title: "MRO and diamond inheritance",
+    tag: "classes",
+    code: `class A:
+    def method(self): return "A"
+
+class B(A):
+    def method(self): return "B->" + super().method()
+
+class C(A):
+    def method(self): return "C->" + super().method()
+
+class D(B, C):   # diamond: D -> B -> C -> A
+    pass
+
+d = D()
+print(d.method())       # B->C->A
+print(D.__mro__)
+# (<class 'D'>, <class 'B'>, <class 'C'>, <class 'A'>, <class 'object'>)`,
+    explanation: "Python's C3 linearisation (MRO) determines method resolution order. In the diamond pattern, A appears once in the MRO. `super()` in B calls C (not A), enabling cooperative multiple inheritance where every class in the chain can contribute.",
+  },
+  {
+    id: "py-dataclass-frozen",
+    language: "python",
+    title: "Frozen dataclasses",
+    tag: "classes",
+    code: `from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class Coordinate:
+    lat: float
+    lon: float
+
+    def distance_to(self, other):
+        return ((self.lat - other.lat)**2 + (self.lon - other.lon)**2)**0.5
+
+origin = Coordinate(0.0, 0.0)
+paris  = Coordinate(48.8566, 2.3522)
+
+print(origin.distance_to(paris))   # 49.01...
+
+# Frozen: mutation raises FrozenInstanceError
+try:
+    origin.lat = 10.0
+except Exception as e:
+    print(type(e).__name__)   # FrozenInstanceError
+
+# Hashable: can be used in sets and dicts
+locations = {origin, paris}`,
+    explanation: "`frozen=True` makes the dataclass immutable (raises `FrozenInstanceError` on assignment). As a bonus, Python automatically makes frozen dataclasses hashable, enabling their use as dict keys and set members.",
+  },
+  {
+    id: "py-async-generator",
+    language: "python",
+    title: "Async generators",
+    tag: "snippet",
+    code: `import asyncio
+
+async def async_range(start, stop):
+    for i in range(start, stop):
+        await asyncio.sleep(0)  # yield control to event loop
+        yield i
+
+async def main():
+    async for n in async_range(0, 5):
+        print(n, end=" ")   # 0 1 2 3 4
+    print()
+
+    # Also works with async comprehensions:
+    values = [n async for n in async_range(0, 5)]
+    print(values)   # [0, 1, 2, 3, 4]
+
+asyncio.run(main())`,
+    explanation: "An async generator is an `async def` function that contains `yield`. It returns an async iterable used with `async for`. The `yield` suspends to return a value; `await` inside can suspend to wait for I/O.",
+  },
+  {
+    id: "py-asyncio-gather",
+    language: "python",
+    title: "asyncio.gather for concurrent tasks",
+    tag: "snippet",
+    code: `import asyncio
+
+async def fetch(name, delay):
+    await asyncio.sleep(delay)
+    return f"{name} done"
+
+async def main():
+    # Run concurrently — total time ≈ max(delays), not sum
+    results = await asyncio.gather(
+        fetch("A", 0.3),
+        fetch("B", 0.1),
+        fetch("C", 0.2),
+    )
+    print(results)
+    # ['A done', 'B done', 'C done']  (order preserved)
+
+import time
+t = time.perf_counter()
+asyncio.run(main())
+print(f"{time.perf_counter()-t:.2f}s")  # ~0.30s`,
+    explanation: "`asyncio.gather` runs coroutines concurrently in a single thread. Results come back in the same order as the arguments, regardless of completion order. Use `return_exceptions=True` to collect exceptions rather than stopping on the first failure.",
+  },
+  {
+    id: "py-pathlib-operations",
+    language: "python",
+    title: "pathlib.Path common operations",
+    tag: "snippet",
+    code: `from pathlib import Path
+
+p = Path("/home/user/docs/report.pdf")
+
+print(p.name)         # report.pdf
+print(p.stem)         # report
+print(p.suffix)       # .pdf
+print(p.parent)       # /home/user/docs
+print(p.parts)        # ('/', 'home', 'user', 'docs', 'report.pdf')
+
+# Build paths with / operator
+config = Path.home() / ".config" / "app" / "settings.json"
+
+# Check existence and type
+p.exists()
+p.is_file()
+p.is_dir()
+
+# Read / write text
+# p.write_text("hello")
+# content = p.read_text()
+
+# Glob
+# for py_file in Path(".").glob("**/*.py"):
+#     print(py_file)`,
+    explanation: "`pathlib.Path` offers an object-oriented API for filesystem paths. The `/` operator joins path segments. Methods like `.read_text()`, `.write_text()`, `.exists()`, and `.glob()` eliminate most `os.path` imports in modern Python.",
+  },
+  {
+    id: "py-collections-counter",
+    language: "python",
+    title: "collections.Counter",
+    tag: "structures",
+    code: `from collections import Counter
+
+words = ["apple", "banana", "apple", "cherry", "banana", "apple"]
+c = Counter(words)
+print(c)                         # Counter({'apple': 3, 'banana': 2, 'cherry': 1})
+print(c["apple"])                # 3
+print(c["missing"])              # 0 (no KeyError)
+print(c.most_common(2))         # [('apple', 3), ('banana', 2)]
+
+# Arithmetic on counters
+c2 = Counter({"apple": 1, "date": 5})
+print(c + c2)    # apple:4, banana:2, cherry:1, date:5
+print(c - c2)    # apple:2, banana:2, cherry:1 (negatives removed)
+
+# Count characters in a string
+print(Counter("mississippi"))`,
+    explanation: "`Counter` is a dict subclass that counts hashable items. Missing keys return 0 (not KeyError). `most_common(n)` returns the n most frequent elements. Counter arithmetic handles union/intersection-like operations.",
+  },
+  {
+    id: "py-collections-defaultdict",
+    language: "python",
+    title: "collections.defaultdict",
+    tag: "structures",
+    code: `from collections import defaultdict
+
+# Group words by first letter without if-missing checks
+words = ["apple", "avocado", "banana", "blueberry", "cherry"]
+grouped = defaultdict(list)
+for w in words:
+    grouped[w[0]].append(w)
+print(dict(grouped))
+# {'a': ['apple', 'avocado'], 'b': ['banana', 'blueberry'], 'c': ['cherry']}
+
+# Count occurrences
+count = defaultdict(int)
+for w in words:
+    count[w[0]] += 1   # no need to check if key exists
+print(dict(count))   # {'a': 2, 'b': 2, 'c': 1}
+
+# Nested defaultdict
+nested = defaultdict(lambda: defaultdict(int))
+nested["row"]["col"] += 1`,
+    explanation: "`defaultdict(factory)` calls the factory when a key is missing rather than raising `KeyError`. Common factories: `list`, `int` (default 0), `set`. More idiomatic than `dict.setdefault` for building collections.",
+  },
+  {
+    id: "py-heapq-module",
+    language: "python",
+    title: "heapq: min-heap operations",
+    tag: "structures",
+    code: `import heapq
+
+nums = [5, 1, 8, 3, 2]
+
+# Turn list into a heap in-place (min-heap by default)
+heapq.heapify(nums)
+print(nums[0])   # 1 (minimum is always at index 0)
+
+# Push and pop
+heapq.heappush(nums, 0)
+print(heapq.heappop(nums))  # 0 (smallest removed)
+
+# Get N largest/smallest without full sort
+data = [3, 1, 4, 1, 5, 9, 2, 6]
+print(heapq.nlargest(3, data))   # [9, 6, 5]
+print(heapq.nsmallest(3, data))  # [1, 1, 2]
+
+# Max-heap: negate values
+max_heap = [-x for x in data]
+heapq.heapify(max_heap)
+print(-heapq.heappop(max_heap))  # 9`,
+    explanation: "`heapq` provides a min-heap using a plain list. `heappush`/`heappop` maintain the heap invariant in O(log n). For max-heap, negate values. Use `nlargest`/`nsmallest` for small N; use `sorted` for large N.",
+  },
+  {
+    id: "py-bisect-module",
+    language: "python",
+    title: "bisect for sorted list insertion",
+    tag: "structures",
+    code: `import bisect
+
+sorted_list = [1, 3, 5, 7, 9]
+
+# Find insertion point for 6 (to keep sorted order)
+i = bisect.bisect_left(sorted_list, 6)
+print(i)   # 3 (would go between 5 and 7)
+
+# Insert while maintaining sort: O(log n) search, O(n) insert
+bisect.insort(sorted_list, 6)
+print(sorted_list)  # [1, 3, 5, 6, 7, 9]
+
+# bisect_right puts duplicates after existing equal elements
+bisect.insort(sorted_list, 6)
+print(sorted_list)  # [1, 3, 5, 6, 6, 7, 9]
+
+# Fast grade lookup using sorted breakpoints
+grades = ["F", "D", "C", "B", "A"]
+breakpoints = [60, 70, 80, 90]
+score = 85
+grade = grades[bisect.bisect(breakpoints, score)]
+print(grade)  # B`,
+    explanation: "`bisect` performs binary search on sorted lists to find insertion points. `insort` inserts while maintaining order. `bisect_left` places before existing equal elements; `bisect_right` (default) places after. Lookup is O(log n).",
+  },
+  {
+    id: "py-functools-reduce",
+    language: "python",
+    title: "functools.reduce for fold operations",
+    tag: "structures",
+    code: `from functools import reduce
+import operator
+
+nums = [1, 2, 3, 4, 5]
+
+# Equivalent to ((((1+2)+3)+4)+5) = 15
+total = reduce(operator.add, nums)
+print(total)   # 15
+
+# With initial value:
+result = reduce(lambda acc, x: acc * x, nums, 1)
+print(result)  # 120 (factorial)
+
+# Flatten a list of lists
+lists = [[1, 2], [3, 4], [5]]
+flat = reduce(lambda a, b: a + b, lists)
+print(flat)   # [1, 2, 3, 4, 5]
+
+# Build a dict from key-value pairs
+pairs = [("a", 1), ("b", 2)]
+d = reduce(lambda acc, kv: {**acc, kv[0]: kv[1]}, pairs, {})`,
+    explanation: "`reduce(f, seq)` applies f cumulatively: `f(f(f(a,b),c),d)`. The optional third argument is the initial accumulator. Python 3 moved it to `functools` to discourage overuse — comprehensions or `sum`/`max` are usually clearer.",
+  },
+  {
+    id: "py-itertools-accumulate",
+    language: "python",
+    title: "itertools.accumulate for running totals",
+    tag: "structures",
+    code: `import itertools
+import operator
+
+nums = [1, 2, 3, 4, 5]
+
+# Running sum (default operation is addition)
+running_sum = list(itertools.accumulate(nums))
+print(running_sum)   # [1, 3, 6, 10, 15]
+
+# Running product
+running_prod = list(itertools.accumulate(nums, operator.mul))
+print(running_prod)  # [1, 2, 6, 24, 120]
+
+# With initial value (Python 3.8+)
+with_init = list(itertools.accumulate(nums, initial=100))
+print(with_init)  # [100, 101, 103, 106, 110, 115]
+
+# Running maximum
+data = [3, 1, 4, 1, 5, 9, 2, 6]
+running_max = list(itertools.accumulate(data, max))
+print(running_max)   # [3, 3, 4, 4, 5, 9, 9, 9]`,
+    explanation: "`itertools.accumulate` produces running aggregates. It's lazy, memory-efficient, and supports any binary function. The `initial` parameter (3.8+) prepends a starting value. Use it for prefix sums, running max/min, and scan operations.",
+  },
+  {
+    id: "py-sys-module-basics",
+    language: "python",
+    title: "sys module essentials",
+    tag: "snippet",
+    code: `import sys
+
+# Python version info
+print(sys.version_info)       # sys.version_info(major=3, minor=12, ...)
+print(sys.version_info >= (3, 10))  # True
+
+# Command-line arguments
+# python script.py arg1 arg2
+print(sys.argv)   # ['script.py', 'arg1', 'arg2']
+
+# Standard streams
+print("to stdout", file=sys.stdout)
+print("to stderr", file=sys.stderr)
+
+# Exit with code
+# sys.exit(0)   # 0 = success, non-zero = error
+
+# Module search path
+print(sys.path[:2])   # list of directories Python searches for modules
+
+# Platform
+print(sys.platform)   # 'linux', 'win32', 'darwin'`,
+    explanation: "`sys` exposes Python's runtime environment. `sys.argv` gives CLI args; `sys.version_info` enables version guards; `sys.exit()` terminates the interpreter. Prefer `sys.stderr` for error messages so they don't mix with normal output.",
+  },
+  {
+    id: "py-os-module-basics",
+    language: "python",
+    title: "os module for environment and paths",
+    tag: "snippet",
+    code: `import os
+
+# Environment variables
+home = os.environ.get("HOME", "/tmp")  # safe get with default
+os.environ["MY_VAR"] = "hello"         # set env var
+
+# Working directory
+cwd = os.getcwd()
+os.chdir("/tmp")   # change directory
+os.chdir(cwd)      # change back
+
+# Path operations (prefer pathlib for new code)
+joined = os.path.join("/home", "user", "file.txt")
+print(joined)             # /home/user/file.txt
+print(os.path.exists("/tmp"))         # True
+print(os.path.basename(joined))      # file.txt
+print(os.path.splitext("file.txt"))  # ('file', '.txt')
+
+# List directory
+files = os.listdir(".")`,
+    explanation: "`os` provides OS-level operations. `os.environ.get()` is safer than direct key access (avoids KeyError). For path manipulation, prefer `pathlib.Path` in modern code — it's object-oriented and platform-independent.",
+  },
+  {
+    id: "py-re-module-basics",
+    language: "python",
+    title: "Regular expressions with re module",
+    tag: "snippet",
+    code: `import re
+
+text = "Contact us at alice@example.com or bob@test.org"
+
+# Search for first match
+m = re.search(r"\\w+@\\w+\\.\\w+", text)
+if m:
+    print(m.group())   # alice@example.com
+
+# Find all matches
+emails = re.findall(r"\\w+@\\w+\\.\\w+", text)
+print(emails)   # ['alice@example.com', 'bob@test.org']
+
+# Substitute
+cleaned = re.sub(r"\\w+@\\w+\\.\\w+", "[REDACTED]", text)
+print(cleaned)
+
+# Compile for repeated use
+pattern = re.compile(r"\\d{4}-\\d{2}-\\d{2}")
+print(pattern.match("2026-05-07"))   # Match object`,
+    explanation: "`re.search` scans for first match anywhere; `re.match` only checks the start; `re.findall` returns all non-overlapping matches. Compile patterns with `re.compile` when reusing. Raw strings (`r\"...\"`) prevent backslash issues.",
+  },
+  {
+    id: "py-json-module",
+    language: "python",
+    title: "json module: serialise and deserialise",
+    tag: "snippet",
+    code: `import json
+
+data = {"name": "Alice", "age": 30, "scores": [95, 87, 92], "active": True}
+
+# Python → JSON string
+s = json.dumps(data, indent=2)
+print(s)
+
+# JSON string → Python
+loaded = json.loads(s)
+print(loaded["name"])   # Alice
+print(type(loaded["scores"]))  # <class 'list'>
+
+# Write to file
+# with open("data.json", "w") as f:
+#     json.dump(data, f, indent=2)
+
+# Read from file
+# with open("data.json") as f:
+#     loaded = json.load(f)
+
+# Handle non-serialisable types:
+import datetime
+json.dumps({"date": str(datetime.date.today())})`,
+    explanation: "`json.dumps` serialises to a string; `json.loads` parses a string. The `indent` parameter pretty-prints. Non-serialisable types (datetime, set, custom objects) must be converted to JSON-compatible types manually or via a custom encoder.",
+  },
+  {
+    id: "py-logging-module",
+    language: "python",
+    title: "logging module basics",
+    tag: "snippet",
+    code: `import logging
+
+# Basic configuration (call once at startup)
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
+
+logger = logging.getLogger(__name__)
+
+logger.debug("debug details: x=%d", 42)
+logger.info("server started on port %d", 8080)
+logger.warning("disk usage above 90%%")
+logger.error("connection failed: %s", "timeout")
+
+try:
+    1 / 0
+except ZeroDivisionError:
+    logger.exception("unexpected error")   # includes traceback`,
+    explanation: "Use `logging.getLogger(__name__)` for per-module loggers. Call `basicConfig` once at app startup. Prefer `%s` format strings over f-strings in log calls — they're only evaluated if the message is actually emitted.",
+  },
+  {
+    id: "py-threading-basics",
+    language: "python",
+    title: "threading module basics",
+    tag: "snippet",
+    code: `import threading
+import time
+
+results = []
+lock = threading.Lock()
+
+def worker(n):
+    time.sleep(0.01)        # simulate I/O
+    with lock:              # protect shared state
+        results.append(n * n)
+
+threads = [threading.Thread(target=worker, args=(i,)) for i in range(5)]
+for t in threads: t.start()
+for t in threads: t.join()   # wait for all
+
+print(sorted(results))   # [0, 1, 4, 9, 16]`,
+    explanation: "The `threading` module is useful for I/O-bound concurrency. The GIL prevents true CPU parallelism, but threads can overlap I/O waits. Always protect shared mutable state with a `Lock`. For CPU-bound work, use `multiprocessing` or `concurrent.futures`.",
+  },
+  {
+    id: "py-concurrent-futures",
+    language: "python",
+    title: "concurrent.futures for easy parallelism",
+    tag: "snippet",
+    code: `from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+import time
+
+def slow_square(n):
+    time.sleep(0.01)
+    return n * n
+
+# Thread pool: ideal for I/O-bound tasks
+with ThreadPoolExecutor(max_workers=4) as executor:
+    futures = [executor.submit(slow_square, i) for i in range(8)]
+    results = [f.result() for f in futures]
+print(results)   # [0, 1, 4, 9, 16, 25, 36, 49]
+
+# map() variant: simpler for uniform inputs
+with ThreadPoolExecutor(max_workers=4) as executor:
+    results = list(executor.map(slow_square, range(8)))`,
+    explanation: "`concurrent.futures` provides a high-level thread/process pool API. `submit` returns a `Future`; call `.result()` to block and get the value. Use `ThreadPoolExecutor` for I/O-bound work and `ProcessPoolExecutor` for CPU-bound tasks.",
+  },
+  {
+    id: "py-dataclass-inheritance",
+    language: "python",
+    title: "Dataclass inheritance",
+    tag: "classes",
+    code: `from dataclasses import dataclass
+
+@dataclass
+class Animal:
+    name: str
+    age: int
+
+@dataclass
+class Dog(Animal):
+    breed: str
+    # parent fields come first in __init__
+
+d = Dog(name="Rex", age=3, breed="Labrador")
+print(d)   # Dog(name='Rex', age=3, breed='Labrador')
+
+# Fields with defaults must come after fields without
+@dataclass
+class Named:
+    name: str
+    title: str = "Mr"
+
+@dataclass
+class Employee(Named):
+    department: str
+    # 'department' has no default, but 'title' in parent has one
+    # This raises TypeError — defaults can't precede non-defaults`,
+    explanation: "Dataclass inheritance composes `__init__` by listing parent fields before child fields. The notorious constraint: a parent field with a default must not be followed by a child field without a default — this would create an invalid parameter order.",
+  },
+  {
+    id: "py-pep695-generics",
+    language: "python",
+    title: "PEP 695 type parameter syntax (Python 3.12)",
+    tag: "types",
+    code: `# Python 3.12+ native generic syntax — no TypeVar import needed
+def first[T](seq: list[T]) -> T:
+    return seq[0]
+
+# Generic class
+class Stack[T]:
+    def __init__(self):
+        self._items: list[T] = []
+
+    def push(self, item: T) -> None:
+        self._items.append(item)
+
+    def pop(self) -> T:
+        return self._items.pop()
+
+s: Stack[int] = Stack()
+s.push(1)
+s.push(2)
+print(s.pop())   # 2
+
+# Type alias with 'type' keyword
+type Vector = list[float]`,
+    explanation: "PEP 695 (Python 3.12) adds native `[T]` syntax for type parameters — no more `TypeVar` imports. Type aliases use `type Name = ...`. These are purely syntactic improvements; the runtime behaviour is identical to the older style.",
+  },
+  {
+    id: "py-match-guards",
+    language: "python",
+    title: "Match statement with guard clauses",
+    tag: "snippet",
+    code: `def categorise(point):
+    match point:
+        case (x, y) if x == 0 and y == 0:
+            return "origin"
+        case (x, 0):
+            return f"on x-axis at {x}"
+        case (0, y):
+            return f"on y-axis at {y}"
+        case (x, y) if x == y:
+            return f"on diagonal at {x}"
+        case (x, y):
+            return f"general point ({x}, {y})"
+
+print(categorise((0, 0)))    # origin
+print(categorise((3, 0)))    # on x-axis at 3
+print(categorise((5, 5)))    # on diagonal at 5`,
+    explanation: "Guard clauses (`if condition`) after a pattern add extra constraints. A pattern with a guard only matches if both the structural pattern and the guard are true. Guards are evaluated only after the pattern matches.",
+  },
+  {
+    id: "py-match-mapping",
+    language: "python",
+    title: "Match with mapping patterns",
+    tag: "snippet",
+    code: `def handle_event(event):
+    match event:
+        case {"type": "click", "x": x, "y": y}:
+            return f"click at ({x},{y})"
+        case {"type": "keypress", "key": k}:
+            return f"key '{k}' pressed"
+        case {"type": str(t)}:
+            return f"unknown event type: {t}"
+        case _:
+            return "malformed event"
+
+print(handle_event({"type": "click", "x": 10, "y": 20}))
+# click at (10,20)
+print(handle_event({"type": "keypress", "key": "Enter"}))
+# key 'Enter' pressed`,
+    explanation: "Mapping patterns match dictionaries. Extra keys are ignored (unlike sequence patterns which are length-sensitive). Capture variables bind to the corresponding values. Use `**rest` to capture remaining keys.",
+  },
+  {
+    id: "py-walrus-operator",
+    language: "python",
+    title: "Walrus operator := (assignment expression)",
+    tag: "snippet",
+    code: `import re
+
+text = "The price is 42 dollars"
+
+# Assign and test in one expression
+if m := re.search(r"\\d+", text):
+    print(f"Found number: {m.group()}")   # Found number: 42
+
+# Useful in while loops:
+data = [1, 2, 3, 0, 4, 5]
+i = 0
+while (val := data[i]) != 0:
+    print(val, end=" ")   # 1 2 3
+    i += 1
+
+# Avoids calling expensive functions twice:
+if (n := len(text)) > 10:
+    print(f"Long string: {n} chars")`,
+    explanation: "The walrus operator `:=` assigns and returns a value in a single expression. It's most useful in `while` and `if` conditions to avoid calling a function twice or introducing an extra variable before the condition.",
+  },
+  {
+    id: "py-functools-partial",
+    language: "python",
+    title: "functools.partial for argument binding",
+    tag: "snippet",
+    code: `from functools import partial
+
+def power(base, exponent):
+    return base ** exponent
+
+# Bind the first argument
+square = partial(power, exponent=2)
+cube   = partial(power, exponent=3)
+
+print(square(4))   # 16
+print(cube(3))     # 27
+
+# Useful with map:
+print(list(map(partial(power, exponent=2), [1, 2, 3, 4])))
+# [1, 4, 9, 16]
+
+# Partial with positional args
+double = partial(lambda factor, x: x * factor, 2)
+print(double(5))   # 10`,
+    explanation: "`functools.partial` creates a new callable with some arguments pre-filled. It's a cleaner alternative to a lambda when you just need to bind arguments. The result is a `partial` object, not a lambda, so it has a descriptive `repr`.",
+  },
+  {
+    id: "py-itertools-product",
+    language: "python",
+    title: "itertools.product: cartesian product",
+    tag: "snippet",
+    code: `import itertools
+
+colors = ["red", "blue"]
+sizes  = ["S", "M", "L"]
+
+# Cartesian product — like nested for loops
+for color, size in itertools.product(colors, sizes):
+    print(f"{color}-{size}", end="  ")
+# red-S  red-M  red-L  blue-S  blue-M  blue-L
+
+# Equivalent nested loop:
+# for c in colors:
+#     for s in sizes:
+#         print(f"{c}-{s}")
+
+# repeat parameter: same iterable multiple times
+for a, b in itertools.product("AB", repeat=2):
+    print(a+b, end=" ")
+# AA AB BA BB`,
+    explanation: "`itertools.product` computes the Cartesian product lazily. `repeat=n` is equivalent to repeating the iterable n times. Use it instead of deeply nested loops — the result is both more readable and memory-efficient.",
+  },
+  {
+    id: "py-itertools-combinations",
+    language: "python",
+    title: "itertools.combinations and permutations",
+    tag: "snippet",
+    code: `import itertools
+
+items = [1, 2, 3, 4]
+
+# Combinations: no repeats, order doesn't matter
+print(list(itertools.combinations(items, 2)))
+# [(1,2),(1,3),(1,4),(2,3),(2,4),(3,4)]
+
+# Permutations: no repeats, order matters
+print(list(itertools.permutations(items, 2)))
+# [(1,2),(1,3),(1,4),(2,1),(2,3),(2,4),...]  12 pairs
+
+# combinations_with_replacement: repeats allowed
+print(list(itertools.combinations_with_replacement("AB", 2)))
+# [('A','A'),('A','B'),('B','B')]`,
+    explanation: "`combinations(r)` yields r-length subsets; `permutations(r)` yields r-length ordered arrangements. `combinations_with_replacement` allows an item to appear more than once. All are lazy iterators.",
+  },
+  {
+    id: "py-itertools-islice",
+    language: "python",
+    title: "itertools.islice: lazy slicing",
+    tag: "snippet",
+    code: `import itertools
+
+# Slice an iterator without materialising it
+def count_up():
+    n = 0
+    while True:
+        yield n
+        n += 1
+
+gen = count_up()  # infinite generator
+
+# Take the first 5 elements
+first5 = list(itertools.islice(gen, 5))
+print(first5)   # [0, 1, 2, 3, 4]
+
+# Skip 3, take next 5 (start, stop, step like slice())
+seq = itertools.islice(range(100), 10, 20, 2)
+print(list(seq))   # [10, 12, 14, 16, 18]
+
+# islice doesn't support negative indices
+# (use collections.deque(maxlen=n) for last-n)`,
+    explanation: "`itertools.islice` lazily slices any iterator without consuming it all. Essential for working with infinite generators. Unlike regular slicing, it doesn't support negative indices. Arguments mirror `slice(start, stop, step)`.",
+  },
+  {
+    id: "py-contextlib-contextmanager",
+    language: "python",
+    title: "contextlib.contextmanager decorator",
+    tag: "snippet",
+    code: `from contextlib import contextmanager
+import time
+
+@contextmanager
+def timer(label=""):
+    start = time.perf_counter()
+    try:
+        yield   # control passes to the 'with' block here
+    finally:
+        elapsed = time.perf_counter() - start
+        print(f"{label}: {elapsed:.4f}s")
+
+with timer("sleep test"):
+    time.sleep(0.01)
+# sleep test: 0.0102s
+
+# The contextmanager turns a generator into a context manager.
+# Code before 'yield' is __enter__; code after is __exit__.
+# Use try/finally to ensure cleanup even on exceptions.`,
+    explanation: "`@contextmanager` converts a generator function into a context manager. `yield` separates the enter and exit logic. Wrap in `try/finally` to guarantee cleanup. This is simpler than writing a class with `__enter__`/`__exit__`.",
+  },
+  {
+    id: "py-slots-performance",
+    language: "python",
+    title: "__slots__ to reduce memory",
+    tag: "understanding",
+    code: `class WithDict:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+    # Uses __dict__ — flexible but memory-heavy
+
+class WithSlots:
+    __slots__ = ("x", "y")   # no __dict__, no arbitrary attrs
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+import sys
+a = WithDict(1, 2)
+b = WithSlots(1, 2)
+print(sys.getsizeof(a))    # ~48 bytes + 232 for __dict__
+print(sys.getsizeof(b))    # ~56 bytes total (no __dict__)
+
+# Slots class: slightly faster attribute access too
+# Trade-off: can't add arbitrary attributes or use __weakref__`,
+    explanation: "`__slots__` replaces the per-instance `__dict__` with fixed-size slots. Memory per instance drops significantly. Trade-offs: no dynamic attribute creation, no weak references by default, inheritance requires care. Use for classes with millions of instances.",
+  },
+  {
+    id: "py-namedtuple-usage",
+    language: "python",
+    title: "collections.namedtuple",
+    tag: "structures",
+    code: `from collections import namedtuple
+
+Point = namedtuple("Point", ["x", "y"])
+Color = namedtuple("Color", "r g b")  # space-separated string
+
+p = Point(3, 4)
+print(p.x, p.y)    # 3 4
+print(p[0])        # 3  (still a tuple)
+print(p._asdict()) # {'x': 3, 'y': 4}
+
+# Non-destructive update:
+p2 = p._replace(x=10)
+print(p2)   # Point(x=10, y=4)
+
+# With defaults (Python 3.6.1+):
+Config = namedtuple("Config", ["host", "port", "debug"], defaults=["localhost", 8080, False])
+c = Config()
+print(c)   # Config(host='localhost', port=8080, debug=False)`,
+    explanation: "`namedtuple` creates a tuple subclass with named fields. Instances are immutable, memory-efficient, and support both index and name access. Use `_replace` for non-destructive updates. Prefer `dataclass` when you need mutability or methods.",
+  },
+  {
+    id: "py-enum-basics",
+    language: "python",
+    title: "enum.Enum and enum.auto()",
+    tag: "types",
+    code: `from enum import Enum, auto
+
+class Color(Enum):
+    RED   = 1
+    GREEN = 2
+    BLUE  = 3
+
+class Direction(Enum):
+    NORTH = auto()   # auto-assigns 1, 2, 3, ...
+    SOUTH = auto()
+    EAST  = auto()
+    WEST  = auto()
+
+print(Color.RED)           # Color.RED
+print(Color.RED.value)     # 1
+print(Color.RED.name)      # 'RED'
+print(Color["RED"])        # Color.RED  (by name)
+print(Color(1))            # Color.RED  (by value)
+
+# Iterate over members:
+for c in Color:
+    print(c.value, c.name)`,
+    explanation: "`Enum` creates a set of named constants. `auto()` auto-numbers values starting from 1. Access by name with `[]`, by value with `()`. Enums are iterable and support comparison by identity. Use `IntEnum` when interoperability with int is needed.",
+  },
+  {
+    id: "py-typing-typevar-bound",
+    language: "python",
+    title: "TypeVar with bound for constrained generics",
+    tag: "types",
+    code: `from typing import TypeVar
+
+# Unconstrained TypeVar — any type
+T = TypeVar("T")
+
+# Bound TypeVar — T must be a subtype of Comparable
+class Comparable:
+    def __lt__(self, other): ...
+
+C = TypeVar("C", bound=Comparable)
+
+def minimum(a: C, b: C) -> C:
+    return a if a < b else b
+
+# Constraints (explicit allowed types):
+NumStr = TypeVar("NumStr", int, str)
+
+def double(x: NumStr) -> NumStr:
+    return x * 2
+
+print(double(3))     # 6
+print(double("ab"))  # abab`,
+    explanation: "`TypeVar(bound=T)` constrains a generic to subtypes of T. `TypeVar(constraints...)` lists the exact allowed types. The difference: bound allows any subtype; constraints allow exactly those types. Bounds are more flexible for library code.",
+  },
+  {
+    id: "py-typing-generic-class",
+    language: "python",
+    title: "Generic classes with TypeVar",
+    tag: "types",
+    code: `from typing import TypeVar, Generic
+
+T = TypeVar("T")
+
+class Box(Generic[T]):
+    def __init__(self, value: T):
+        self.value = value
+
+    def unwrap(self) -> T:
+        return self.value
+
+    def map(self, f) -> "Box[T]":
+        return Box(f(self.value))
+
+int_box = Box(42)
+str_box = Box("hello")
+
+print(int_box.unwrap())          # 42
+doubled = int_box.map(lambda x: x * 2)
+print(doubled.unwrap())          # 84
+
+# Type checker knows int_box.value is int:
+val: int = int_box.unwrap()`,
+    explanation: "Generic classes are created by inheriting from `Generic[T]`. Type variables bind at construction time, giving the type checker full information about the contained type. Python 3.12 adds shorter `class Box[T]:` syntax.",
+  },
+  {
+    id: "py-abc-register",
+    language: "python",
+    title: "ABC virtual subclasses with register()",
+    tag: "classes",
+    code: `from abc import ABC
+
+class Drawable(ABC):
+    def draw(self): ...
+
+# Register a class that doesn't inherit from Drawable
+class Sprite:
+    def draw(self):
+        print("Drawing sprite")
+
+Drawable.register(Sprite)   # virtual subclass
+
+s = Sprite()
+print(isinstance(s, Drawable))   # True
+print(issubclass(Sprite, Drawable))  # True
+
+# But Sprite doesn't actually inherit from Drawable:
+print(Sprite.__mro__)  # [Sprite, object]  (no Drawable)`,
+    explanation: "`register()` makes a class a 'virtual subclass' of an ABC without actual inheritance. `isinstance`/`issubclass` return True, but no abstract method enforcement occurs. Useful for making third-party classes satisfy an interface protocol.",
+  },
+  {
+    id: "py-functools-cache",
+    language: "python",
+    title: "functools.cache and lru_cache",
+    tag: "snippet",
+    code: `from functools import cache, lru_cache
+
+@cache
+def fib(n):
+    if n < 2: return n
+    return fib(n - 1) + fib(n - 2)
+
+print(fib(50))   # fast due to memoisation
+
+# lru_cache with size limit (evicts oldest when full)
+@lru_cache(maxsize=128)
+def expensive(x, y):
+    return x ** y + y ** x
+
+print(expensive(3, 4))   # 81 + 64 = 145
+
+# Inspect cache stats
+print(expensive.cache_info())
+# CacheInfo(hits=0, misses=1, maxsize=128, currsize=1)
+
+# Clear cache
+expensive.cache_clear()`,
+    explanation: "`@cache` (Python 3.9+) is `@lru_cache(maxsize=None)` — unbounded memoisation. `@lru_cache` evicts least-recently-used entries when the cache is full. Both require hashable arguments. `cache_info()` shows hit/miss statistics.",
+  },
+  {
+    id: "py-string-methods-overview",
+    language: "python",
+    title: "Essential string methods",
+    tag: "snippet",
+    code: `s = "  Hello, World!  "
+
+# Whitespace / case
+print(s.strip())           # "Hello, World!"
+print(s.lower())           # "  hello, world!  "
+print(s.upper())           # "  HELLO, WORLD!  "
+print(s.title())           # "  Hello, World!  "
+
+# Search
+print("World" in s)        # True
+print(s.find("World"))     # 9 (index, -1 if not found)
+print(s.count("l"))        # 3
+
+# Split / join
+parts = s.strip().split(", ")
+print(parts)               # ['Hello', 'World!']
+print(" | ".join(parts))   # Hello | World!
+
+# Replace / check
+print(s.strip().replace("World", "Python"))
+print("abc123".isalnum())  # True`,
+    explanation: "Most string methods return new strings (strings are immutable). `strip`/`lstrip`/`rstrip` trim whitespace. `find` returns -1 on miss; `index` raises ValueError. `split` without args splits on any whitespace and removes empties.",
+  },
+  {
+    id: "py-f-string-advanced",
+    language: "python",
+    title: "Advanced f-string formatting",
+    tag: "snippet",
+    code: `pi = 3.14159265
+n  = 1234567.89
+name = "Alice"
+
+# Width, fill, alignment
+print(f"{name:>10}")    # "     Alice"  (right-aligned)
+print(f"{name:^10}")    # "  Alice   "  (centered)
+print(f"{name:-<10}")   # "Alice-----"  (left, fill with -)
+
+# Number formatting
+print(f"{pi:.3f}")         # 3.142
+print(f"{n:,.2f}")         # 1,234,567.89
+print(f"{n:e}")            # 1.234568e+06
+print(f"{255:#010x}")      # 0x000000ff
+
+# Debug with = (Python 3.8+)
+x = 42
+print(f"{x=}")    # x=42`,
+    explanation: "f-string format specs follow `{value:fill align width .precision type}`. The `=` flag (Python 3.8+) prints `name=value`. `#` adds `0x`/`0b`/`0o` prefix. Nested f-strings and expressions are fully supported.",
+  },
+  {
+    id: "py-bytes-bytearray",
+    language: "python",
+    title: "bytes and bytearray",
+    tag: "types",
+    code: `# bytes: immutable sequence of bytes 0-255
+b = b"hello"
+print(b[0])            # 104 (integer, not char)
+print(b.hex())         # 68656c6c6f
+print(bytes.fromhex("68656c6c6f"))  # b'hello'
+
+# bytearray: mutable
+ba = bytearray(b"hello")
+ba[0] = 72             # change 'h' to 'H'
+print(ba)              # bytearray(b'Hello')
+
+# Encode/decode
+s = "café"
+encoded = s.encode("utf-8")   # bytes
+decoded = encoded.decode("utf-8")  # str
+print(encoded)   # b'caf\\xc3\\xa9'`,
+    explanation: "In Python 3, `str` is Unicode; `bytes` is raw binary. Indexing bytes gives integers. `encode()`/`decode()` convert between str and bytes. `bytearray` is the mutable version of bytes, used for in-place binary manipulation.",
+  },
+  {
+    id: "py-unpacking-assignment",
+    language: "python",
+    title: "Extended iterable unpacking",
+    tag: "snippet",
+    code: `first, *rest = [1, 2, 3, 4, 5]
+print(first)   # 1
+print(rest)    # [2, 3, 4, 5]
+
+*init, last = [1, 2, 3, 4, 5]
+print(init)    # [1, 2, 3, 4]
+print(last)    # 5
+
+first, *middle, last = [1, 2, 3, 4, 5]
+print(first)   # 1
+print(middle)  # [2, 3, 4]
+print(last)    # 5
+
+# Works with any iterable
+a, b, *c = range(10)
+print(a, b, len(c))   # 0 1 8`,
+    explanation: "The `*` in assignment unpacking captures 'the rest' as a list. It can be placed at the beginning, end, or middle of the left-hand side. Only one `*` is allowed per assignment. This works with any iterable on the right.",
+  },
+  {
+    id: "py-dict-merge-operator",
+    language: "python",
+    title: "Dict merge with | operator (Python 3.9+)",
+    tag: "snippet",
+    code: `defaults = {"color": "blue", "size": "M", "stock": 100}
+overrides = {"color": "red", "stock": 0}
+
+# | creates a new merged dict (right side wins on conflicts)
+merged = defaults | overrides
+print(merged)   # {'color': 'red', 'size': 'M', 'stock': 0}
+
+# |= updates in place
+defaults |= overrides
+print(defaults) # {'color': 'red', 'size': 'M', 'stock': 0}
+
+# Before Python 3.9:
+old_way = {**defaults, **overrides}`,
+    explanation: "The `|` operator (Python 3.9+) merges two dicts into a new one; `|=` updates in place. Right side wins on key conflicts. This is cleaner than `{**a, **b}` and communicates intent more clearly.",
+  },
+  {
+    id: "py-exception-groups",
+    language: "python",
+    title: "Exception groups and except* (Python 3.11)",
+    tag: "snippet",
+    code: `# ExceptionGroup bundles multiple exceptions
+eg = ExceptionGroup("multiple errors", [
+    ValueError("bad value"),
+    TypeError("wrong type"),
+    KeyError("missing key"),
+])
+
+# except* handles each matching subgroup
+try:
+    raise eg
+except* ValueError as e:
+    print("ValueError(s):", e.exceptions)
+except* TypeError as e:
+    print("TypeError(s):", e.exceptions)
+# KeyError propagates since it's not caught`,
+    explanation: "`ExceptionGroup` (Python 3.11) holds multiple exceptions at once — useful for concurrent tasks that each might fail. `except*` catches matching exceptions from the group without preventing other types from propagating.",
+  },
+  {
+    id: "py-structural-pattern-class",
+    language: "python",
+    title: "Match with class patterns",
+    tag: "snippet",
+    code: `from dataclasses import dataclass
+
+@dataclass
+class Point:
+    x: float
+    y: float
+
+@dataclass
+class Circle:
+    center: Point
+    radius: float
+
+def describe(shape):
+    match shape:
+        case Circle(center=Point(x=0, y=0), radius=r):
+            return f"circle at origin, r={r}"
+        case Circle(center=Point(x=cx, y=cy), radius=r):
+            return f"circle at ({cx},{cy}), r={r}"
+        case Point(x=0, y=0):
+            return "origin"
+        case _:
+            return "unknown"
+
+print(describe(Circle(Point(0,0), 5)))   # circle at origin, r=5`,
+    explanation: "Class patterns in `match` use the class name with keyword arguments matching attribute names. Dataclasses and namedtuples support positional patterns too. Patterns nest — a `Circle` pattern can contain a nested `Point` pattern.",
+  },
+  {
+    id: "py-type-annotation-runtime",
+    language: "python",
+    title: "Accessing type annotations at runtime",
+    tag: "types",
+    code: `from __future__ import annotations  # makes all annotations strings (PEP 563)
+import typing
+
+class Model:
+    name: str
+    age: int
+    score: float = 0.0
+
+# __annotations__ holds the annotation strings
+print(Model.__annotations__)
+# {'name': <class 'str'>, 'age': <class 'int'>, 'score': <class 'float'>}
+
+# Without 'from __future__ import annotations':
+# {'name': str, 'age': int, 'score': float}
+
+# get_type_hints() resolves string annotations:
+hints = typing.get_type_hints(Model)
+print(hints)  # {'name': str, 'age': int, 'score': float}`,
+    explanation: "`__annotations__` holds raw annotation values. With `from __future__ import annotations`, they are stored as strings (lazy evaluation). `typing.get_type_hints()` resolves them in the correct namespace. Used by ORMs, dataclasses, and validation libraries.",
+  },
+  {
+    id: "py-import-system",
+    language: "python",
+    title: "Import system: __name__, __package__, __file__",
+    tag: "understanding",
+    code: `# In module 'mypackage/utils.py':
+print(__name__)     # 'mypackage.utils' when imported
+                    # '__main__' when run directly
+
+# Canonical guard for runnable modules:
+if __name__ == "__main__":
+    print("Running as script")
+
+# __file__: path to the current source file
+import os
+print(__file__)     # /path/to/mypackage/utils.py
+
+# __package__: the package name
+print(__package__)  # 'mypackage'
+
+# Programmatic import:
+import importlib
+mod = importlib.import_module("json")
+print(mod.dumps({"key": "val"}))`,
+    explanation: "`__name__` is `'__main__'` when the file is run directly, otherwise the dotted module name. `__file__` gives the absolute path. The `if __name__ == '__main__':` guard is the standard way to have code that only runs when a script is invoked directly.",
+  },
+  {
+    id: "py-getattr-setattr",
+    language: "python",
+    title: "getattr, setattr, delattr, __getattr__",
+    tag: "classes",
+    code: `class Config:
+    debug = False
+    host  = "localhost"
+
+    def __getattr__(self, name):
+        # Called only when normal lookup fails
+        return f"<unknown attribute: {name}>"
+
+cfg = Config()
+
+# Dynamic attribute access
+attr = "debug"
+print(getattr(cfg, attr))            # False
+print(getattr(cfg, "missing", 42))   # 42 (default)
+
+# Dynamic attribute setting
+setattr(cfg, "port", 8080)
+print(cfg.port)   # 8080
+
+# Dynamic deletion
+delattr(cfg, "port")
+
+# __getattr__ fallback
+print(cfg.nonexistent)  # <unknown attribute: nonexistent>`,
+    explanation: "`getattr`/`setattr`/`delattr` enable dynamic attribute manipulation. `__getattr__` is called only when normal lookup fails (not the same as `__getattribute__`). Use these for configuration objects, proxies, and ORM-style magic attributes.",
+  },
+  {
+    id: "py-object-lifecycle",
+    language: "python",
+    title: "Object lifecycle: __new__ and __del__",
+    tag: "classes",
+    code: `class Counted:
+    _instances = 0
+
+    def __new__(cls, *args, **kwargs):
+        cls._instances += 1
+        instance = super().__new__(cls)
+        print(f"Creating instance #{cls._instances}")
+        return instance
+
+    def __init__(self, name):
+        self.name = name
+
+    def __del__(self):
+        type(self)._instances -= 1
+        print(f"Deleting {self.name}")
+
+a = Counted("Alice")  # Creating instance #1
+b = Counted("Bob")    # Creating instance #2
+del a                  # Deleting Alice
+print(Counted._instances)  # 1`,
+    explanation: "`__new__` creates the object (receives the class); `__init__` initialises it (receives the instance). `__del__` is called when the reference count drops to zero. Don't rely on `__del__` for critical cleanup — use context managers instead.",
+  },
+  {
+    id: "py-coroutine-send",
+    language: "python",
+    title: "Generator coroutines with send()",
+    tag: "understanding",
+    code: `def accumulator():
+    total = 0
+    while True:
+        value = yield total   # yields current total, receives next value
+        if value is None:
+            break
+        total += value
+
+gen = accumulator()
+next(gen)           # prime the generator (advance to first yield)
+print(gen.send(10))  # 10
+print(gen.send(20))  # 30
+print(gen.send(5))   # 35
+
+# close() throws GeneratorExit:
+gen.close()`,
+    explanation: "`send(value)` resumes a generator and passes value as the result of the `yield` expression. You must `next()` (or `send(None)`) first to prime it. This coroutine pattern was the foundation for `async`/`await` before native async was added.",
+  },
+  {
+    id: "py-weakref-module",
+    language: "python",
+    title: "weakref module for caches",
+    tag: "structures",
+    code: `import weakref
+
+class HeavyObject:
+    def __init__(self, data):
+        self.data = data
+    def __del__(self):
+        print(f"Deleted: {self.data[:10]}")
+
+# Cache that doesn't prevent garbage collection
+cache = weakref.WeakValueDictionary()
+
+obj = HeavyObject("important data" * 100)
+cache["key"] = obj
+
+print(cache.get("key") is obj)   # True
+del obj   # reference count drops to 0 — GC runs
+          # Deleted: important dat...
+print(cache.get("key"))          # None — automatically removed`,
+    explanation: "`WeakValueDictionary` holds weak references — the objects can be GC'd when no strong references exist. Entries are automatically removed when the object is deleted. Use for caches that shouldn't prevent GC.",
+  },
+  {
+    id: "py-abstract-method-check",
+    language: "python",
+    title: "Checking for abstract methods",
+    tag: "classes",
+    code: `from abc import ABC, abstractmethod
+
+class Plugin(ABC):
+    @abstractmethod
+    def process(self, data): ...
+
+    @abstractmethod
+    def name(self) -> str: ...
+
+# Cannot instantiate directly:
+try:
+    p = Plugin()
+except TypeError as e:
+    print(e)
+    # Can't instantiate abstract class Plugin
+    # with abstract methods name, process
+
+# Must implement all abstract methods:
+class MyPlugin(Plugin):
+    def process(self, data): return data.upper()
+    def name(self) -> str:   return "MyPlugin"
+
+mp = MyPlugin()
+print(mp.name())   # MyPlugin`,
+    explanation: "Attempting to instantiate an ABC with unimplemented abstract methods raises `TypeError` listing all missing implementations. This gives you an early, clear error rather than an `AttributeError` later at call time.",
+  },
+  {
+    id: "py-typing-annotated",
+    language: "python",
+    title: "typing.Annotated for metadata",
+    tag: "types",
+    code: `from typing import Annotated
+
+# Attach metadata to a type annotation
+# First arg is the actual type, rest is metadata
+Age       = Annotated[int, "must be >= 0"]
+Email     = Annotated[str, "valid email format"]
+Positive  = Annotated[float, lambda x: x > 0]
+
+def register(name: str, age: Age, email: Email) -> None:
+    # Runtime: access metadata via typing.get_type_hints + include_extras
+    import typing
+    hints = typing.get_type_hints(register, include_extras=True)
+    print(hints["age"])   # int (Annotated stripped at runtime by default)
+    print(typing.get_args(hints["age"]))  # (int, 'must be >= 0')
+
+register("Alice", 30, "alice@example.com")`,
+    explanation: "`Annotated[T, metadata...]` attaches arbitrary metadata to a type hint without changing its runtime type. Used by FastAPI, Pydantic, and other frameworks to attach validation rules, documentation, or dependency injection markers.",
+  },
+  {
+    id: "py-protocol-check-runtime",
+    language: "python",
+    title: "runtime_checkable Protocol",
+    tag: "types",
+    code: `from typing import Protocol, runtime_checkable
+
+@runtime_checkable
+class Drawable(Protocol):
+    def draw(self) -> None: ...
+
+class Circle:
+    def draw(self) -> None:
+        print("Drawing circle")
+
+class Square:
+    def draw(self) -> None:
+        print("Drawing square")
+
+class Text:
+    def render(self) -> None:   # different method name
+        print("Rendering text")
+
+print(isinstance(Circle(), Drawable))   # True
+print(isinstance(Text(), Drawable))     # False — no 'draw'
+
+# Runtime checks only verify method names, not signatures
+shapes: list[Drawable] = [Circle(), Square()]`,
+    explanation: "`@runtime_checkable` lets `isinstance` check protocol conformance at runtime by verifying that the required methods exist. Note: it only checks method names, not signatures. Without `@runtime_checkable`, protocols are static-only.",
+  },
+  {
+    id: "py-pep604-union-isinstance",
+    language: "python",
+    title: "X | Y in isinstance (Python 3.10)",
+    tag: "types",
+    code: `# Python 3.10+ allows | in isinstance and issubclass
+value = 42
+
+# Old way:
+if isinstance(value, (int, float)):
+    print("numeric")
+
+# New way (Python 3.10+):
+if isinstance(value, int | float):
+    print("numeric")   # numeric
+
+# Also works in issubclass:
+print(issubclass(bool, int | float))   # True
+
+# Works in type annotations too:
+def process(x: int | str | None) -> str:
+    return str(x) if x is not None else ""`,
+    explanation: "Python 3.10 allows the `|` union type operator in `isinstance` and `issubclass` — not just in annotations. This makes the isinstance call look consistent with the annotation and avoids the less readable tuple form.",
+  },
+  {
+    id: "py-io-stringio",
+    language: "python",
+    title: "io.StringIO for in-memory text streams",
+    tag: "snippet",
+    code: `import io
+
+# StringIO: file-like string buffer
+buf = io.StringIO()
+buf.write("Hello, ")
+buf.write("World!")
+print(buf.getvalue())   # Hello, World!
+
+# Seek to start and read back
+buf.seek(0)
+print(buf.read())       # Hello, World!
+
+# Use anywhere that expects a file:
+import csv
+output = io.StringIO()
+writer = csv.writer(output)
+writer.writerow(["name", "age"])
+writer.writerow(["Alice", 30])
+print(output.getvalue())
+# name,age\\r\\nAlice,30\\r\\n`,
+    explanation: "`io.StringIO` is an in-memory file that accepts text. Perfect for testing code that writes to files, capturing output, or building strings incrementally through file-like APIs. `getvalue()` returns the whole buffer as a string.",
+  },
+  {
+    id: "py-functools-wraps",
+    language: "python",
+    title: "functools.wraps to preserve metadata",
+    tag: "snippet",
+    code: `import functools
+import time
+
+def timing(func):
+    @functools.wraps(func)   # copies __name__, __doc__, etc.
+    def wrapper(*args, **kwargs):
+        start = time.perf_counter()
+        result = func(*args, **kwargs)
+        print(f"{func.__name__}: {time.perf_counter()-start:.4f}s")
+        return result
+    return wrapper
+
+@timing
+def slow_add(a, b):
+    """Add two numbers."""
+    time.sleep(0.01)
+    return a + b
+
+print(slow_add(1, 2))
+print(slow_add.__name__)  # slow_add (not 'wrapper')
+print(slow_add.__doc__)   # Add two numbers.`,
+    explanation: "`@functools.wraps(func)` copies `__name__`, `__doc__`, `__module__`, and other attributes from the wrapped function to the wrapper. Without it, decorating would hide the original function's identity from introspection tools.",
+  },
+  {
+    id: "py-typing-no-return",
+    language: "python",
+    title: "NoReturn and Never types",
+    tag: "types",
+    code: `from typing import NoReturn, Never   # Never added in 3.11
+
+def raise_error(msg: str) -> NoReturn:
+    raise RuntimeError(msg)
+    # Type checker knows nothing after this returns
+
+def abort() -> NoReturn:
+    import sys; sys.exit(1)
+
+# Never is the bottom type — a function that can never return
+# and can never be called (useful in type algebra)
+def assert_never(x: Never) -> Never:
+    raise AssertionError(f"Unexpected value: {x!r}")
+
+from typing import Literal
+def handle(color: Literal["red", "green", "blue"]) -> str:
+    match color:
+        case "red":   return "stop"
+        case "green": return "go"
+        case "blue":  return "caution"
+        case _ as unreachable:
+            assert_never(unreachable)   # type checker verifies exhaustiveness`,
+    explanation: "`NoReturn` annotates functions that never return normally (they always raise or exit). `Never` is the bottom type — a value of type `Never` cannot exist. Use `assert_never` in exhaustive match arms to get a static check that all cases are covered.",
+  },
+  {
+    id: "py-typing-callable",
+    language: "python",
+    title: "Callable type annotations",
+    tag: "types",
+    code: `from typing import Callable
+
+# Callable[[arg_types...], return_type]
+def apply(fn: Callable[[int, int], int], a: int, b: int) -> int:
+    return fn(a, b)
+
+print(apply(lambda x, y: x + y, 3, 4))   # 7
+print(apply(pow, 2, 8))                   # 256
+
+# Callable with no args:
+Thunk = Callable[[], int]
+def get_42() -> int:
+    return 42
+t: Thunk = get_42
+
+# Variable arity: use Callable[..., ReturnType]
+def call_any(fn: Callable[..., str], *args) -> str:
+    return fn(*args)`,
+    explanation: "`Callable[[P1, P2], R]` annotates a callable with specific parameter types and return type. `Callable[..., R]` allows any parameters. For more expressive signatures (keyword args, overloads), use `typing.Protocol` with `__call__`.",
+  },
+  {
+    id: "py-contextlib-suppress",
+    language: "python",
+    title: "contextlib.suppress to silence exceptions",
+    tag: "snippet",
+    code: `from contextlib import suppress
+import os
+
+# Without suppress:
+try:
+    os.remove("nonexistent.txt")
+except FileNotFoundError:
+    pass   # ignore it
+
+# With suppress — cleaner:
+with suppress(FileNotFoundError):
+    os.remove("nonexistent.txt")
+
+# Multiple exception types:
+with suppress(KeyError, ValueError):
+    d = {}
+    _ = d["missing"]   # KeyError suppressed
+
+# suppress is context manager — can be used in loop:
+data = {"a": 1, "b": "two", "c": 3}
+results = []
+for k, v in data.items():
+    with suppress(TypeError):
+        results.append(v * 2)
+print(results)   # [2, 6]  ('two'*2 is 'twotwo', not suppressed)`,
+    explanation: "`contextlib.suppress` is a context manager that silences the specified exception types, equivalent to `try/except: pass`. It makes intent explicit — you're deliberately ignoring these exceptions, not accidentally swallowing them.",
+  },
+  {
+    id: "py-dataclass-fields",
+    language: "python",
+    title: "dataclasses.fields() and field metadata",
+    tag: "classes",
+    code: `from dataclasses import dataclass, field, fields
+
+@dataclass
+class Product:
+    name: str
+    price: float
+    tags: list = field(default_factory=list)
+    _internal: str = field(default="", repr=False, compare=False)
+
+p = Product("Widget", 9.99, ["sale"])
+
+# Inspect all fields at runtime
+for f in fields(Product):
+    print(f.name, f.type, f.default)
+    # name str MISSING  price float MISSING  tags list MISSING  _internal str ''
+
+# field() options:
+# default_factory: callable for mutable defaults
+# repr=False: exclude from repr
+# compare=False: exclude from == and ordering
+# init=False: exclude from __init__`,
+    explanation: "`dataclasses.field()` customises individual field behaviour. Use `default_factory` for mutable defaults (list, dict). Set `repr=False`/`compare=False` to exclude fields from those operations. `fields()` returns a tuple of `Field` objects for inspection.",
+  },
+  {
+    id: "py-async-context-manager",
+    language: "python",
+    title: "Async context managers",
+    tag: "snippet",
+    code: `import asyncio
+
+class AsyncResource:
+    async def __aenter__(self):
+        print("acquiring resource")
+        await asyncio.sleep(0.01)   # simulate async setup
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        print("releasing resource")
+        await asyncio.sleep(0.01)   # simulate async teardown
+        return False   # don't suppress exceptions
+
+    async def use(self):
+        print("using resource")
+
+async def main():
+    async with AsyncResource() as res:
+        await res.use()
+    # acquiring resource → using resource → releasing resource
+
+asyncio.run(main())`,
+    explanation: "Async context managers implement `__aenter__` and `__aexit__` as coroutines, used with `async with`. Use them for resources that require async acquisition/release (database connections, HTTP sessions, file handles with async I/O).",
+  },
+  {
+    id: "py-match-as-pattern",
+    language: "python",
+    title: "Match with as-patterns and OR patterns",
+    tag: "snippet",
+    code: `def classify(val):
+    match val:
+        # OR pattern: matches either branch
+        case 0 | 0.0 | "" | [] | {} | None:
+            return "falsy"
+
+        # as-pattern: match and bind simultaneously
+        case [first, *rest] as whole:
+            return f"non-empty list, first={first}, total={len(whole)}"
+
+        case {"x": x, "y": y} as point:
+            return f"point at ({x},{y})"
+
+        case _ as other:
+            return f"other: {other!r}"
+
+print(classify([]))          # falsy
+print(classify([1,2,3]))     # non-empty list, first=1, total=3
+print(classify({"x":1,"y":2}))  # point at (1,2)`,
+    explanation: "`|` in patterns creates OR alternatives. The `as` keyword binds the entire matched value to a name, while inner variables bind sub-parts. Both can be combined: `[first, *_] as lst` gives both the first element and the whole list.",
+  },
+  {
+    id: "py-slots-inheritance",
+    language: "python",
+    title: "__slots__ and inheritance",
+    tag: "caveats",
+    code: `class Base:
+    __slots__ = ("x",)
+    def __init__(self, x): self.x = x
+
+class Child(Base):
+    # Must declare OWN new slots only — don't repeat parent's
+    __slots__ = ("y",)
+    def __init__(self, x, y):
+        super().__init__(x)
+        self.y = y
+
+c = Child(1, 2)
+print(c.x, c.y)   # 1 2
+
+# If Child doesn't declare __slots__, it gets __dict__ anyway:
+class NoSlots(Base):
+    pass   # __dict__ added back!
+
+n = NoSlots(10)
+n.extra = "yes"   # works — has __dict__
+print(hasattr(n, "__dict__"))   # True`,
+    explanation: "Child classes must declare their OWN new slot names in `__slots__`; don't re-list parent slots. If any class in the MRO lacks `__slots__`, all instances get `__dict__` anyway, negating the memory savings.",
+  },
+  {
+    id: "py-typing-typedict",
+    language: "python",
+    title: "TypedDict for typed dictionaries",
+    tag: "types",
+    code: `from typing import TypedDict, NotRequired
+
+class Movie(TypedDict):
+    title: str
+    year:  int
+    rating: NotRequired[float]   # optional key (3.11+)
+
+# Type checker enforces structure
+m: Movie = {"title": "Inception", "year": 2010}  # OK
+m2: Movie = {"title": "Dune", "year": 2021, "rating": 8.5}
+
+# print(m["rating"])  # KeyError at runtime, warning at check time
+
+# Alternative functional syntax:
+Config = TypedDict("Config", {"host": str, "port": int})
+
+# TypedDicts don't enforce at runtime — they're for type checkers
+print(isinstance(m, dict))   # True`,
+    explanation: "`TypedDict` creates a typed dict schema for use with type checkers. `NotRequired[T]` marks optional keys. Unlike dataclasses, TypedDicts are plain dicts at runtime — `isinstance` checks against `dict`. Great for JSON-shaped data.",
+  },
+  {
+    id: "py-zip-dict-tricks",
+    language: "python",
+    title: "dict() from zip and dict comprehension tricks",
+    tag: "snippet",
+    code: `keys   = ["a", "b", "c"]
+values = [1, 2, 3]
+
+# Build dict from parallel lists
+d1 = dict(zip(keys, values))
+print(d1)   # {'a': 1, 'b': 2, 'c': 3}
+
+# Swap keys and values
+original = {"x": 10, "y": 20, "z": 30}
+swapped = {v: k for k, v in original.items()}
+print(swapped)  # {10: 'x', 20: 'y', 30: 'z'}
+
+# Group by a property
+from itertools import groupby
+data = [("alice", 1), ("alice", 2), ("bob", 3)]
+grouped = {k: list(v) for k, v in groupby(data, key=lambda x: x[0])}
+print(grouped)  # {'alice': [('alice',1),('alice',2)], 'bob': [('bob',3)]}`,
+    explanation: "`dict(zip(keys, values))` creates a dict from two parallel iterables. Swapping keys/values with a dict comprehension requires unique values. `groupby` + a comprehension builds a grouped dict in one expression (data must be pre-sorted by key).",
+  },
+  {
+    id: "py-generator-throw-close",
+    language: "python",
+    title: "Generator throw() and close()",
+    tag: "understanding",
+    code: `def guarded_gen():
+    try:
+        for i in range(10):
+            yield i
+    except ValueError as e:
+        print(f"caught: {e}")
+        yield -1   # can yield after catching
+    finally:
+        print("generator cleanup")
+
+gen = guarded_gen()
+print(next(gen))   # 0
+print(next(gen))   # 1
+
+# throw() injects an exception into the generator
+print(gen.throw(ValueError, "bad input"))   # caught: bad input  → -1
+
+# close() sends GeneratorExit to the generator
+gen2 = guarded_gen()
+next(gen2)
+gen2.close()   # generator cleanup`,
+    explanation: "`throw(exc)` injects an exception at the `yield` point; the generator can catch and handle it, then yield again. `close()` throws `GeneratorExit`. Both trigger `finally` blocks, making resource cleanup reliable even in generator-based pipelines.",
+  },
+  {
+    id: "py-pep8-style-hints",
+    language: "python",
+    title: "PEP 8 style essentials",
+    tag: "snippet",
+    code: `# Naming conventions
+my_variable = 1            # snake_case for variables and functions
+MY_CONSTANT = 42           # UPPER_SNAKE for module-level constants
+class MyClass: pass        # PascalCase for classes
+_private = "internal"      # single _ for module-private
+__dunder__ = "special"     # double underscores for dunder methods
+
+# Spacing
+x = 1 + 2                  # spaces around operators
+d = {"key": value}         # colon: no space before, one after
+f(arg=value)               # no spaces around = in keyword args
+
+# Line length: 79 chars for code, 72 for docstrings
+# Use implicit continuation inside brackets rather than backslash
+
+# Imports: one per line, standard library first
+import os
+import sys
+from pathlib import Path`,
+    explanation: "PEP 8 is Python's official style guide. Tools like `black`, `ruff`, and `flake8` enforce it automatically. Key rules: snake_case for everything except classes (PascalCase) and constants (UPPER_SNAKE). 4-space indentation, spaces around operators.",
+  },
+
 ];

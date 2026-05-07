@@ -11089,4 +11089,2460 @@ Console.WriteLine(q);
 // SELECT * FROM users WHERE active = 1 LIMIT 10`,
     explanation: "Fluent builders return 'this' from each setter, enabling method chains that read like a sentence. Each call narrows or configures the object; a terminal method (Build, Execute) materialises the result.",
   },
+// === CSHARP BATCH 2 ===
+  {
+    id: "cs-collection-literal",
+    language: "csharp",
+    title: "Collection expressions (C# 12)",
+    tag: "snippet",
+    code: `// C# 12: collection expressions with [ ] syntax.
+int[]        array   = [1, 2, 3, 4, 5];
+List<int>    list    = [1, 2, 3];
+Span<int>    span    = [1, 2, 3];
+HashSet<int> set     = [1, 2, 3];
+
+// Spread operator .. merges collections.
+int[] first  = [1, 2, 3];
+int[] second = [4, 5, 6];
+int[] combined = [..first, ..second, 7, 8];
+Console.WriteLine(string.Join(", ", combined));  // 1,2,3,4,5,6,7,8`,
+    explanation: "Collection expressions provide a unified [ ] literal syntax for arrays, List<T>, Span<T>, and other collection types. The spread operator (..) merges collections inline.",
+  },
+  {
+    id: "cs-pattern-list",
+    language: "csharp",
+    title: "List patterns in switch expressions (C# 11)",
+    tag: "snippet",
+    code: `int[] Describe(int[] arr) => arr switch
+{
+    []              => throw new ArgumentException("empty"),
+    [int x]         => [x * 2],
+    [int x, int y]  => [y, x],              // swap two elements
+    [int first, .., int last] => [first, last],  // first and last
+    _               => arr[..3],             // take first 3
+};
+
+Console.WriteLine(string.Join(",", Describe([5])));          // 10
+Console.WriteLine(string.Join(",", Describe([3, 7])));       // 7,3
+Console.WriteLine(string.Join(",", Describe([1,2,3,4,5]))); // 1,5`,
+    explanation: "List patterns match the shape and content of arrays or lists in switch expressions. The slice pattern (..) matches zero or more elements and can bind the matched range.",
+  },
+  {
+    id: "cs-linq-order-by",
+    language: "csharp",
+    title: "LINQ OrderBy / ThenBy",
+    tag: "snippet",
+    code: `var students = new[]
+{
+    (Name: "alice",  Score: 90, Grade: "A"),
+    (Name: "bob",    Score: 90, Grade: "B"),
+    (Name: "carol",  Score: 85, Grade: "A"),
+};
+
+// OrderBy + ThenBy: primary then secondary sort.
+var sorted = students
+    .OrderByDescending(s => s.Score)
+    .ThenBy(s => s.Name)
+    .ToList();
+
+foreach (var s in sorted)
+    Console.WriteLine($"{s.Name}: {s.Score}");
+// alice: 90
+// bob:   90
+// carol: 85`,
+    explanation: "OrderBy creates an IOrderedEnumerable; ThenBy adds a secondary key without re-sorting. OrderByDescending and ThenByDescending flip individual columns.",
+  },
+  {
+    id: "cs-string-span-parse",
+    language: "csharp",
+    title: "Parsing numbers from ReadOnlySpan<char>",
+    tag: "snippet",
+    code: `// int.Parse and TryParse accept ReadOnlySpan<char> — no substring needed.
+string line = "key=42;value=99";
+
+// Without Span: creates intermediate string.
+int v1 = int.Parse(line.Substring(4, 2));
+
+// With Span: zero-allocation parse.
+ReadOnlySpan<char> span  = line.AsSpan();
+int                value = int.Parse(span.Slice(4, 2));
+Console.WriteLine(value);   // 42
+
+// TryParse variant.
+bool ok = int.TryParse(span.Slice(11, 2), out int n);
+Console.WriteLine(ok ? n : -1);  // 99`,
+    explanation: "int.Parse and most numeric parsers accept ReadOnlySpan<char> in modern .NET — use AsSpan().Slice() instead of Substring() to parse sub-strings without allocation.",
+  },
+  {
+    id: "cs-string-split-span",
+    language: "csharp",
+    title: "string.Split vs MemoryExtensions.Split",
+    tag: "snippet",
+    code: `string csv = "alice,bob,carol,dave";
+
+// Classic Split: allocates string[] and individual strings.
+string[] classic = csv.Split(',');
+Console.WriteLine(classic.Length);   // 4
+
+// .NET 8+: MemoryExtensions.Split avoids allocation.
+Span<Range> ranges = stackalloc Range[10];
+int count = csv.AsSpan().Split(ranges, ',');
+
+for (int i = 0; i < count; i++)
+{
+    ReadOnlySpan<char> field = csv.AsSpan(ranges[i]);
+    Console.WriteLine(field.ToString());  // alice, bob, carol, dave
+}`,
+    explanation: "MemoryExtensions.Split into a stackalloc Range[] avoids all heap allocation — critical for CSV/log parsing in high-throughput code. Requires .NET 8+.",
+  },
+  {
+    id: "cs-utf8-string-literal",
+    language: "csharp",
+    title: "UTF-8 string literals (C# 11)",
+    tag: "snippet",
+    code: `// Suffix 'u8' creates a ReadOnlySpan<byte> (UTF-8 bytes) at compile time.
+ReadOnlySpan<byte> greeting = "Hello, World!"u8;
+Console.WriteLine(greeting.Length);   // 13 bytes
+
+// No runtime encoding — bytes are baked into the assembly.
+// Ideal for fixed protocol strings, JSON keys, HTTP headers.
+
+byte[] buffer = new byte[100];
+int written = System.Text.Encoding.UTF8.GetBytes("compare"u8, buffer);
+
+// u8 literals can be compared without decoding.
+ReadOnlySpan<byte> header = "Content-Type"u8;
+Console.WriteLine(header.SequenceEqual("Content-Type"u8));  // True`,
+    explanation: "UTF-8 string literals (C# 11) produce compile-time byte sequences as ReadOnlySpan<byte>, eliminating runtime encoding/decoding for static protocol strings.",
+  },
+  {
+    id: "cs-record-with-2",
+    language: "csharp",
+    title: "with expression creates a modified record copy",
+    tag: "snippet",
+    code: `record Address(string Street, string City, string Zip);
+record Person(string Name, int Age, Address Home);
+
+var person = new Person("Alice", 30,
+    new Address("123 Main", "Springfield", "62701"));
+
+// 'with' creates a shallow copy with specified properties changed.
+var moved = person with
+{
+    Home = person.Home with { City = "Shelbyville", Zip = "62702" }
+};
+
+Console.WriteLine(person.Home.City);  // Springfield
+Console.WriteLine(moved.Home.City);   // Shelbyville
+Console.WriteLine(moved.Name);        // Alice  (copied)`,
+    explanation: "The 'with' expression non-destructively modifies records by creating a new instance with the changed fields copied and the rest left the same. Nest 'with' for deep changes.",
+  },
+  {
+    id: "cs-switch-expression",
+    language: "csharp",
+    title: "Switch expression — exhaustive pattern match",
+    tag: "snippet",
+    code: `enum Season { Spring, Summer, Autumn, Winter }
+
+// Switch expression: returns a value, comma-separated arms.
+string Describe(Season s) => s switch
+{
+    Season.Spring => "flowers blooming",
+    Season.Summer => "hot and sunny",
+    Season.Autumn => "leaves falling",
+    Season.Winter => "cold and dark",
+    // No default needed — compiler verifies exhaustiveness for enums.
+};
+
+// With tuple patterns.
+string Move(int dx, int dy) => (dx, dy) switch
+{
+    (0,  1) => "up",    (0, -1) => "down",
+    (1,  0) => "right", (-1, 0) => "left",
+    _       => "diagonal"
+};`,
+    explanation: "Switch expressions are exhaustiveness-checked — the compiler warns if an enum value is unhandled. Tuple patterns let you match on multiple values simultaneously.",
+  },
+  {
+    id: "cs-record-equality",
+    language: "csharp",
+    title: "Record equality is value-based",
+    tag: "snippet",
+    code: `record Point(int X, int Y);
+
+var p1 = new Point(1, 2);
+var p2 = new Point(1, 2);
+var p3 = new Point(3, 4);
+
+// Structural (value) equality.
+Console.WriteLine(p1 == p2);        // True
+Console.WriteLine(p1.Equals(p2));   // True
+
+// Reference equality is different.
+Console.WriteLine(object.ReferenceEquals(p1, p2));  // False
+
+// Can be used as dictionary key or HashSet element.
+var set = new HashSet<Point> { p1, p2 };
+Console.WriteLine(set.Count);   // 1  (p1 and p2 are equal)`,
+    explanation: "Records auto-generate value-based Equals, GetHashCode, and == — two records with the same property values are equal. Unlike classes, where == is reference equality by default.",
+  },
+  {
+    id: "cs-async-stream",
+    language: "csharp",
+    title: "IAsyncEnumerable<T> — async stream",
+    tag: "snippet",
+    code: `using System.Collections.Generic;
+
+async IAsyncEnumerable<int> GetDataAsync()
+{
+    for (int i = 0; i < 5; i++)
+    {
+        await Task.Delay(10);   // simulate async I/O
+        yield return i;
+    }
+}
+
+// Consume with 'await foreach'.
+await foreach (int item in GetDataAsync())
+{
+    Console.WriteLine(item);   // 0, 1, 2, 3, 4
+}
+
+// With cancellation:
+// await foreach (var item in GetDataAsync().WithCancellation(ct))`,
+    explanation: "IAsyncEnumerable<T> is the async equivalent of IEnumerable<T>. Use 'await foreach' to consume items one at a time as they arrive — ideal for paginated APIs or streaming database results.",
+  },
+  {
+    id: "cs-object-pool-2",
+    language: "csharp",
+    title: "Microsoft.Extensions.ObjectPool",
+    tag: "snippet",
+    code: `using Microsoft.Extensions.ObjectPool;
+
+// ObjectPool reuses expensive objects instead of allocating new ones.
+var policy  = new DefaultPooledObjectPolicy<StringBuilder>();
+var pool    = new DefaultObjectPool<StringBuilder>(policy, maximumRetained: 10);
+
+// Rent from pool.
+StringBuilder sb = pool.Get();
+try
+{
+    sb.Clear();   // pool may return a dirty object!
+    sb.Append("Hello").Append(", ").Append("World");
+    Console.WriteLine(sb);   // Hello, World
+}
+finally
+{
+    pool.Return(sb);   // MUST return — or leak
+}`,
+    explanation: "ObjectPool<T> reduces GC pressure for expensive objects like StringBuilder or HttpClient instances. Always clear state before use and always return to the pool — the policy controls initialisation.",
+  },
+  {
+    id: "cs-span-stackalloc",
+    language: "csharp",
+    title: "stackalloc with Span<T>",
+    tag: "snippet",
+    code: `// stackalloc allocates memory on the stack — no GC pressure.
+// Wrap in Span<T> for a safe, managed view.
+Span<int> buffer = stackalloc int[16];
+buffer.Fill(0);
+
+for (int i = 0; i < 16; i++)
+    buffer[i] = i * i;
+
+Console.WriteLine(string.Join(", ", buffer[..5].ToArray()));
+// 0, 1, 4, 9, 16
+
+// stackalloc with initialiser.
+Span<byte> magic = stackalloc byte[] { 0xDE, 0xAD, 0xBE, 0xEF };
+Console.WriteLine(magic[0].ToString("X2"));  // DE`,
+    explanation: "stackalloc Span<T> avoids heap allocation for small temporary buffers. The stack frame owns the memory, so it's automatically freed when the method returns — no GC involvement.",
+  },
+  {
+    id: "cs-span-over-array",
+    language: "csharp",
+    title: "Span<T> over an array — zero-copy sub-range",
+    tag: "snippet",
+    code: `int[] data = [10, 20, 30, 40, 50, 60, 70, 80];
+
+// Span over a slice — no array copy.
+Span<int> middle = data.AsSpan(2, 4);
+Console.WriteLine(string.Join(", ", middle.ToArray()));  // 30,40,50,60
+
+// Mutation through Span affects the original array.
+middle[0] = 99;
+Console.WriteLine(data[2]);   // 99
+
+// Range syntax works with AsSpan.
+Span<int> end = data.AsSpan()[5..];
+Console.WriteLine(end[0]);    // 60`,
+    explanation: "AsSpan() creates a Span<T> that is a window into the existing array — mutations through the span write directly to the array. Use it to pass sub-arrays to methods without copying.",
+  },
+  {
+    id: "cs-memory-marshal",
+    language: "csharp",
+    title: "MemoryMarshal for reinterpreting memory",
+    tag: "snippet",
+    code: `using System.Runtime.InteropServices;
+
+// Reinterpret a byte span as int span — zero copy.
+byte[] bytes = [0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00];
+ReadOnlySpan<int> ints = MemoryMarshal.Cast<byte, int>(bytes);
+Console.WriteLine(ints[0]);   // 1 (little-endian)
+Console.WriteLine(ints[1]);   // 2
+
+// MemoryMarshal.GetArrayDataReference: unsafe but fastest array access.
+ref int first = ref MemoryMarshal.GetArrayDataReference(new int[] { 10, 20 });
+Console.WriteLine(first);  // 10`,
+    explanation: "MemoryMarshal.Cast reinterprets a memory span as a different type — like C's type-punning but bounds-checked. Use it for parsing binary formats at zero cost.",
+  },
+  // --- understanding ---
+  {
+    id: "cs-value-type-stack",
+    language: "csharp",
+    title: "Value types live on the stack — unless boxed or in a class",
+    tag: "understanding",
+    code: `// Common misconception: value types always live on the stack.
+// Reality: value types live ON THE STACK only as local variables.
+
+int localInt = 42;   // lives on the stack
+
+// Value type inside a class: lives on the HEAP (part of the class object).
+class Container { public int Value; }
+var c = new Container();  // c.Value is on the heap
+
+// Value type in an array: lives on the heap (array is a reference type).
+int[] arr = [1, 2, 3];   // ints are in the heap array
+
+// Box: explicitly moved to heap as object.
+object boxed = localInt;   // boxing
+
+// Rule: value types are allocated wherever their container lives.`,
+    explanation: "Value types live on the stack only when they're local variables or parameters. As fields of a class, elements of an array, or boxed objects, they live on the heap.",
+  },
+  {
+    id: "cs-dispose-not-gc",
+    language: "csharp",
+    title: "Dispose is not called by GC — you must call it",
+    tag: "understanding",
+    code: `class FileProcessor : IDisposable
+{
+    private StreamReader? _reader;
+
+    public FileProcessor(string path)
+    {
+        _reader = new StreamReader(path);
+    }
+
+    // GC does NOT call Dispose — only the finalizer (~) is GC-triggered.
+    // Dispose must be called explicitly or via 'using'.
+    public void Dispose()
+    {
+        _reader?.Dispose();
+        _reader = null;
+        GC.SuppressFinalize(this);   // don't run finalizer if Dispose was called
+    }
+}
+
+// CORRECT: using ensures Dispose is called.
+using (var fp = new FileProcessor("/dev/null")) { }`,
+    explanation: "Dispose() is not automatic — you must call it explicitly or use a 'using' statement. The finalizer (~Destructor) is GC-driven but non-deterministic. The IDisposable pattern combines both.",
+  },
+  {
+    id: "cs-interface-covariance",
+    language: "csharp",
+    title: "Interface covariance with out type parameter",
+    tag: "understanding",
+    code: `// IEnumerable<out T> is covariant — T only appears in output position.
+IEnumerable<string>  strings = new List<string> { "hello", "world" };
+IEnumerable<object>  objects = strings;   // valid! string is-a object
+
+Console.WriteLine(objects.First());   // hello
+
+// IReadOnlyList<out T> is also covariant.
+IReadOnlyList<string>  strList = new[] { "a", "b" };
+IReadOnlyList<object>  objList = strList;  // valid
+
+// IList<T> is NOT covariant — T appears in both input and output.
+// IList<object> badList = new List<string>();  // Compile error`,
+    explanation: "A generic interface is covariant in T when T only appears as a return type (out). This allows IEnumerable<string> to be assigned to IEnumerable<object> — a string IS an object.",
+  },
+  {
+    id: "cs-contravariant-generic",
+    language: "csharp",
+    title: "Contravariance with in type parameter",
+    tag: "understanding",
+    code: `// IComparer<in T> is contravariant — T only in input position.
+IComparer<object>  objCmp = Comparer<object>.Default;
+
+// A comparer of objects can compare strings (strings are objects).
+IComparer<string> strCmp = objCmp;   // valid — contravariance!
+
+Console.WriteLine(strCmp.Compare("a", "b"));  // negative (a < b)
+
+// Action<in T> is also contravariant.
+Action<object>  objAction = o => Console.WriteLine(o);
+Action<string>  strAction = objAction;  // valid
+strAction("hello");  // hello`,
+    explanation: "A generic type is contravariant in T when T only appears in input positions (in). A comparer of objects can compare strings — string is a more specific type than what was required.",
+  },
+  {
+    id: "cs-exception-filter",
+    language: "csharp",
+    title: "Exception filters with when clause",
+    tag: "understanding",
+    code: `int attempt = 0;
+
+bool ShouldRetry(Exception ex) => ex is TimeoutException && attempt < 3;
+
+// Exception filter: catch only when condition is true.
+// The stack is NOT unwound if the filter returns false (unlike re-throw).
+for (int i = 0; i < 5; i++)
+{
+    try
+    {
+        attempt = i;
+        if (i < 3) throw new TimeoutException();
+        Console.WriteLine("success on attempt " + i);
+        break;
+    }
+    catch (TimeoutException ex) when (ShouldRetry(ex))
+    {
+        Console.WriteLine($"retry {i}");
+    }
+}`,
+    explanation: "when clauses filter exceptions without unwinding the stack — useful for retry loops and conditional logging. The filter runs while still in the throwing frame, preserving the original stack.",
+  },
+  {
+    id: "cs-lock-object",
+    language: "csharp",
+    title: "lock keyword — Monitor-based mutual exclusion",
+    tag: "understanding",
+    code: `class Counter
+{
+    private int _count;
+    private readonly object _sync = new();   // dedicated lock object
+
+    public void Increment()
+    {
+        lock (_sync)   // equivalent to Monitor.Enter/Exit + try/finally
+        {
+            _count++;
+        }
+    }
+
+    public int Value => _count;
+}
+
+// Common mistake: locking on 'this' or a public field — anyone can lock on it.
+// Always use a private readonly object for your lock.
+
+// C# 13: Lock type (System.Threading.Lock) is more efficient than object.`,
+    explanation: "lock is syntactic sugar for Monitor.Enter/Exit in a try/finally. Always lock on a private readonly object — locking on 'this' or a public type exposes the lock to external code.",
+  },
+  {
+    id: "cs-lazy-initialization",
+    language: "csharp",
+    title: "Lazy<T> thread-safe initialisation modes",
+    tag: "understanding",
+    code: `using System.Threading;
+
+// ExecutionAndPublication: default — single initialisation, thread-safe.
+Lazy<string> safe = new(
+    () => { Console.WriteLine("init"); return "value"; },
+    LazyThreadSafetyMode.ExecutionAndPublication);
+
+// Multiple threads all get the same instance.
+Parallel.For(0, 4, _ => Console.WriteLine(safe.Value));
+// init (printed once)
+// value value value value
+
+// None: no thread safety — only use when you own the thread access.
+Lazy<string> unsafe_ = new(() => "value", LazyThreadSafetyMode.None);`,
+    explanation: "Lazy<T> with ExecutionAndPublication ensures the factory runs at most once across all threads. PublicationOnly runs the factory on every thread but only one 'wins' — useful when initialisation has side effects.",
+  },
+  {
+    id: "cs-async-cancellation",
+    language: "csharp",
+    title: "Cooperative cancellation via CancellationToken",
+    tag: "understanding",
+    code: `async Task LongOperation(CancellationToken ct)
+{
+    for (int i = 0; i < 100; i++)
+    {
+        // Check cancellation explicitly.
+        ct.ThrowIfCancellationRequested();   // throws OperationCanceledException
+
+        await Task.Delay(50, ct);   // or pass token to async APIs
+        Console.WriteLine($"step {i}");
+    }
+}
+
+using var cts = new CancellationTokenSource();
+cts.CancelAfter(200);   // cancel after 200ms
+
+try
+{
+    await LongOperation(cts.Token);
+}
+catch (OperationCanceledException)
+{
+    Console.WriteLine("Cancelled!");
+}`,
+    explanation: "Cancellation in .NET is cooperative — the callee must check the token. ThrowIfCancellationRequested() and passing the token to async APIs are the two common patterns.",
+  },
+  {
+    id: "cs-task-when-any",
+    language: "csharp",
+    title: "Task.WhenAny — first completed wins",
+    tag: "understanding",
+    code: `async Task<string> Slow() { await Task.Delay(200); return "slow"; }
+async Task<string> Fast() { await Task.Delay(50);  return "fast"; }
+
+// WhenAny completes when the first task finishes.
+Task<string> winner = await Task.WhenAny(Slow(), Fast());
+Console.WriteLine(await winner);   // fast
+
+// Pattern: race a task against a timeout.
+using var cts = new CancellationTokenSource(100);
+try
+{
+    var result = await Task.WhenAny(
+        Slow(),
+        Task.Delay(Timeout.Infinite, cts.Token)
+    );
+    // determine which completed first...
+}
+catch (OperationCanceledException) { Console.WriteLine("timeout"); }`,
+    explanation: "Task.WhenAny is the 'first wins' counterpart to Task.WhenAll. Unfinished tasks continue running — cancel them explicitly if you no longer need their results.",
+  },
+  {
+    id: "cs-ref-readonly",
+    language: "csharp",
+    title: "ref readonly — read-only reference to avoid copies",
+    tag: "understanding",
+    code: `readonly struct LargeStruct
+{
+    public readonly double X, Y, Z, W;
+    public LargeStruct(double x, double y, double z, double w)
+    { X=x; Y=y; Z=z; W=w; }
+}
+
+static ref readonly LargeStruct GetRef(LargeStruct[] arr, int i)
+    => ref arr[i];   // returns a reference, not a copy
+
+LargeStruct[] data = [new(1,2,3,4), new(5,6,7,8)];
+
+// ref readonly: access the struct in-place — no 32-byte copy.
+ref readonly LargeStruct s = ref GetRef(data, 0);
+Console.WriteLine(s.X);   // 1  — read only via reference
+// s.X = 99;  // Compile error — ref readonly`,
+    explanation: "ref readonly parameters and returns let you access large structs by reference without copying, while the readonly constraint prevents accidental mutation.",
+  },
+  {
+    id: "cs-generic-math-2",
+    language: "csharp",
+    title: "Generic math with INumber<T>",
+    tag: "understanding",
+    code: `using System.Numerics;
+
+// INumber<T> is the base interface for all numeric types in .NET 7+.
+static T Sum<T>(IEnumerable<T> items) where T : INumber<T>
+    => items.Aggregate(T.Zero, (a, b) => a + b);
+
+Console.WriteLine(Sum(new int[]    { 1, 2, 3, 4, 5 }));    // 15
+Console.WriteLine(Sum(new double[] { 1.5, 2.5, 3.0 }));    // 7
+Console.WriteLine(Sum(new decimal[]{ 10m, 20m, 30m }));    // 60
+
+// Works with any type implementing INumber<T>: int, long, float, double, decimal...
+// T.Zero, T.One, T.MaxValue, +, -, *, / are all available.`,
+    explanation: "INumber<T> (System.Numerics, .NET 7+) lets you write generic algorithms over any numeric type. T.Zero and arithmetic operators are defined as static abstract interface members.",
+  },
+  {
+    id: "cs-source-gen-concept",
+    language: "csharp",
+    title: "Source generators run at compile time",
+    tag: "understanding",
+    code: `// Source generators (Roslyn) analyse your code and emit new C# files.
+// Common uses:
+// - [GeneratedRegex]: compiles regex at build time.
+// - JsonSerializerContext: AOT-safe JSON serialisation.
+// - Logging source generator: structured log methods.
+
+using System.Text.RegularExpressions;
+
+partial class Parser
+{
+    // GeneratedRegex runs at compile time — no runtime compilation overhead.
+    [GeneratedRegex(@"^\d{4}-\d{2}-\d{2}$")]
+    private static partial Regex DatePattern();
+
+    public bool IsDate(string s) => DatePattern().IsMatch(s);
+}
+
+// var p = new Parser();
+// Console.WriteLine(p.IsDate("2026-05-07"));  // True`,
+    explanation: "Source generators run during compilation and inject new code. [GeneratedRegex] is the most visible example — it turns a regex literal into a compiled state machine at build time.",
+  },
+  // --- structures ---
+  {
+    id: "cs-channel-producer",
+    language: "csharp",
+    title: "System.Threading.Channels — producer/consumer",
+    tag: "structures",
+    code: `using System.Threading.Channels;
+
+var channel = Channel.CreateUnbounded<int>();
+
+// Producer: writes to channel.
+async Task Produce()
+{
+    for (int i = 0; i < 5; i++)
+    {
+        await channel.Writer.WriteAsync(i);
+        await Task.Delay(10);
+    }
+    channel.Writer.Complete();   // signal done
+}
+
+// Consumer: reads from channel.
+async Task Consume()
+{
+    await foreach (int item in channel.Reader.ReadAllAsync())
+        Console.WriteLine($"received {item}");
+}
+
+await Task.WhenAll(Produce(), Consume());`,
+    explanation: "System.Threading.Channels provides a high-performance, lock-free producer/consumer pipe. CreateBounded<T>(n) adds backpressure when the buffer fills.",
+  },
+  {
+    id: "cs-frozen-dict",
+    language: "csharp",
+    title: "FrozenDictionary — read-only, optimised at creation",
+    tag: "structures",
+    code: `using System.Collections.Frozen;
+
+// Build the mutable dict, then freeze it for read-only use.
+var lookup = new Dictionary<string, int>
+{
+    ["one"]   = 1,
+    ["two"]   = 2,
+    ["three"] = 3,
+}.ToFrozenDictionary();
+
+// FrozenDictionary uses a perfect hash — faster lookups than Dictionary.
+Console.WriteLine(lookup["two"]);   // 2
+Console.WriteLine(lookup.ContainsKey("four"));   // False
+
+// Frozen collections are immutable — no Add/Remove.
+// Best for static lookup tables initialised at startup.`,
+    explanation: "FrozenDictionary (.NET 8+) is built once and optimised for read-heavy workloads — it uses a minimal perfect hash for O(1) lookups faster than regular Dictionary.",
+  },
+  {
+    id: "cs-sorted-set-2",
+    language: "csharp",
+    title: "SortedSet<T> — always-sorted unique collection",
+    tag: "structures",
+    code: `var set = new SortedSet<int> { 5, 2, 8, 1, 9, 3 };
+
+// Elements are always in sorted order.
+Console.WriteLine(string.Join(", ", set));   // 1, 2, 3, 5, 8, 9
+
+// GetViewBetween: efficient range view.
+SortedSet<int> range = set.GetViewBetween(3, 8);
+Console.WriteLine(string.Join(", ", range));  // 3, 5, 8
+
+// Min and Max are O(log n).
+Console.WriteLine(set.Min);   // 1
+Console.WriteLine(set.Max);   // 9
+
+// Reverse iterate.
+foreach (int n in set.Reverse())
+    Console.Write(n + " ");  // 9 8 5 3 2 1`,
+    explanation: "SortedSet<T> maintains elements in sorted order (red-black tree). GetViewBetween returns a live view of elements in a range — efficient for sliding-window queries.",
+  },
+  {
+    id: "cs-concurrent-queue",
+    language: "csharp",
+    title: "ConcurrentQueue<T> — lock-free FIFO",
+    tag: "structures",
+    code: `using System.Collections.Concurrent;
+
+var q = new ConcurrentQueue<string>();
+
+// Enqueue is thread-safe.
+Parallel.For(0, 5, i => q.Enqueue($"item-{i}"));
+
+// TryDequeue: safe dequeue — returns false if empty.
+while (q.TryDequeue(out string? item))
+    Console.WriteLine(item);
+
+// TryPeek: look without removing.
+q.Enqueue("peek-me");
+if (q.TryPeek(out string? first))
+    Console.WriteLine($"peeked: {first}");  // peek-me`,
+    explanation: "ConcurrentQueue<T> is a lock-free thread-safe FIFO. TryDequeue and TryPeek are the safe APIs — never use Count > 0 before TryDequeue in multi-threaded code.",
+  },
+  {
+    id: "cs-memory-pool-2",
+    language: "csharp",
+    title: "MemoryPool<T> for heap buffers",
+    tag: "structures",
+    code: `using System.Buffers;
+
+// MemoryPool rents a Memory<T> (heap-based) unlike ArrayPool.
+using IMemoryOwner<byte> owner = MemoryPool<byte>.Shared.Rent(256);
+Memory<byte> buffer = owner.Memory;
+
+// Write to the buffer.
+for (int i = 0; i < 10; i++)
+    buffer.Span[i] = (byte)i;
+
+// Read back.
+Console.WriteLine(buffer.Span[5]);   // 5
+
+// IMemoryOwner implements IDisposable — return to pool via using.
+// After Dispose, the Memory<byte> must not be used.`,
+    explanation: "MemoryPool<T> provides heap-resident buffers — unlike ArrayPool which is array-centric. The IMemoryOwner wraps the buffer and returns it to the pool on Dispose.",
+  },
+  {
+    id: "cs-immutable-collections-2",
+    language: "csharp",
+    title: "ImmutableStack / ImmutableQueue",
+    tag: "structures",
+    code: `using System.Collections.Immutable;
+
+// ImmutableStack: persistent LIFO.
+var stack = ImmutableStack<int>.Empty;
+var s1 = stack.Push(1).Push(2).Push(3);   // new stacks
+Console.WriteLine(s1.Peek());   // 3
+
+var s2 = s1.Pop(out int popped);  // s2 has 1,2; popped = 3
+Console.WriteLine(popped);        // 3
+Console.WriteLine(s1.Peek());     // 3  — s1 unchanged
+
+// ImmutableQueue: persistent FIFO.
+var q = ImmutableQueue<string>.Empty;
+var q1 = q.Enqueue("a").Enqueue("b");
+var q2 = q1.Dequeue(out string? head);
+Console.WriteLine(head);   // a`,
+    explanation: "Immutable stack/queue use structural sharing — each Push/Enqueue creates a new version that shares nodes with the old version. Old versions are preserved — perfect for undo history.",
+  },
+  {
+    id: "cs-sparse-array",
+    language: "csharp",
+    title: "Dictionary<int, T> as a sparse array",
+    tag: "structures",
+    code: `// For large index ranges with sparse data, use a dict instead of an array.
+var sparse = new Dictionary<int, string>();
+
+// Only occupied indices use memory.
+sparse[0]     = "first";
+sparse[999]   = "near end";
+sparse[99999] = "far end";
+
+// Access like a sparse array.
+string? val = sparse.GetValueOrDefault(500);   // null
+Console.WriteLine(val ?? "not set");   // not set
+
+// Iterate only occupied entries.
+foreach (var (idx, v) in sparse)
+    Console.WriteLine($"[{idx}] = {v}");`,
+    explanation: "Dictionary<int, T> is a natural sparse array — only store occupied entries, and GetValueOrDefault handles missing indices cleanly without IndexOutOfRange.",
+  },
+  {
+    id: "cs-regex-compiled",
+    language: "csharp",
+    title: "Compiled Regex vs interpreted Regex",
+    tag: "structures",
+    code: `using System.Text.RegularExpressions;
+
+string text = "born 1990-05-15, graduated 2012-06-01";
+
+// Interpreted (default): compiled on first use, stored in cache.
+var r1 = new Regex(@"\d{4}-\d{2}-\d{2}");
+
+// Compiled: compiled to IL at creation — faster repeated matching.
+var r2 = new Regex(@"\d{4}-\d{2}-\d{2}", RegexOptions.Compiled);
+
+// [GeneratedRegex] (C# 11): compiled at BUILD TIME — fastest.
+// Prefer GeneratedRegex for hot paths.
+
+foreach (Match m in r2.Matches(text))
+    Console.WriteLine(m.Value);
+// 1990-05-15
+// 2012-06-01`,
+    explanation: "RegexOptions.Compiled compiles the regex to IL at runtime for faster matching at the cost of longer creation time. [GeneratedRegex] is better — zero runtime cost.",
+  },
+  {
+    id: "cs-environment-2",
+    language: "csharp",
+    title: "Environment class utilities",
+    tag: "structures",
+    code: `// Environment provides system info and process utilities.
+Console.WriteLine(Environment.MachineName);         // host name
+Console.WriteLine(Environment.ProcessorCount);      // CPU core count
+Console.WriteLine(Environment.OSVersion);           // OS info
+Console.WriteLine(Environment.Is64BitProcess);      // True on 64-bit
+Console.WriteLine(Environment.WorkingSet);          // memory in bytes
+Console.WriteLine(Environment.TickCount64);         // ms since boot
+
+// Special folders.
+string desktop = Environment.GetFolderPath(
+    Environment.SpecialFolder.Desktop);
+Console.WriteLine(desktop);
+
+// Exit gracefully.
+// Environment.Exit(0);   // exits entire process immediately`,
+    explanation: "The Environment class provides cross-platform access to machine info, process properties, and special folder paths — no P/Invoke needed for common system queries.",
+  },
+  // --- caveats ---
+  {
+    id: "cs-string-boxing",
+    language: "csharp",
+    title: "String concatenation with + boxes value types",
+    tag: "caveats",
+    code: `int x = 42;
+
+// "text" + x: x is boxed to object, then ToString() is called.
+string s1 = "value: " + x;          // boxes x
+
+// Interpolation avoids boxing — compiler calls x.ToString() directly.
+string s2 = $"value: {x}";          // no boxing
+
+// Explicit ToString also avoids boxing.
+string s3 = "value: " + x.ToString();
+
+// For high-frequency code (game loops, hot paths), prefer interpolation
+// or string.Create / StringBuilder to avoid boxing allocations.
+Console.WriteLine(s1 == s2);  // True`,
+    explanation: "The + operator between string and a value type triggers boxing; interpolated strings call ToString() directly on the struct, avoiding the boxing allocation.",
+  },
+  {
+    id: "cs-foreach-value-type",
+    language: "csharp",
+    title: "foreach over a custom struct enumerator avoids boxing",
+    tag: "caveats",
+    code: `// List<T>.Enumerator is a struct — foreach doesn't box it.
+var list = new List<int> { 1, 2, 3 };
+foreach (int n in list)  // uses List<int>.Enumerator (struct, no boxing)
+    Console.WriteLine(n);
+
+// But assigning to IEnumerator<T> boxes the struct enumerator.
+IEnumerator<int> boxed = list.GetEnumerator();  // boxed!
+
+// Lesson: foreach is smart — it calls GetEnumerator() on the concrete type
+// and uses the struct enumerator directly, avoiding boxing.`,
+    explanation: "C#'s foreach uses a duck-typing pattern: it calls GetEnumerator() on the actual type (not via interface), which lets List<T>'s struct enumerator work without boxing.",
+  },
+  {
+    id: "cs-mutable-struct",
+    language: "csharp",
+    title: "Mutable struct in a readonly context gets copied",
+    tag: "caveats",
+    code: `struct Counter
+{
+    private int _value;
+    public int Value => _value;
+    public void Increment() { _value++; }
+}
+
+// Readonly field: struct is copied before calling Increment.
+class Holder
+{
+    public readonly Counter C = new Counter();
+    public void Try() { C.Increment(); }  // increments a COPY!
+}
+
+var h = new Holder();
+h.Try(); h.Try(); h.Try();
+Console.WriteLine(h.C.Value);   // 0  — never changed!
+
+// Fix: use a non-readonly field, or use a class, or mark the method readonly.`,
+    explanation: "Calling a mutating method on a readonly struct field causes the compiler to make a defensive copy — the mutation happens on the copy, not the original. Use 'readonly' on pure struct methods to suppress this.",
+  },
+  {
+    id: "cs-interface-default-pitfall-2",
+    language: "csharp",
+    title: "Overriding an interface default method requires interface reference",
+    tag: "caveats",
+    code: `interface ILogger
+{
+    void Log(string msg) => Console.WriteLine($"[default] {msg}");
+}
+
+class FileLogger : ILogger
+{
+    // This 'Log' is a new method on FileLogger — it does NOT override ILogger.Log.
+    public void Log(string msg) => Console.WriteLine($"[file] {msg}");
+}
+
+FileLogger fl = new FileLogger();
+fl.Log("test");              // [file] test
+
+ILogger il = fl;
+il.Log("test");              // [file] test — because FileLogger has Log()
+
+// If FileLogger only had the class method (not interface explicit impl),
+// and it didn't implement Log at all, the default would be used via interface.`,
+    explanation: "To actually override a default interface method, the class method signature must match exactly and it's found via the virtual dispatch. Without explicit override semantics, both methods coexist.",
+  },
+  {
+    id: "cs-generic-constraint-new",
+    language: "csharp",
+    title: "new() constraint requires parameterless constructor",
+    tag: "caveats",
+    code: `// new() constraint: T must have a public parameterless constructor.
+T CreateAndInit<T>() where T : new()
+{
+    return new T();   // allowed because of new() constraint
+}
+
+class Simple { }
+class Configured
+{
+    public Configured(int n) { }    // only parameterised ctor
+}
+
+var s = CreateAndInit<Simple>();     // OK
+// var c = CreateAndInit<Configured>(); // Compile error!
+
+// new() prevents factory use with types that need parameters.
+// Alternative: Func<T> factory parameter instead.
+T Create<T>(Func<T> factory) => factory();`,
+    explanation: "The new() constraint is often seen as a limitation — it only works for default-constructible types. Accepting a Func<T> factory is more flexible.",
+  },
+  {
+    id: "cs-task-result-deadlock-2",
+    language: "csharp",
+    title: ".Result and .Wait() can deadlock",
+    tag: "caveats",
+    code: `// In a context with a SynchronizationContext (ASP.NET classic, WinForms):
+//
+// async Task<string> GetData() {
+//     await Task.Delay(100);   // continuation scheduled on SyncContext
+//     return "data";
+// }
+//
+// string data = GetData().Result;  // blocks the SyncContext thread
+// The await can never resume because the thread is blocked!
+// → DEADLOCK
+
+// Safe alternatives:
+// 1. Make the entire call chain async.
+// 2. Use Task.Run to escape the context: Task.Run(GetData).Result
+// 3. Use ConfigureAwait(false) inside GetData.
+
+// In .NET 6+ minimal APIs (no SyncContext), .Result is usually safe.`,
+    explanation: ".Result blocks the calling thread while waiting for the Task. If the Task's continuation needs to resume on the same thread (SynchronizationContext), it deadlocks. Always await instead.",
+  },
+  {
+    id: "cs-covariance-pitfall",
+    language: "csharp",
+    title: "Array covariance is unsafe — throws at runtime",
+    tag: "caveats",
+    code: `// Arrays are covariant in C# — string[] is-a object[].
+// But this is UNSOUND — the runtime checks assignments!
+string[] strings = ["hello", "world"];
+object[] objects = strings;   // valid at compile time
+
+try
+{
+    objects[0] = 42;   // throws ArrayTypeMismatchException at runtime!
+}
+catch (ArrayTypeMismatchException ex)
+{
+    Console.WriteLine(ex.Message);
+}
+
+// IReadOnlyList<T> covariance is SAFE because you can't write to it.
+IReadOnlyList<string> roStrings = strings;
+IReadOnlyList<object> roObjects = roStrings;  // safe`,
+    explanation: "Array covariance is a C# design flaw — object[0] = 42 compiles fine but fails at runtime with ArrayTypeMismatchException. Generic collection covariance (IEnumerable<out T>) is safe because it's read-only.",
+  },
+  {
+    id: "cs-struct-default",
+    language: "csharp",
+    title: "Struct default value is all-zero — may be invalid",
+    tag: "caveats",
+    code: `struct Temperature
+{
+    public double Celsius { get; init; }
+    public bool   IsValid { get; init; }
+}
+
+// default(Temperature) gives all-zero fields.
+Temperature t = default;
+Console.WriteLine(t.Celsius);   // 0
+Console.WriteLine(t.IsValid);   // False  ← zero means false!
+
+// Common gotcha: a struct in an array is default-initialised.
+Temperature[] readings = new Temperature[3];
+// All readings have Celsius=0, IsValid=false — is that a valid state?
+
+// Design advice: ensure the all-zero state is a valid, sensible default.`,
+    explanation: "Structs always have a default value of all-zero bits. Design your structs so that default(T) represents a valid, 'empty' state — otherwise every consumer must check validity.",
+  },
+  // --- types ---
+  {
+    id: "cs-span-string",
+    language: "csharp",
+    title: "string.AsSpan() for zero-copy string access",
+    tag: "types",
+    code: `string text = "Hello, World! 42";
+
+// AsSpan() wraps the string in ReadOnlySpan<char> — no copy.
+ReadOnlySpan<char> span = text.AsSpan();
+
+// Slice without allocating.
+ReadOnlySpan<char> hello = span[..5];
+Console.WriteLine(hello.ToString());   // Hello
+
+// Parse a number from within a string.
+ReadOnlySpan<char> numPart = span[15..];  // "42"
+int n = int.Parse(numPart);
+Console.WriteLine(n);   // 42
+
+// Equality without allocation.
+Console.WriteLine(span[7..12].Equals("World", StringComparison.Ordinal));  // True`,
+    explanation: "string.AsSpan() provides zero-copy access to string contents. Combining with Slice/ranges and span-aware parse methods eliminates substring allocations in hot paths.",
+  },
+  {
+    id: "cs-value-tuple-2",
+    language: "csharp",
+    title: "ValueTuple vs Tuple — stack vs heap",
+    tag: "types",
+    code: `// Tuple<T1, T2>: reference type — heap-allocated.
+Tuple<int, string> heapTuple = Tuple.Create(1, "hello");
+Console.WriteLine(heapTuple.Item1);   // 1
+
+// (T1, T2) ValueTuple: value type — stack-allocated.
+(int id, string name) stackTuple = (1, "hello");
+Console.WriteLine(stackTuple.id);     // 1  ← named access
+
+// ValueTuple syntax sugar.
+(int x, int y) Point = (3, 4);
+Console.WriteLine(Point.x + Point.y);  // 7
+
+// Deconstruction.
+var (first, second) = ("a", "b");
+Console.WriteLine(first);   // a`,
+    explanation: "ValueTuple (C# 7+) is a struct with named fields, allocated on the stack. Prefer it over Tuple (reference type) for lightweight multi-value returns.",
+  },
+  {
+    id: "cs-object-identity",
+    language: "csharp",
+    title: "Reference equality with ReferenceEquals",
+    tag: "types",
+    code: `// == on classes calls the overloaded operator (may do value comparison).
+// object.ReferenceEquals always checks pointer identity.
+
+string a = "hello";
+string b = "hello";
+string c = new string("hello".ToCharArray());
+
+Console.WriteLine(a == b);                       // True (value via overload)
+Console.WriteLine(object.ReferenceEquals(a, b)); // True (string literal interning)
+Console.WriteLine(object.ReferenceEquals(a, c)); // False (different objects)
+
+// Custom class with == override.
+record Point(int X, int Y);
+var p1 = new Point(1, 2);
+var p2 = new Point(1, 2);
+Console.WriteLine(p1 == p2);                           // True (record value eq)
+Console.WriteLine(object.ReferenceEquals(p1, p2));     // False`,
+    explanation: "Use object.ReferenceEquals when you specifically need pointer identity, regardless of any == overloads. Useful in debugging and identity-map caches.",
+  },
+  {
+    id: "cs-runtime-type",
+    language: "csharp",
+    title: "RuntimeTypeHandle and Type identity",
+    tag: "types",
+    code: `// Type objects are singletons per AppDomain — same type == same object.
+Type intType1 = typeof(int);
+Type intType2 = 42.GetType();
+
+Console.WriteLine(object.ReferenceEquals(intType1, intType2));  // True
+Console.WriteLine(intType1 == intType2);  // True
+
+// Type name and metadata.
+Console.WriteLine(intType1.Name);          // Int32
+Console.WriteLine(intType1.FullName);      // System.Int32
+Console.WriteLine(intType1.IsValueType);   // True
+Console.WriteLine(intType1.IsGenericType); // False
+
+// Generic type information.
+Type listType = typeof(List<int>);
+Console.WriteLine(listType.GetGenericArguments()[0].Name);  // Int32`,
+    explanation: "Type objects are unique per type per AppDomain — you can safely use == or ReferenceEquals to compare them. typeof(T) is evaluated at compile time; GetType() at runtime.",
+  },
+  {
+    id: "cs-tuple-deconstruct",
+    language: "csharp",
+    title: "Deconstruction — tuples and custom types",
+    tag: "types",
+    code: `// ValueTuple deconstruction.
+var point = (x: 3, y: 4);
+var (px, py) = point;
+Console.WriteLine($"x={px} y={py}");   // x=3 y=4
+
+// Discard with _.
+var (first, _, third) = (1, 2, 3);
+
+// Custom type deconstruction via Deconstruct method.
+class Rectangle
+{
+    public int Width, Height;
+    public void Deconstruct(out int w, out int h) { w=Width; h=Height; }
+}
+var rect = new Rectangle { Width=10, Height=5 };
+var (w, h) = rect;
+Console.WriteLine($"{w}x{h}");   // 10x5
+
+// In foreach.
+var pairs = new[] { (1, "a"), (2, "b") };
+foreach (var (n, s) in pairs) Console.WriteLine($"{n}={s}");`,
+    explanation: "Deconstruction works for ValueTuples, record types, and any type with a Deconstruct method. _ discards individual fields you don't need.",
+  },
+  {
+    id: "cs-dynamic-expando",
+    language: "csharp",
+    title: "ExpandoObject — dynamic property bag",
+    tag: "types",
+    code: `using System.Dynamic;
+
+dynamic obj = new ExpandoObject();
+
+// Add properties dynamically at runtime.
+obj.Name = "alice";
+obj.Age  = 30;
+obj.Greet = (Action)(() => Console.WriteLine($"Hi, {obj.Name}!"));
+
+Console.WriteLine(obj.Name);   // alice
+obj.Greet();                   // Hi, alice!
+
+// Iterate as a dictionary.
+var dict = (IDictionary<string, object?>)obj;
+foreach (var kv in dict)
+    Console.WriteLine($"{kv.Key}: {kv.Value}");`,
+    explanation: "ExpandoObject is a dynamic property bag — useful for building flexible DTOs or JSON-like structures at runtime. Access it as IDictionary<string,object?> for iteration.",
+  },
+  {
+    id: "cs-boxing-interface-2",
+    language: "csharp",
+    title: "Unboxing requires the exact type",
+    tag: "types",
+    code: `int n = 42;
+object boxed = n;   // box int to object
+
+// Unbox: must cast to the EXACT type.
+int unboxed = (int)boxed;         // OK
+Console.WriteLine(unboxed);       // 42
+
+// Casting to a compatible but different type throws.
+try
+{
+    long bad = (long)boxed;        // InvalidCastException!
+}
+catch (InvalidCastException ex)
+{
+    Console.WriteLine(ex.Message);
+}
+
+// Correct: unbox first, then convert.
+long correct = (long)(int)boxed;
+Console.WriteLine(correct);   // 42`,
+    explanation: "Unboxing requires casting to the exact type that was boxed — you can't unbox an int as a long even though int is implicitly convertible to long. Unbox first, then convert.",
+  },
+  // --- families ---
+  {
+    id: "cs-iequatable-fam",
+    language: "csharp",
+    title: "IEquatable<T> vs Equals(object) — when to implement both",
+    tag: "families",
+    code: `struct Point : IEquatable<Point>
+{
+    public int X, Y;
+
+    // IEquatable<T>: avoids boxing for structs.
+    public bool Equals(Point other) => X == other.X && Y == other.Y;
+
+    // Equals(object): required for compatibility with collections.
+    public override bool Equals(object? obj) =>
+        obj is Point other && Equals(other);
+
+    public override int GetHashCode() => HashCode.Combine(X, Y);
+
+    public static bool operator ==(Point a, Point b) => a.Equals(b);
+    public static bool operator !=(Point a, Point b) => !a.Equals(b);
+}
+
+// HashSet<Point> uses IEquatable<Point>.Equals — no boxing.
+var set = new HashSet<Point> { new Point { X=1, Y=2 } };
+Console.WriteLine(set.Contains(new Point { X=1, Y=2 }));  // True`,
+    explanation: "IEquatable<T>.Equals avoids boxing for value types — HashSet and Dictionary use it when available. Always pair it with override Equals(object) and GetHashCode() for consistency.",
+  },
+  {
+    id: "cs-icomparable-fam",
+    language: "csharp",
+    title: "IComparable<T> for sorting and ordering",
+    tag: "families",
+    code: `class Version : IComparable<Version>
+{
+    public int Major, Minor, Patch;
+
+    public int CompareTo(Version? other)
+    {
+        if (other is null) return 1;    // null sorts before any version
+        int c = Major.CompareTo(other.Major); if (c != 0) return c;
+        c = Minor.CompareTo(other.Minor);     if (c != 0) return c;
+        return Patch.CompareTo(other.Patch);
+    }
+
+    public override string ToString() => $"{Major}.{Minor}.{Patch}";
+}
+
+var versions = new[] { new Version{Major=2,Minor=1,Patch=0},
+                       new Version{Major=1,Minor=10,Patch=3} };
+Array.Sort(versions);
+Console.WriteLine(versions[0]);   // 1.10.3`,
+    explanation: "Implement IComparable<T> to define the natural ordering — Array.Sort, List.Sort, and SortedSet use it. Return negative/zero/positive for less/equal/greater.",
+  },
+  {
+    id: "cs-httphandler-fam",
+    language: "csharp",
+    title: "HttpClient vs IHttpClientFactory",
+    tag: "families",
+    code: `// HttpClient: reuse ONE instance per base address — don't new() per request.
+// Creating a new HttpClient each request exhausts sockets (TIME_WAIT).
+static readonly HttpClient _client = new();
+
+async Task<string> Fetch(string url) =>
+    await _client.GetStringAsync(url);
+
+// IHttpClientFactory (preferred in DI apps): manages lifetime, rotation.
+// builder.Services.AddHttpClient<MyService>();
+// class MyService { MyService(HttpClient c) { ... } }
+
+// Named client for per-host configuration.
+// builder.Services.AddHttpClient("github", c => {
+//     c.BaseAddress = new Uri("https://api.github.com");
+//     c.DefaultRequestHeaders.Add("User-Agent", "MyApp");
+// });`,
+    explanation: "Share one HttpClient per base address (or use IHttpClientFactory in DI) — creating one per request exhausts sockets. IHttpClientFactory also handles DNS change rotation.",
+  },
+  {
+    id: "cs-cancellation-linked",
+    language: "csharp",
+    title: "Linked cancellation tokens",
+    tag: "families",
+    code: `using System.Threading;
+
+// Create a composite token: cancel if EITHER source fires.
+var userCts    = new CancellationTokenSource();
+var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+
+using var linked = CancellationTokenSource.CreateLinkedTokenSource(
+    userCts.Token, timeoutCts.Token);
+
+CancellationToken combined = linked.Token;
+
+// combined is cancelled when user cancels OR timeout fires.
+try
+{
+    await Task.Delay(10_000, combined);
+}
+catch (OperationCanceledException)
+{
+    Console.WriteLine($"Cancelled. User={userCts.IsCancellationRequested} " +
+                      $"Timeout={timeoutCts.IsCancellationRequested}");
+}
+
+userCts.Dispose(); timeoutCts.Dispose();`,
+    explanation: "CreateLinkedTokenSource combines multiple tokens — the result fires when any source is cancelled. Use it to apply both a timeout and a user-cancel to the same operation.",
+  },
+  {
+    id: "cs-dependency-injection-2",
+    language: "csharp",
+    title: "DI service lifetimes — Singleton, Scoped, Transient",
+    tag: "families",
+    code: `// Transient: new instance per injection — stateless services.
+// builder.Services.AddTransient<IEmailService, EmailService>();
+
+// Scoped: one per HTTP request — per-user state, DbContext.
+// builder.Services.AddScoped<IUserContext, UserContext>();
+
+// Singleton: one per process — config, caches, shared state.
+// builder.Services.AddSingleton<ICache, MemoryCache>();
+
+// Captive dependency bug: NEVER inject Scoped into Singleton!
+// The Singleton captures a single request's Scoped instance forever.
+
+// Safe hierarchy: Singleton can depend on Singleton.
+//                 Scoped can depend on Scoped or Singleton.
+//                 Transient can depend on anything.`,
+    explanation: "Service lifetimes control how long an instance lives. Injecting a Scoped service into a Singleton creates a 'captive dependency' — the Singleton holds a stale per-request object forever.",
+  },
+  {
+    id: "cs-options-pattern-2",
+    language: "csharp",
+    title: "IOptions<T> vs IOptionsSnapshot<T> vs IOptionsMonitor<T>",
+    tag: "families",
+    code: `// All three read configuration; they differ in update behaviour.
+
+// IOptions<T>: singleton — reads config ONCE at startup. Doesn't refresh.
+// IOptionsSnapshot<T>: scoped — reloads per HTTP request.
+// IOptionsMonitor<T>: singleton — refreshes when config changes (OnChange event).
+
+// Usage:
+// class MyService(IOptionsMonitor<AppSettings> opts)
+// {
+//     public void DoWork() {
+//         var settings = opts.CurrentValue;  // always fresh
+//     }
+// }
+
+// Registration:
+// builder.Services.Configure<AppSettings>(
+//     builder.Configuration.GetSection("App"));`,
+    explanation: "Use IOptions<T> for values that never change; IOptionsSnapshot<T> for per-request freshness; IOptionsMonitor<T> for live-reload without restarting the process.",
+  },
+  {
+    id: "cs-expression-tree-2",
+    language: "csharp",
+    title: "Expression trees — code as data",
+    tag: "families",
+    code: `using System.Linq.Expressions;
+
+// A lambda can be captured as an Expression tree (not just a delegate).
+Expression<Func<int, int>> squared = n => n * n;
+
+// Inspect the tree.
+Console.WriteLine(squared.Body);             // (n * n)
+Console.WriteLine(squared.Body.NodeType);    // Multiply
+
+// Compile to a delegate when needed.
+Func<int, int> fn = squared.Compile();
+Console.WriteLine(fn(5));   // 25
+
+// EF Core translates Expression<Func<T,bool>> to SQL:
+// dbContext.Users.Where(u => u.Age > 18)
+// → WHERE Age > 18`,
+    explanation: "When you assign a lambda to Expression<Func<T>>, the C# compiler emits a tree of objects representing the code — not executable IL. LINQ-to-SQL providers walk the tree to generate queries.",
+  },
+  {
+    id: "cs-string-pool-fam",
+    language: "csharp",
+    title: "String.Intern vs StringPool vs FrozenSet for lookup",
+    tag: "families",
+    code: `// string.Intern: CLR intern table — saves memory for many identical strings.
+string a = string.Intern("shared");
+string b = string.Intern("shared");
+Console.WriteLine(object.ReferenceEquals(a, b));  // True
+
+// For fast set membership, FrozenSet is better than HashSet for immutable data.
+using System.Collections.Frozen;
+FrozenSet<string> keywords = FrozenSet.Create("if","else","for","while");
+Console.WriteLine(keywords.Contains("for"));   // True
+
+// For high-frequency string-keyed caches, Microsoft.Extensions.Caching.Memory
+// or a custom ConcurrentDictionary is more appropriate than Intern.`,
+    explanation: "string.Intern is for deduplication of high-volume strings in memory. FrozenSet is better for static lookup tables. Avoid over-using Intern — the intern table is never garbage-collected.",
+  },
+  // --- classes ---
+  {
+    id: "cs-pattern-visitor",
+    language: "csharp",
+    title: "Visitor-like dispatch with switch expression",
+    tag: "classes",
+    code: `abstract record Shape;
+record Circle(double Radius) : Shape;
+record Rectangle(double W, double H) : Shape;
+record Triangle(double Base, double Height) : Shape;
+
+// Switch expression as a type-dispatched visitor.
+static double Area(Shape s) => s switch
+{
+    Circle    c => Math.PI * c.Radius * c.Radius,
+    Rectangle r => r.W * r.H,
+    Triangle  t => 0.5 * t.Base * t.Height,
+    _ => throw new ArgumentException($"Unknown shape: {s}")
+};
+
+Console.WriteLine(Area(new Circle(5)));          // 78.53...
+Console.WriteLine(Area(new Rectangle(3, 4)));    // 12`,
+    explanation: "Using record types + switch expression replaces the Visitor pattern boilerplate. The compiler warns if a new Shape subtype is added but not handled in the switch.",
+  },
+  {
+    id: "cs-abstract-factory",
+    language: "csharp",
+    title: "Abstract factory via interface",
+    tag: "classes",
+    code: `interface IButton  { void Click();  }
+interface IFactory { IButton CreateButton(); }
+
+class DarkButton : IButton  { public void Click() => Console.WriteLine("dark click"); }
+class LightButton : IButton { public void Click() => Console.WriteLine("light click"); }
+
+class DarkFactory  : IFactory { public IButton CreateButton() => new DarkButton();  }
+class LightFactory : IFactory { public IButton CreateButton() => new LightButton(); }
+
+// Client uses only the interface — theme is injected.
+static void UseButton(IFactory factory)
+{
+    var btn = factory.CreateButton();
+    btn.Click();
+}
+
+UseButton(new DarkFactory());   // dark click
+UseButton(new LightFactory());  // light click`,
+    explanation: "The abstract factory pattern creates families of related objects. Injecting the factory (not the product) lets you switch entire families at once — useful for theming and platform abstraction.",
+  },
+  {
+    id: "cs-builder-pattern",
+    language: "csharp",
+    title: "Builder pattern with validation",
+    tag: "classes",
+    code: `class Email
+{
+    private Email() { }
+    public string To { get; private set; } = "";
+    public string Subject { get; private set; } = "";
+    public string Body    { get; private set; } = "";
+
+    public class Builder
+    {
+        private readonly Email _email = new();
+        public Builder To(string addr)      { _email.To = addr;      return this; }
+        public Builder Subject(string subj) { _email.Subject = subj; return this; }
+        public Builder Body(string body)    { _email.Body = body;     return this; }
+        public Email Build()
+        {
+            if (string.IsNullOrEmpty(_email.To)) throw new InvalidOperationException();
+            return _email;
+        }
+    }
+}
+
+var email = new Email.Builder()
+    .To("alice@example.com")
+    .Subject("Hello")
+    .Body("Hi there!")
+    .Build();`,
+    explanation: "The builder pattern creates complex objects step-by-step with validation in Build(). The private Email constructor prevents direct instantiation — only the inner Builder can create one.",
+  },
+  {
+    id: "cs-strategy-pattern",
+    language: "csharp",
+    title: "Strategy pattern with Func delegates",
+    tag: "classes",
+    code: `class Sorter<T>
+{
+    private readonly Comparison<T> _strategy;
+
+    public Sorter(Comparison<T> strategy) => _strategy = strategy;
+
+    public void Sort(List<T> items)
+    {
+        items.Sort(_strategy);
+    }
+}
+
+var items = new List<string> { "banana", "apple", "cherry" };
+
+// Strategy 1: alphabetical.
+new Sorter<string>(string.Compare).Sort(items);
+Console.WriteLine(string.Join(", ", items));   // apple, banana, cherry
+
+// Strategy 2: by length.
+new Sorter<string>((a, b) => a.Length - b.Length).Sort(items);
+Console.WriteLine(string.Join(", ", items));   // apple, banana, cherry`,
+    explanation: "Using a delegate (Comparison<T> or Func<T,T,int>) as a strategy parameter is idiomatic in C# — no need for a Strategy interface and concrete classes for simple algorithms.",
+  },
+  {
+    id: "cs-event-covariant",
+    language: "csharp",
+    title: "Event declaration with EventHandler<T>",
+    tag: "classes",
+    code: `class FileWatcher
+{
+    public event EventHandler<FileChangedEventArgs>? FileChanged;
+
+    protected virtual void OnFileChanged(string path)
+    {
+        FileChanged?.Invoke(this, new FileChangedEventArgs(path));
+    }
+
+    public void SimulateChange(string path) => OnFileChanged(path);
+}
+
+class FileChangedEventArgs : EventArgs
+{
+    public string Path { get; }
+    public FileChangedEventArgs(string path) { Path = path; }
+}
+
+var watcher = new FileWatcher();
+watcher.FileChanged += (sender, e) => Console.WriteLine($"Changed: {e.Path}");
+watcher.SimulateChange("/tmp/data.csv");  // Changed: /tmp/data.csv`,
+    explanation: "Use EventHandler<TEventArgs> instead of raw delegates for events — it standardises the (sender, args) signature and integrates with the .NET event model and tooling.",
+  },
+  {
+    id: "cs-template-method",
+    language: "csharp",
+    title: "Template Method pattern via abstract class",
+    tag: "classes",
+    code: `abstract class DataProcessor
+{
+    // Template method: defines the algorithm skeleton.
+    public void Process()
+    {
+        ReadData();
+        ValidateData();
+        TransformData();
+        WriteData();
+    }
+
+    protected abstract void ReadData();
+    protected abstract void WriteData();
+
+    protected virtual void ValidateData()
+    {
+        Console.WriteLine("Default validation");
+    }
+
+    protected virtual void TransformData() { }
+}
+
+class CsvProcessor : DataProcessor
+{
+    protected override void ReadData()  => Console.WriteLine("Read CSV");
+    protected override void WriteData() => Console.WriteLine("Write CSV");
+}
+
+new CsvProcessor().Process();`,
+    explanation: "The template method defines the algorithm in the base class with abstract hooks for varying steps. Subclasses override only what differs — the orchestration stays in the base.",
+  },
+  {
+    id: "cs-decorator-pattern",
+    language: "csharp",
+    title: "Decorator pattern with interface wrapping",
+    tag: "classes",
+    code: `interface ICache { string? Get(string key); void Set(string key, string val); }
+
+class MemoryCache : ICache
+{
+    private readonly Dictionary<string, string> _store = new();
+    public string? Get(string key) => _store.GetValueOrDefault(key);
+    public void Set(string key, string val) => _store[key] = val;
+}
+
+class LoggingCache : ICache
+{
+    private readonly ICache _inner;
+    public LoggingCache(ICache inner) => _inner = inner;
+    public string? Get(string key) {
+        var val = _inner.Get(key);
+        Console.WriteLine($"GET {key} = {val ?? "(miss)"}");
+        return val;
+    }
+    public void Set(string key, string val) {
+        Console.WriteLine($"SET {key} = {val}");
+        _inner.Set(key, val);
+    }
+}
+
+ICache cache = new LoggingCache(new MemoryCache());
+cache.Set("x", "42");
+cache.Get("x");`,
+    explanation: "The decorator wraps a component in another that adds behaviour (logging, caching, metrics) while preserving the interface. Stack decorators by wrapping them in each other.",
+  },
+  {
+    id: "cs-composite-pattern",
+    language: "csharp",
+    title: "Composite pattern — tree of uniform components",
+    tag: "classes",
+    code: `interface IFileSystem { long Size(); void Print(string indent = ""); }
+
+class File : IFileSystem
+{
+    public string Name; public long Bytes;
+    public File(string n, long b) { Name=n; Bytes=b; }
+    public long   Size()                 => Bytes;
+    public void   Print(string indent)   => Console.WriteLine($"{indent}{Name} ({Bytes}B)");
+}
+
+class Folder : IFileSystem
+{
+    public string Name; private List<IFileSystem> _children = new();
+    public Folder(string n) { Name = n; }
+    public void Add(IFileSystem item) => _children.Add(item);
+    public long Size() => _children.Sum(c => c.Size());
+    public void Print(string indent)
+    {
+        Console.WriteLine($"{indent}{Name}/");
+        _children.ForEach(c => c.Print(indent + "  "));
+    }
+}
+
+var root = new Folder("root");
+root.Add(new File("a.txt", 100)); root.Add(new File("b.txt", 200));
+var sub = new Folder("sub"); sub.Add(new File("c.txt", 50)); root.Add(sub);
+root.Print();
+Console.WriteLine($"Total: {root.Size()}B");`,
+    explanation: "The composite pattern treats individual items and containers identically via a common interface. Here, both File and Folder implement IFileSystem — clients don't need to distinguish them.",
+  },
+  {
+    id: "cs-null-object-pattern",
+    language: "csharp",
+    title: "Null Object pattern — eliminate null checks",
+    tag: "classes",
+    code: `interface ILogger { void Log(string msg); }
+
+class ConsoleLogger : ILogger
+{
+    public void Log(string msg) => Console.WriteLine($"LOG: {msg}");
+}
+
+// NullLogger: does nothing — safe to call without null checks.
+class NullLogger : ILogger
+{
+    public static readonly ILogger Instance = new NullLogger();
+    public void Log(string msg) { }   // no-op
+}
+
+class Service
+{
+    private readonly ILogger _log;
+    public Service(ILogger? log = null) => _log = log ?? NullLogger.Instance;
+    public void DoWork() { _log.Log("working"); }
+}
+
+new Service().DoWork();                        // silent
+new Service(new ConsoleLogger()).DoWork();     // LOG: working`,
+    explanation: "The Null Object provides a do-nothing default implementation, eliminating null checks everywhere the service is used. Prefer it over null-conditional ?. chaining on injected dependencies.",
+  },
+  {
+    id: "cs-primary-constructor",
+    language: "csharp",
+    title: "Primary constructors (C# 12)",
+    tag: "snippet",
+    code: `// Primary constructors for classes and structs (C# 12).
+class Point(double x, double y)
+{
+    public double X { get; } = x;
+    public double Y { get; } = y;
+    public double Distance => Math.Sqrt(X * X + Y * Y);
+}
+
+// Also works on structs:
+struct Color(byte r, byte g, byte b)
+{
+    public byte R = r, G = g, B = b;
+}
+
+var p = new Point(3, 4);
+Console.WriteLine(p.Distance); // 5`,
+    explanation: "Primary constructors bring constructor parameters into class/struct scope for initializers. Reduces boilerplate; parameters are in scope for all instance members during initialization.",
+  },
+  {
+    id: "cs-default-interface-method",
+    language: "csharp",
+    title: "Default interface methods",
+    tag: "snippet",
+    code: `interface ILogger
+{
+    void Log(string message);
+    // Default implementation — no need to override
+    void LogError(string msg) => Log($"ERROR: {msg}");
+    void LogInfo(string msg)  => Log($"INFO:  {msg}");
+}
+
+class ConsoleLogger : ILogger
+{
+    public void Log(string message) => Console.WriteLine(message);
+    // LogError and LogInfo are inherited from the interface
+}
+
+ILogger log = new ConsoleLogger();
+log.LogError("Oops");   // ERROR: Oops
+log.LogInfo("Ready");   // INFO:  Ready`,
+    explanation: "Default interface methods let you add new members to interfaces without breaking existing implementations. Often used for convenience overloads that delegate to the one required member.",
+  },
+  {
+    id: "cs-pattern-matching-not",
+    language: "csharp",
+    title: "Negation and conjunctive patterns",
+    tag: "snippet",
+    code: `object? val = 42;
+
+// 'not' pattern
+if (val is not null)
+    Console.WriteLine("has a value");
+
+// 'and' / 'or' combined
+int n = 15;
+bool inRange = n is >= 10 and <= 20;   // true
+bool outside  = n is < 0 or > 100;     // false
+
+// Combine with type tests
+static string Describe(object o) => o switch
+{
+    int i and > 0     => $"positive int {i}",
+    int i and < 0     => $"negative int {i}",
+    int                => "zero",
+    string s and not "" => $"non-empty string '{s}'",
+    _                  => "other",
+};`,
+    explanation: "C# 9+ logical patterns (`not`, `and`, `or`) compose checks without nested if-statements. They work in both `is` expressions and `switch` arms, keeping guard logic close to the pattern.",
+  },
+  {
+    id: "cs-span-string-slice",
+    language: "csharp",
+    title: "Slicing strings with Span<char>",
+    tag: "snippet",
+    code: `string path = "/usr/local/bin/dotnet";
+
+// Zero-allocation slice — no heap string created
+ReadOnlySpan<char> filename = path.AsSpan(path.LastIndexOf('/') + 1);
+Console.WriteLine(filename.ToString());   // dotnet
+
+// Useful in hot paths: parse without allocating substrings
+ReadOnlySpan<char> csv = "10,20,30";
+int comma = csv.IndexOf(',');
+int first  = int.Parse(csv[..comma]);    // 10
+int rest   = int.Parse(csv[(comma + 1)..]);  // "20,30" — would parse 20`,
+    explanation: "AsSpan() gives a Span<char> view into an existing string. Combined with slicing (range indexers), you can parse substrings without allocating new string objects on the heap.",
+  },
+  {
+    id: "cs-required-member",
+    language: "csharp",
+    title: "required members (C# 11)",
+    tag: "snippet",
+    code: `// 'required' enforces that object-initializer sets the property.
+class User
+{
+    public required string Name  { get; init; }
+    public required string Email { get; init; }
+    public int Age { get; init; } = 0;  // optional
+}
+
+// Compile error: Name and Email must be supplied.
+// var u = new User();
+
+var user = new User { Name = "Alice", Email = "a@b.com" };
+Console.WriteLine(user.Name);`,
+    explanation: "`required` on a property forces callers using object-initializer syntax to provide a value. Unlike constructor parameters, it works cleanly with object initializers and records.",
+  },
+  {
+    id: "cs-checked-unchecked",
+    language: "csharp",
+    title: "Overflow: checked vs unchecked",
+    tag: "understanding",
+    code: `int max = int.MaxValue;  // 2,147,483,647
+
+// checked: throws OverflowException on overflow
+try
+{
+    int result = checked(max + 1);
+}
+catch (OverflowException)
+{
+    Console.WriteLine("Overflow caught!");
+}
+
+// unchecked (default): wraps silently
+int wrapped = unchecked(max + 1);   // -2,147,483,648
+Console.WriteLine(wrapped);
+
+// Blocks of checked/unchecked code:
+checked
+{
+    int a = max;
+    int b = a + 1;  // throws
+}`,
+    explanation: "By default C# arithmetic is unchecked — overflow wraps silently. Wrap with `checked` to throw on overflow, which is essential for financial or safety-critical calculations.",
+  },
+  {
+    id: "cs-covariant-return",
+    language: "csharp",
+    title: "Covariant return types (C# 9)",
+    tag: "understanding",
+    code: `abstract class Animal
+{
+    public abstract Animal Create();
+}
+
+class Dog : Animal
+{
+    // C# 9+: return type can be a more derived type
+    public override Dog Create() => new Dog();
+}
+
+Animal a = new Dog();
+Animal result = a.Create();   // runtime type is Dog
+Dog    d      = new Dog().Create();  // no cast needed`,
+    explanation: "Covariant returns allow overrides to return a more derived type than the base declaration. This avoids unnecessary casts and communicates richer static type information to callers.",
+  },
+  {
+    id: "cs-nullability-annotations",
+    language: "csharp",
+    title: "Nullable reference types annotations",
+    tag: "understanding",
+    code: `#nullable enable
+
+string  nonNull = "hello";    // cannot be null
+string? nullable = null;      // explicitly nullable
+
+// Compiler warns if you dereference without null check:
+// int len = nullable.Length;   // warning CS8602
+
+int len = nullable?.Length ?? 0;   // safe
+
+// Bang operator (!) suppresses the warning when you are sure:
+string forced = nullable!;   // you assume it's non-null here
+
+// Annotate return values:
+string? FindUser(int id) => id > 0 ? "Alice" : null;`,
+    explanation: "Nullable reference type annotations (#nullable enable) let the compiler flow-analyse null safety. Use `?` to declare intent, `?.` for safe access, `??` for defaults, and `!` sparingly.",
+  },
+  {
+    id: "cs-using-declarations",
+    language: "csharp",
+    title: "using declarations (C# 8)",
+    tag: "snippet",
+    code: `// Classic using statement (scope ends at '}'  brace)
+using (var fs1 = File.OpenRead("a.txt"))
+{
+    // use fs1
+}   // disposed here
+
+// C# 8 using declaration — scope ends at end of enclosing block
+using var fs2 = File.OpenRead("b.txt");
+// ... use fs2 ...
+// disposed when the method / block exits
+
+static string ReadAll(string path)
+{
+    using var reader = new StreamReader(path);
+    return reader.ReadToEnd();
+}   // reader disposed here`,
+    explanation: "The `using var` declaration (C# 8) disposes the object at the end of the enclosing scope without an extra nesting level, keeping code flatter and reducing indentation.",
+  },
+  {
+    id: "cs-init-only-setter",
+    language: "csharp",
+    title: "init-only property setters",
+    tag: "snippet",
+    code: `class Coordinate
+{
+    public double Lat  { get; init; }
+    public double Long { get; init; }
+}
+
+// Set once via object initializer
+var c = new Coordinate { Lat = 51.5, Long = -0.1 };
+
+// Immutable after construction — compile error:
+// c.Lat = 52.0;
+
+// Works naturally with records (init is the default)
+record Point(double X, double Y);
+var p  = new Point(1, 2);
+var p2 = p with { X = 5 };   // non-destructive mutation`,
+    explanation: "`init` setters allow a property to be set only during object construction (including object initializers and `with` expressions). The value is immutable afterwards, giving value-object semantics.",
+  },
+  {
+    id: "cs-interpolated-verbatim",
+    language: "csharp",
+    title: "Verbatim interpolated strings",
+    tag: "snippet",
+    code: `string dir   = @"C:\\Users\\alice";
+string file  = "report.pdf";
+
+// Combine @ and $ for interpolated verbatim strings
+string path1 = $@"{dir}\\{file}";        // C# 6
+string path2 = @$"{dir}\\{file}";        // C# 8+ (either order)
+Console.WriteLine(path1);   // C:\\Users\\alice\\report.pdf
+
+// Multi-line interpolated verbatim
+string sql = $@"
+    SELECT *
+    FROM   users
+    WHERE  name = '{file}'";`,
+    explanation: "Combining `$` and `@` gives you interpolated verbatim strings: backslashes need no escaping, and you can embed expressions with `{}`. Both `$@` and `@$` are valid in C# 8+.",
+  },
+  {
+    id: "cs-stackalloc-span",
+    language: "csharp",
+    title: "stackalloc with Span<T>",
+    tag: "structures",
+    code: `// Pre-C# 7.2: stackalloc only in unsafe context
+// C# 7.2+: stackalloc can be assigned to Span<T> in safe code
+Span<int> buffer = stackalloc int[8];
+
+for (int i = 0; i < buffer.Length; i++)
+    buffer[i] = i * i;
+
+int sum = 0;
+foreach (int v in buffer)
+    sum += v;
+Console.WriteLine(sum);   // 0+1+4+9+16+25+36+49 = 140
+
+// Safe because Span keeps the lifetime to the current stack frame
+// Never return a stackalloc Span from a method`,
+    explanation: "`stackalloc` allocates memory on the stack — no GC pressure. With `Span<T>` you can use it in safe code. Limit size (< a few KB) to avoid stack overflow; never escape the span.",
+  },
+  {
+    id: "cs-named-tuple-return",
+    language: "csharp",
+    title: "Named tuple return values",
+    tag: "structures",
+    code: `// Method returns a named tuple — clearer than out params
+static (double Min, double Max, double Avg) Stats(int[] data)
+{
+    double min = data.Min(), max = data.Max();
+    return (min, max, data.Average());
+}
+
+var (min, max, avg) = Stats([2, 7, 1, 9, 4]);
+Console.WriteLine($"min={min} max={max} avg={avg:F1}");
+// min=1 max=9 avg=4.6
+
+// Access by name without deconstruction:
+var s = Stats([2, 7, 1, 9, 4]);
+Console.WriteLine(s.Max);`,
+    explanation: "Named tuples document the semantic meaning of each element without defining a full struct. They combine with deconstruction for clean call-site patterns and are value-typed (no heap allocation).",
+  },
+  {
+    id: "cs-dictionary-trygetvalue",
+    language: "csharp",
+    title: "TryGetValue vs indexer lookup",
+    tag: "structures",
+    code: `var scores = new Dictionary<string, int>
+{
+    ["Alice"] = 95,
+    ["Bob"]   = 87,
+};
+
+// Indexer throws KeyNotFoundException if key is absent:
+// int x = scores["Eve"];  // throws
+
+// TryGetValue: safe lookup, no throw, no double-hash
+if (scores.TryGetValue("Alice", out int score))
+    Console.WriteLine($"Alice: {score}");   // Alice: 95
+
+// GetValueOrDefault (C# 8): returns 0 / default if missing
+int eve = scores.GetValueOrDefault("Eve");  // 0
+int eveOr = scores.GetValueOrDefault("Eve", -1);  // -1`,
+    explanation: "`TryGetValue` performs a single hash lookup and returns false if the key is absent — always prefer it over the indexer when the key might be missing. `GetValueOrDefault` is an even terser alternative for read-only lookups.",
+  },
+  {
+    id: "cs-array-segment",
+    language: "csharp",
+    title: "ArraySegment<T> as a slice",
+    tag: "structures",
+    code: `int[] data = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+// Zero-copy slice into the original array
+var seg = new ArraySegment<int>(data, offset: 3, count: 4);
+// seg contains data[3..7] = {3,4,5,6}
+
+foreach (int v in seg)
+    Console.Write(v + " ");   // 3 4 5 6
+Console.WriteLine();
+
+// Modifications through the segment affect the original array
+seg[0] = 99;
+Console.WriteLine(data[3]);   // 99
+
+// Convert to Span (zero-copy, no allocation)
+Span<int> span = seg;`,
+    explanation: "`ArraySegment<T>` is a lightweight struct that wraps an array with an offset and count. It avoids copying but does allocate a new struct. For performance-critical code, prefer `Span<T>` which has better language support.",
+  },
+  {
+    id: "cs-iasyncenumerable",
+    language: "csharp",
+    title: "IAsyncEnumerable<T> async streams",
+    tag: "structures",
+    code: `using System.Runtime.CompilerServices;
+
+// Produce values asynchronously
+static async IAsyncEnumerable<int> CountUpAsync(
+    int from, int to,
+    [EnumeratorCancellation] CancellationToken ct = default)
+{
+    for (int i = from; i <= to; i++)
+    {
+        await Task.Delay(10, ct);
+        yield return i;
+    }
+}
+
+// Consume with await foreach
+await foreach (int n in CountUpAsync(1, 5))
+    Console.Write(n + " ");
+// 1 2 3 4 5`,
+    explanation: "`IAsyncEnumerable<T>` with `yield return` inside an `async` method creates an async stream. Callers use `await foreach`. The `[EnumeratorCancellation]` attribute wires cancellation into the loop automatically.",
+  },
+  {
+    id: "cs-boxing-value-type",
+    language: "csharp",
+    title: "Boxing and unboxing mechanics",
+    tag: "caveats",
+    code: `int x = 42;
+
+// Boxing: copies value type to heap-allocated object
+object boxed = x;           // allocation
+
+// Unboxing: copies back, must match exact type
+int y = (int)boxed;         // OK
+// long z = (long)boxed;    // InvalidCastException — must use (int) first
+
+// Hidden boxing in older APIs
+ArrayList list = new ArrayList();
+list.Add(42);   // boxes every int
+int n = (int)list[0];  // unboxes
+
+// Modern generics avoid boxing:
+List<int> typed = new List<int>();
+typed.Add(42);  // no boxing`,
+    explanation: "Boxing wraps a value type in a heap object; unboxing copies it back. It's a hidden allocation in generic-free or interface-based APIs. Generics and `Span<T>` are the primary ways to avoid boxing in modern C#.",
+  },
+  {
+    id: "cs-closure-loop-variable",
+    language: "csharp",
+    title: "Closure captures loop variable",
+    tag: "caveats",
+    code: `// Classic trap: all lambdas capture the same variable
+var actions = new List<Action>();
+for (int i = 0; i < 3; i++)
+    actions.Add(() => Console.Write(i + " "));
+
+actions.ForEach(a => a());   // prints: 3 3 3  (not 0 1 2!)
+
+// Fix: capture a local copy
+var correct = new List<Action>();
+for (int i = 0; i < 3; i++)
+{
+    int copy = i;   // new variable per iteration
+    correct.Add(() => Console.Write(copy + " "));
+}
+correct.ForEach(a => a());   // prints: 0 1 2
+
+// foreach in C# 5+ captures per-iteration, so no trap there`,
+    explanation: "A lambda captures the variable itself, not the value at capture time. In a `for` loop all closures share one variable (i), which is 3 by the time they run. Creating a local copy per iteration fixes it.",
+  },
+  {
+    id: "cs-equals-vs-referenceequals",
+    language: "csharp",
+    title: "Equals vs ReferenceEquals",
+    tag: "caveats",
+    code: `string a = "hello";
+string b = "hello";
+string c = new string("hello".ToCharArray()); // avoids interning
+
+// Equals: value equality (overridden by string)
+Console.WriteLine(a.Equals(b));              // True
+Console.WriteLine(a.Equals(c));              // True
+
+// ReferenceEquals: identity (same heap object?)
+Console.WriteLine(ReferenceEquals(a, b));    // True  (interned)
+Console.WriteLine(ReferenceEquals(a, c));    // False (new object)
+
+// == on strings uses value equality (Equals)
+Console.WriteLine(a == c);     // True
+
+// For objects without Equals override, == is ReferenceEquals:
+var x = new object();
+var y = new object();
+Console.WriteLine(x == y);     // False`,
+    explanation: "`Equals` tests semantic equality (overridden by value-types and strings). `ReferenceEquals` tests object identity. For strings, `==` calls `Equals`; for most objects, `==` is identity. Know which you need.",
+  },
+  {
+    id: "cs-yield-state-machine",
+    language: "csharp",
+    title: "yield return state machine internals",
+    tag: "understanding",
+    code: `// Iterator methods compile to a hidden state-machine class.
+// Each 'yield return' resumes at the next state.
+static IEnumerable<int> Squares(int n)
+{
+    for (int i = 1; i <= n; i++)
+    {
+        Console.Write($"[{i}] ");  // only runs on demand
+        yield return i * i;
+    }
+}
+
+// Execution is lazy — nothing runs until enumerated
+var seq = Squares(3);
+Console.WriteLine("created");       // prints first
+foreach (int v in seq)
+    Console.Write(v + " ");
+// created  [1] 1  [2] 4  [3] 9`,
+    explanation: "The compiler transforms an iterator method into a state-machine class that implements `IEnumerator<T>`. Execution is suspended at each `yield return` and resumed on the next `MoveNext()` call — making iterators truly lazy.",
+  },
+  {
+    id: "cs-expression-bodied-members",
+    language: "csharp",
+    title: "Expression-bodied members",
+    tag: "snippet",
+    code: `class Circle(double radius)
+{
+    // Expression-bodied property
+    public double Radius => radius;
+    public double Area   => Math.PI * radius * radius;
+
+    // Expression-bodied method
+    public double Scale(double factor) => new Circle(radius * factor).Area;
+
+    // Expression-bodied constructor and finalizer (C# 7)
+    ~Circle() => Console.WriteLine("Circle destroyed");
+
+    // Expression-bodied operator
+    public static Circle operator *(Circle c, double f) => new(c.Radius * f);
+}
+
+var c = new Circle(5);
+Console.WriteLine(c.Area);   // 78.53...`,
+    explanation: "Expression-bodied members use `=>` to replace single-expression method/property/operator bodies. They reduce noise for trivial members while remaining fully type-checked.",
+  },
+  {
+    id: "cs-deconstruct-custom",
+    language: "csharp",
+    title: "Custom Deconstruct method",
+    tag: "snippet",
+    code: `class Rectangle
+{
+    public double Width  { get; }
+    public double Height { get; }
+    public Rectangle(double w, double h) { Width = w; Height = h; }
+
+    // Provide deconstruction by adding a Deconstruct method
+    public void Deconstruct(out double width, out double height)
+    {
+        width  = Width;
+        height = Height;
+    }
+}
+
+var rect = new Rectangle(3, 4);
+var (w, h) = rect;   // calls Deconstruct
+Console.WriteLine($"{w} x {h}");   // 3 x 4
+
+// Works in switch patterns too:
+if (rect is (3, var ht))
+    Console.WriteLine($"Width is 3, height={ht}");`,
+    explanation: "Any type with a `Deconstruct(out T1 ..., out TN ...)` method supports tuple-like deconstruction syntax. Extension methods work too, letting you add deconstruction to types you don't own.",
+  },
+  {
+    id: "cs-string-create",
+    language: "csharp",
+    title: "String.Create for zero-copy construction",
+    tag: "snippet",
+    code: `using System.Buffers;
+
+// String.Create writes directly into the string's buffer — no intermediate allocation
+string result = string.Create(10, 65, static (span, startChar) =>
+{
+    for (int i = 0; i < span.Length; i++)
+        span[i] = (char)(startChar + i);
+});
+Console.WriteLine(result);   // ABCDEFGHIJ
+
+// Compare with StringBuilder (allocates a char[] internally)
+var sb = new System.Text.StringBuilder();
+for (int i = 0; i < 10; i++)
+    sb.Append((char)(65 + i));
+string s2 = sb.ToString();`,
+    explanation: "`String.Create` eliminates the intermediate buffer that `StringBuilder` or `string(char[])` would allocate. The state parameter avoids capturing a variable in the lambda, preventing a closure allocation.",
+  },
+  {
+    id: "cs-record-struct",
+    language: "csharp",
+    title: "record struct (C# 10)",
+    tag: "types",
+    code: `// record struct: value semantics + value-type storage (no heap)
+record struct Point(double X, double Y);
+
+var a = new Point(1, 2);
+var b = new Point(1, 2);
+Console.WriteLine(a == b);   // True  (structural equality)
+Console.WriteLine(a);        // Point { X = 1, Y = 2 }
+
+// Mutable by default (unlike record class)
+a.X = 99;
+Console.WriteLine(a.X);
+
+// readonly record struct for immutable value type
+readonly record struct Vector(double Dx, double Dy)
+{
+    public double Length => Math.Sqrt(Dx*Dx + Dy*Dy);
+}`,
+    explanation: "`record struct` gives value-type semantics (stack allocation, copy-by-value) with auto-generated equality and `ToString`. `readonly record struct` additionally prevents mutation — the sweet spot for small immutable data.",
+  },
+  {
+    id: "cs-delegate-func-action",
+    language: "csharp",
+    title: "Func<>, Action<>, Predicate<>",
+    tag: "types",
+    code: `// Func<T, TResult>: takes T, returns TResult
+Func<int, int, int> add  = (a, b) => a + b;
+Func<string, int>   len  = s => s.Length;
+Console.WriteLine(add(3, 4));   // 7
+
+// Action<T>: takes T, returns void
+Action<string> print = Console.WriteLine;
+print("hello");
+
+// Predicate<T>: special case of Func<T, bool>
+Predicate<int> isEven = n => n % 2 == 0;
+Console.WriteLine(isEven(4));   // True
+
+// Compose with LINQ:
+var nums = Enumerable.Range(1, 10)
+    .Where(isEven)
+    .Select(n => add(n, 1));
+Console.WriteLine(string.Join(",", nums));  // 3,5,7,9,11`,
+    explanation: "`Func<>`, `Action<>`, and `Predicate<>` are built-in generic delegate types. Use `Func` for functions that return a value, `Action` for void functions, and `Predicate` for single-argument boolean tests.",
+  },
+  {
+    id: "cs-enum-flags",
+    language: "csharp",
+    title: "Flags enums with bitwise operations",
+    tag: "types",
+    code: `[Flags]
+enum Permissions
+{
+    None    = 0,
+    Read    = 1 << 0,   // 1
+    Write   = 1 << 1,   // 2
+    Execute = 1 << 2,   // 4
+    All     = Read | Write | Execute,
+}
+
+Permissions p = Permissions.Read | Permissions.Write;
+Console.WriteLine(p);                        // Read, Write
+Console.WriteLine(p.HasFlag(Permissions.Read));   // True
+Console.WriteLine(p.HasFlag(Permissions.Execute)); // False
+
+// Add a permission
+p |= Permissions.Execute;
+// Remove a permission
+p &= ~Permissions.Write;
+Console.WriteLine(p);   // Read, Execute`,
+    explanation: "`[Flags]` enum uses power-of-two values so multiple flags can be ORed together. `HasFlag` tests membership. Combine with bitwise `|=` (add) and `&= ~flag` (remove). Always include a zero `None` value.",
+  },
+  {
+    id: "cs-observer-event",
+    language: "csharp",
+    title: "Observer pattern via events",
+    tag: "families",
+    code: `class Stock
+{
+    private decimal _price;
+    public event EventHandler<decimal>? PriceChanged;
+
+    public decimal Price
+    {
+        get => _price;
+        set
+        {
+            _price = value;
+            PriceChanged?.Invoke(this, value);   // notify subscribers
+        }
+    }
+}
+
+var stock = new Stock();
+stock.PriceChanged += (s, p) => Console.WriteLine($"Price: {p:C}");
+stock.PriceChanged += (s, p) => { if (p > 100) Console.WriteLine("High!"); };
+
+stock.Price = 95m;    // Price: $95.00
+stock.Price = 110m;   // Price: $110.00  High!`,
+    explanation: "C# events are multicast delegates with subscribe (`+=`) and unsubscribe (`-=`). The `?.Invoke` null-conditional safely fires with no subscribers. Use `EventHandler<TEventArgs>` as the standard signature.",
+  },
+  {
+    id: "cs-mediator-pattern",
+    language: "csharp",
+    title: "Mediator pattern",
+    tag: "families",
+    code: `interface IMediator { void Notify(string sender, string ev); }
+
+class Button { public IMediator? Mediator; public void Click() => Mediator?.Notify("Button", "click"); }
+class TextBox { public IMediator? Mediator; public void Input() => Mediator?.Notify("TextBox", "input"); }
+
+class UIMediator : IMediator
+{
+    private readonly Button _btn;
+    private readonly TextBox _tb;
+    public UIMediator(Button b, TextBox t) { _btn = b; _btn.Mediator = this; _tb = t; _tb.Mediator = this; }
+
+    public void Notify(string sender, string ev)
+    {
+        if (sender == "Button" && ev == "click")
+            Console.WriteLine("Mediator: button clicked, clearing textbox");
+        else if (sender == "TextBox" && ev == "input")
+            Console.WriteLine("Mediator: text changed, enabling button");
+    }
+}
+
+var btn = new Button(); var tb = new TextBox();
+var med = new UIMediator(btn, tb);
+btn.Click(); tb.Input();`,
+    explanation: "The Mediator centralises cross-component communication, reducing direct coupling between components. Each component only knows the mediator interface, not its peers — particularly useful for complex UI or workflow orchestration.",
+  },
+  {
+    id: "cs-chain-of-responsibility",
+    language: "csharp",
+    title: "Chain of responsibility",
+    tag: "families",
+    code: `abstract class Handler
+{
+    protected Handler? Next;
+    public Handler SetNext(Handler h) { Next = h; return h; }
+    public abstract void Handle(int request);
+}
+
+class LowHandler : Handler
+{
+    public override void Handle(int r)
+    {
+        if (r < 10) Console.WriteLine($"Low handles {r}");
+        else Next?.Handle(r);
+    }
+}
+
+class MidHandler : Handler
+{
+    public override void Handle(int r)
+    {
+        if (r < 100) Console.WriteLine($"Mid handles {r}");
+        else Next?.Handle(r);
+    }
+}
+
+var low = new LowHandler();
+low.SetNext(new MidHandler());
+
+low.Handle(5);   // Low handles 5
+low.Handle(50);  // Mid handles 50`,
+    explanation: "Chain of Responsibility passes a request along a chain of handlers until one processes it. Each handler decides to handle or forward. Use it for middleware pipelines, validation chains, and event bubbling.",
+  },
+  {
+    id: "cs-abstract-base-template",
+    language: "csharp",
+    title: "Template method in abstract base",
+    tag: "classes",
+    code: `abstract class Report
+{
+    // Template method: defines the skeleton
+    public void Generate()
+    {
+        GatherData();
+        FormatData();
+        Output();
+    }
+
+    protected abstract void GatherData();
+    protected abstract void FormatData();
+
+    protected virtual void Output() =>
+        Console.WriteLine("Writing to stdout");
+}
+
+class CsvReport : Report
+{
+    protected override void GatherData()   => Console.WriteLine("Querying DB...");
+    protected override void FormatData()   => Console.WriteLine("Formatting CSV...");
+}
+
+new CsvReport().Generate();
+// Querying DB... → Formatting CSV... → Writing to stdout`,
+    explanation: "The Template Method pattern defines the algorithm skeleton in a base class and defers specific steps to subclasses. `protected abstract` forces overrides; `virtual` provides a default that subclasses can override optionally.",
+  },
+  {
+    id: "cs-sealed-class",
+    language: "csharp",
+    title: "sealed classes and override",
+    tag: "classes",
+    code: `class Base
+{
+    public virtual void Hello() => Console.WriteLine("Base");
+}
+
+class Derived : Base
+{
+    // sealed override: cannot be overridden further
+    public sealed override void Hello() => Console.WriteLine("Derived");
+}
+
+// Compile error: cannot override a sealed member
+// class Further : Derived { public override void Hello() {} }
+
+// sealed class: cannot be inherited at all
+sealed class Singleton
+{
+    public static readonly Singleton Instance = new();
+    private Singleton() {}
+}`,
+    explanation: "`sealed` on a class prevents inheritance. `sealed override` prevents a virtual method from being overridden in further derived classes. Sealing enables JIT devirtualisation, which can improve performance in hot paths.",
+  },
+  {
+    id: "cs-interface-segregation",
+    language: "csharp",
+    title: "Interface segregation principle",
+    tag: "classes",
+    code: `// Fat interface (violation):
+interface IWorker { void Work(); void Eat(); void Sleep(); }
+
+// Segregated (ISP-compliant):
+interface IWorkable  { void Work(); }
+interface IFeedable  { void Eat(); }
+interface ISleepable { void Sleep(); }
+
+class HumanWorker : IWorkable, IFeedable, ISleepable
+{
+    public void Work()  => Console.WriteLine("Working");
+    public void Eat()   => Console.WriteLine("Eating");
+    public void Sleep() => Console.WriteLine("Sleeping");
+}
+
+// Robot only needs IWorkable — no forced stubs for Eat/Sleep
+class Robot : IWorkable
+{
+    public void Work() => Console.WriteLine("Beep boop working");
+}`,
+    explanation: "ISP: clients should not depend on interfaces they don't use. Split large interfaces into small, role-specific ones. This makes implementations cleaner and reduces coupling between unrelated consumers.",
+  },
+  {
+    id: "cs-extension-method-fluent",
+    language: "csharp",
+    title: "Extension methods for fluent APIs",
+    tag: "classes",
+    code: `static class StringExtensions
+{
+    public static string Truncate(this string s, int maxLen)
+        => s.Length <= maxLen ? s : s[..maxLen] + "...";
+
+    public static string TitleCase(this string s)
+        => System.Globalization.CultureInfo.CurrentCulture
+              .TextInfo.ToTitleCase(s.ToLower());
+
+    public static bool IsEmail(this string s)
+        => s.Contains('@') && s.Contains('.');
+}
+
+string input = "hello world from csharp, a long string";
+
+string result = input
+    .TitleCase()          // Hello World From Csharp, A Long String
+    .Truncate(20);        // Hello World From Cs...
+
+Console.WriteLine(result);
+Console.WriteLine("alice@example.com".IsEmail());   // True`,
+    explanation: "Extension methods on `string` (or any type) enable fluent chaining without modifying the original class. They are syntactic sugar — the compiler rewrites `s.Truncate(20)` to `StringExtensions.Truncate(s, 20)`.",
+  },
+
 ];

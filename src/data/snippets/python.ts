@@ -31397,5 +31397,1797 @@ cmd.execute(); print(e.text)  # hello
 cmd.undo();    print(e.text)  # (empty)
 `,
     explanation: "Encapsulating each operation as a Command object lets you implement undo/redo, command queues, and logging without coupling the invoker to the receiver's implementation.",
+  },
+{
+    id: "py-snippet-operator-chain",
+    language: "python",
+    title: "Chained comparisons are concise and readable",
+    tag: "snippet",
+    code: `x = 5
+print(1 < x < 10)    # True — equivalent to 1<x and x<10
+print(0 <= x <= 5)   # True
+print(x == 5 == 5)   # True (identity chain)
+# Useful in loops:
+for n in range(10):
+    if 3 <= n < 7: print(n, end=' ')
+# 3 4 5 6
+`,
+    explanation: "Python allows chaining comparison operators; each pair is evaluated once and the results are ANDed, so x < y < z avoids evaluating y twice as it would in C.",
+  },
+  {
+    id: "py-snippet-bisect-insort",
+    language: "python",
+    title: "bisect maintains a sorted list efficiently",
+    tag: "snippet",
+    code: `import bisect
+sorted_list = [1, 3, 5, 7, 9]
+bisect.insort(sorted_list, 4)  # insert keeping order
+print(sorted_list)  # [1, 3, 4, 5, 7, 9]
+idx = bisect.bisect_left(sorted_list, 5)
+print(idx)  # 3  — index where 5 would be inserted
+`,
+    explanation: "bisect.insort inserts an element into a sorted list in O(log n) time (binary search) plus O(n) for the shift; use it to maintain sorted order without sorting after every insertion.",
+  },
+  {
+    id: "py-snippet-enum-members",
+    language: "python",
+    title: "Enum iteration and membership testing",
+    tag: "snippet",
+    code: `from enum import Enum
+class Direction(Enum):
+    NORTH = 'N'; SOUTH = 'S'; EAST = 'E'; WEST = 'W'
+for d in Direction:
+    print(d.name, d.value)
+print(Direction('N'))          # Direction.NORTH
+print(Direction.NORTH in Direction)  # True
+`,
+    explanation: "Iterating an Enum yields all members in definition order; Direction('N') looks up by value and Direction['NORTH'] by name, providing safe enum construction from external data.",
+  },
+  {
+    id: "py-snippet-dedent",
+    language: "python",
+    title: "textwrap.dedent removes common leading whitespace",
+    tag: "snippet",
+    code: `import textwrap
+text = """
+    def hello():
+        print('hi')
+    """
+cleaned = textwrap.dedent(text).strip()
+print(cleaned)
+# def hello():
+#     print('hi')
+`,
+    explanation: "textwrap.dedent strips the common leading whitespace from every line, useful for embedding indented multi-line strings in indented code without ruining alignment.",
+  },
+  {
+    id: "py-snippet-pathlib-glob",
+    language: "python",
+    title: "pathlib.Path.glob for recursive file discovery",
+    tag: "snippet",
+    code: `from pathlib import Path
+tmp = Path('/tmp')
+for f in tmp.glob('*.txt'):  # non-recursive
+    print(f.name)
+for f in tmp.rglob('*.txt'):  # recursive
+    print(f)
+`,
+    explanation: "Path.glob() uses shell-style wildcards for non-recursive matches; rglob('*.py') is shorthand for glob('**/*.py') and descends into all subdirectories.",
+  },
+  {
+    id: "py-snippet-bisect",
+    language: "python",
+    title: "bisect_left and bisect_right for search-position queries",
+    tag: "snippet",
+    code: `import bisect
+data = [1, 3, 3, 5, 7]
+print(bisect.bisect_left(data, 3))   # 1 — first position
+print(bisect.bisect_right(data, 3))  # 3 — last position + 1
+# Count occurrences:
+count = bisect.bisect_right(data, 3) - bisect.bisect_left(data, 3)
+print(count)  # 2
+`,
+    explanation: "bisect_left returns the leftmost insertion point; bisect_right returns the rightmost; subtracting them gives the count of occurrences — all in O(log n) on a sorted list.",
+  },
+  {
+    id: "py-snippet-functools-cached-property",
+    language: "python",
+    title: "functools.cached_property computes once then caches",
+    tag: "snippet",
+    code: `from functools import cached_property
+class Circle:
+    def __init__(self, radius): self.radius = radius
+    @cached_property
+    def area(self):
+        print('computing...')
+        return 3.14159 * self.radius ** 2
+c = Circle(5)
+print(c.area)  # computing... 78.53975
+print(c.area)  # 78.53975 (cached, no print)
+`,
+    explanation: "cached_property computes the value on first access and stores it in the instance __dict__, so subsequent accesses skip the descriptor entirely — no lock overhead unlike @lru_cache.",
+  },
+  {
+    id: "py-snippet-typing-get-type-hints",
+    language: "python",
+    title: "typing.get_type_hints retrieves resolved annotations",
+    tag: "snippet",
+    code: `from __future__ import annotations
+from typing import get_type_hints
+class Point:
+    x: int
+    y: float
+hints = get_type_hints(Point)
+print(hints)  # {'x': <class 'int'>, 'y': <class 'float'>}
+`,
+    explanation: "get_type_hints evaluates string annotations produced by from __future__ import annotations, returning resolved type objects rather than raw strings for use in frameworks and validators.",
+  },
+  {
+    id: "py-snippet-calendar-month",
+    language: "python",
+    title: "calendar module for date calculations",
+    tag: "snippet",
+    code: `import calendar
+y, m = 2026, 5
+first_day, days = calendar.monthrange(y, m)
+print(f'May 2026: {days} days, starts on {calendar.day_name[first_day]}')
+print(calendar.isleap(2024))  # True
+`,
+    explanation: "calendar.monthrange returns the weekday of the first day and total days in the month; it handles leap years and is preferable to manual day-counting.",
+  },
+  {
+    id: "py-snippet-fractions",
+    language: "python",
+    title: "fractions.Fraction for exact rational arithmetic",
+    tag: "snippet",
+    code: `from fractions import Fraction
+a = Fraction(1, 3)
+b = Fraction(1, 6)
+print(a + b)          # 1/2
+print(a * b)          # 1/18
+print(float(a + b))   # 0.5
+print(Fraction('0.1'))  # 1/10  (exact)
+`,
+    explanation: "Fraction represents rational numbers exactly, avoiding all IEEE 754 rounding; it's slower than float but essential when exactness matters, such as financial calculations or unit tests for floating-point code.",
+  },
+  {
+    id: "py-snippet-decimal-context",
+    language: "python",
+    title: "decimal.localcontext sets precision and rounding per block",
+    tag: "snippet",
+    code: `from decimal import Decimal, localcontext, ROUND_HALF_UP
+with localcontext() as ctx:
+    ctx.prec = 4
+    ctx.rounding = ROUND_HALF_UP
+    result = Decimal('1.2345') + Decimal('0.0001')
+    print(result)  # 1.235
+print(Decimal('1.2345') + Decimal('0.0001'))  # normal precision
+`,
+    explanation: "localcontext creates a thread-local decimal arithmetic context for a block, allowing you to temporarily change precision or rounding mode without affecting the global context.",
+  },
+  {
+    id: "py-snippet-hashlib",
+    language: "python",
+    title: "hashlib for cryptographic and non-cryptographic hashing",
+    tag: "snippet",
+    code: `import hashlib
+data = b'hello world'
+print(hashlib.md5(data).hexdigest())           # fast, not secure
+print(hashlib.sha256(data).hexdigest()[:16])   # first 16 chars
+print(hashlib.sha256(data).digest()[:4])       # raw bytes
+`,
+    explanation: "hashlib provides SHA-256, SHA-3, and BLAKE2 for security-sensitive applications; MD5 and SHA-1 are deprecated for cryptographic use but remain fast checksum choices for non-security data integrity.",
+  },
+  {
+    id: "py-snippet-uuid",
+    language: "python",
+    title: "uuid module generates universally unique identifiers",
+    tag: "snippet",
+    code: `import uuid
+u1 = uuid.uuid4()   # random UUID
+print(u1)
+print(type(u1))     # <class 'uuid.UUID'>
+print(str(u1))      # '550e8400-...'
+print(u1.hex)       # no hyphens
+print(uuid.UUID(str(u1)) == u1)  # True
+`,
+    explanation: "uuid.uuid4() generates a cryptographically random 128-bit UUID; UUID objects compare by value and serialize to the standard hyphenated hex string, making them useful as database primary keys.",
+  },
+  {
+    id: "py-snippet-time-perf-counter",
+    language: "python",
+    title: "time.perf_counter for high-resolution timing",
+    tag: "snippet",
+    code: `import time
+start = time.perf_counter()
+total = sum(range(1_000_000))
+elapsed = time.perf_counter() - start
+print(f'{elapsed*1000:.2f} ms')  # elapsed in ms
+# Do NOT use time.time() for benchmarks — it can jump
+`,
+    explanation: "time.perf_counter uses the platform's highest-resolution clock and is the correct tool for elapsed-time benchmarks; time.time is for wall-clock timestamps and can drift.",
+  },
+  {
+    id: "py-snippet-gc-disable",
+    language: "python",
+    title: "Disabling GC during batch operations reduces pauses",
+    tag: "snippet",
+    code: `import gc
+gc.disable()  # pause cyclic GC
+try:
+    data = [{} for _ in range(100_000)]
+    for d in data: d['self'] = d  # cycles
+finally:
+    gc.enable()
+    gc.collect()  # collect all cycles at once
+`,
+    explanation: "Disabling the cyclic GC during a batch that creates many short-lived objects with cycles avoids frequent collection pauses; always re-enable and collect in a finally block.",
+  },
+  {
+    id: "py-understand-name-mangling",
+    language: "python",
+    title: "Name mangling makes __name attributes class-private",
+    tag: "understanding",
+    code: `class Base:
+    __secret = 42  # stored as _Base__secret
+    def get(self): return self.__secret
+class Child(Base):
+    __secret = 99  # stored as _Child__secret
+    def get_child(self): return self.__secret
+b = Child()
+print(b.get())        # 42 — Base's version
+print(b.get_child())  # 99 — Child's version
+`,
+    explanation: "Python mangles names starting with __ (double underscore) to _ClassName__name, giving each class its own private namespace for that attribute so subclasses can't accidentally override it.",
+  },
+  {
+    id: "py-understand-slots-vs-dict",
+    language: "python",
+    title: "__slots__ vs __dict__: trade-offs in memory and flexibility",
+    tag: "understanding",
+    code: `class WithDict:
+    def __init__(self, x, y): self.x = x; self.y = y
+class WithSlots:
+    __slots__ = ('x', 'y')
+    def __init__(self, x, y): self.x = x; self.y = y
+w = WithSlots(1, 2)
+# w.z = 3  # AttributeError — no __dict__
+import sys
+print(sys.getsizeof(WithDict(1,2)))   # larger
+print(sys.getsizeof(WithSlots(1,2)))  # smaller
+`,
+    explanation: "__slots__ replaces the per-instance __dict__ with a fixed-size array, cutting memory 30-50%; the trade-off is that you cannot add arbitrary attributes or use weakref without explicitly listing them.",
+  },
+  {
+    id: "py-understand-generator-pipeline",
+    language: "python",
+    title: "Generators compose into lazy pipelines",
+    tag: "understanding",
+    code: `def integers():
+    n = 0
+    while True: yield n; n += 1
+def evens(it):
+    for n in it:
+        if n % 2 == 0: yield n
+def take(n, it):
+    for i, v in enumerate(it):
+        if i >= n: return
+        yield v
+print(list(take(5, evens(integers()))))
+# [0, 2, 4, 6, 8]
+`,
+    explanation: "Generator functions can be chained without materialising intermediate lists; each stage pulls values one at a time, making the pipeline operate in O(1) memory regardless of stream length.",
+  },
+  {
+    id: "py-understand-coroutine-send",
+    language: "python",
+    title: "Generator.send() injects values into a coroutine",
+    tag: "understanding",
+    code: `def accumulator():
+    total = 0
+    while True:
+        n = yield total
+        if n is None: break
+        total += n
+acc = accumulator()
+next(acc)          # prime the coroutine
+print(acc.send(10))  # 10
+print(acc.send(5))   # 15
+print(acc.send(3))   # 18
+`,
+    explanation: "send() resumes the generator and makes the yield expression evaluate to the sent value; next(g) is equivalent to send(None) and must be called first to advance to the first yield.",
+  },
+  {
+    id: "py-understand-datamodel-arithmetic",
+    language: "python",
+    title: "__add__ and __radd__ implement the + operator",
+    tag: "understanding",
+    code: `class Money:
+    def __init__(self, amount): self.amount = amount
+    def __add__(self, other):
+        if isinstance(other, Money): return Money(self.amount + other.amount)
+        return NotImplemented
+    def __radd__(self, other):  # for sum()
+        if other == 0: return self
+        return self.__add__(other)
+    def __repr__(self): return f'Money({self.amount})'
+print(sum([Money(10), Money(20)]))  # Money(30)
+`,
+    explanation: "__add__ handles left-operand addition; __radd__ handles right-operand addition and is required for sum() because sum starts with the integer 0 and adds each element to it.",
+  },
+  {
+    id: "py-understand-copy-deepcopy",
+    language: "python",
+    title: "copy.copy vs copy.deepcopy for nested structures",
+    tag: "understanding",
+    code: `import copy
+orig = {'a': [1, 2, 3]}
+shallow = copy.copy(orig)
+deep = copy.deepcopy(orig)
+orig['a'].append(99)
+print(shallow['a'])  # [1, 2, 3, 99] — shared list
+print(deep['a'])     # [1, 2, 3] — independent
+`,
+    explanation: "copy.copy duplicates the container but shares references to nested objects; copy.deepcopy recursively duplicates all objects, creating a fully independent structure.",
+  },
+  {
+    id: "py-understand-method-types",
+    language: "python",
+    title: "Instance, class, and static methods differ in their first argument",
+    tag: "understanding",
+    code: `class Demo:
+    def instance(self):       return f'instance: {self}'
+    @classmethod
+    def cls_method(cls):  return f'class: {cls.__name__}'
+    @staticmethod
+    def static():             return 'static — no implicit arg'
+print(Demo().instance())
+print(Demo.cls_method())
+print(Demo.static())
+`,
+    explanation: "Instance methods receive the instance; classmethod receives the class (enabling factory patterns that work with subclasses); staticmethod receives nothing and is essentially a namespaced function.",
+  },
+  {
+    id: "py-understand-abstract-property",
+    language: "python",
+    title: "@abstractmethod + @property enforces a computed interface",
+    tag: "understanding",
+    code: `from abc import ABC, abstractmethod
+class Shape(ABC):
+    @property
+    @abstractmethod
+    def area(self) -> float: ...
+class Circle(Shape):
+    def __init__(self, r): self.r = r
+    @property
+    def area(self): return 3.14 * self.r**2
+print(Circle(5).area)  # 78.5
+# Shape()  # TypeError — abstract
+`,
+    explanation: "Stacking @property and @abstractmethod (in that order) forces subclasses to provide a property implementation rather than a plain attribute, ensuring the interface is uniformly callable.",
+  },
+  {
+    id: "py-understand-namedtuple-vs-dataclass",
+    language: "python",
+    title: "namedtuple vs dataclass: immutability vs flexibility",
+    tag: "understanding",
+    code: `from collections import namedtuple
+from dataclasses import dataclass
+Point = namedtuple('Point', ['x', 'y'])
+p1 = Point(1, 2)
+# p1.x = 99  # AttributeError — immutable
+@dataclass
+class PointDC:
+    x: float; y: float
+p2 = PointDC(1, 2); p2.x = 99  # mutable
+print(p1, p2)
+`,
+    explanation: "namedtuple is immutable, hashable (usable as dict key), and memory-efficient; dataclass is mutable by default, supports default values, post_init, and richer type annotations.",
+  },
+  {
+    id: "py-understand-yield-from",
+    language: "python",
+    title: "yield from delegates to a sub-generator",
+    tag: "understanding",
+    code: `def flatten(lst):
+    for item in lst:
+        if isinstance(item, list):
+            yield from flatten(item)  # delegate recursively
+        else:
+            yield item
+print(list(flatten([1, [2, [3, 4]], 5])))
+# [1, 2, 3, 4, 5]
+`,
+    explanation: "yield from transparently delegates iteration (and send/throw/close) to a sub-generator, enabling recursive generators without manually forwarding each value.",
+  },
+  {
+    id: "py-understand-class-variable-inheritance",
+    language: "python",
+    title: "Subclass attributes shadow parent class variables",
+    tag: "understanding",
+    code: `class Base:
+    tag = 'base'
+class Child(Base):
+    pass
+print(Child.tag)   # 'base'  — inherited
+Child.tag = 'child'
+print(Base.tag)    # 'base'  — unchanged
+print(Child.tag)   # 'child' — now shadowed
+`,
+    explanation: "Reading a class variable walks the MRO; assigning to ClassName.attr creates a new binding on that class without affecting the parent, so subclasses share the value until they write it.",
+  },
+  {
+    id: "py-understand-none-is-singleton",
+    language: "python",
+    title: "None is a singleton — always test with 'is', not '=='",
+    tag: "understanding",
+    code: `x = None
+print(x is None)   # True  — correct idiom
+print(x == None)   # True  — also works but frowned upon
+# Custom __eq__ could make == None return True unexpectedly:
+class Tricky:
+    def __eq__(self, other): return True
+t = Tricky()
+print(t == None)   # True  — misleading!
+print(t is None)   # False — correct
+`,
+    explanation: "None is a singleton object; is None tests identity and is immune to __eq__ overrides, while == None can produce surprising True results from classes that override equality.",
+  },
+  {
+    id: "py-understand-global-nonlocal",
+    language: "python",
+    title: "global and nonlocal rebind names in outer scopes",
+    tag: "understanding",
+    code: `counter = 0
+def inc_global():
+    global counter
+    counter += 1
+inc_global(); inc_global()
+print(counter)  # 2
+def make_adder():
+    total = 0
+    def add(n):
+        nonlocal total
+        total += n; return total
+    return add
+add = make_adder()
+print(add(3), add(4))  # 3 7
+`,
+    explanation: "Without global or nonlocal, assigning to a name inside a function always creates a local variable; global rebinds a module-level name, nonlocal rebinds the nearest enclosing non-global scope.",
+  },
+  {
+    id: "py-understand-format-protocol",
+    language: "python",
+    title: "__format__ controls f-string and format() behaviour",
+    tag: "understanding",
+    code: `class Money:
+    def __init__(self, amt): self.amt = amt
+    def __format__(self, spec):
+        if spec == 'brief': return f'\${self.amt}'
+        return f'\${self.amt:,.2f}'
+m = Money(1234.5)
+print(f'{m}')         # $1,234.50
+print(f'{m:brief}')   # $1234.5
+print(format(m, 'brief'))  # $1234.5
+`,
+    explanation: "__format__(self, format_spec) is called by f-strings and format(); the format_spec is the string after the colon, letting you define domain-specific mini-languages for your types.",
+  },
+  {
+    id: "py-understand-annotations-pep563",
+    language: "python",
+    title: "from __future__ import annotations defers all annotations",
+    tag: "understanding",
+    code: `from __future__ import annotations
+def greet(name: str) -> str:
+    return f'Hello {name}'
+import typing
+print(typing.get_type_hints(greet))
+# {'name': <class 'str'>, 'return': <class 'str'>}
+# Without the future import, str in quotes is needed for forward refs
+`,
+    explanation: "PEP 563 makes all annotations strings at parse time, deferring evaluation; this solves forward-reference issues and speeds up import but requires get_type_hints() to resolve them.",
+  },
+  {
+    id: "py-structures-avl-tree",
+    language: "python",
+    title: "AVL tree — self-balancing BST with rotations",
+    tag: "structures",
+    code: `class AVLNode:
+    def __init__(self, v): self.v=v; self.l=self.r=None; self.h=1
+def height(n): return n.h if n else 0
+def update(n): n.h = 1 + max(height(n.l), height(n.r))
+def rotate_right(y):
+    x=y.l; y.l=x.r; x.r=y; update(y); update(x); return x
+def rotate_left(x):
+    y=x.r; x.r=y.l; y.l=x; update(x); update(y); return y
+def balance(n):
+    update(n); bf=height(n.l)-height(n.r)
+    if bf>1 and height(n.l.l)>=height(n.l.r): return rotate_right(n)
+    if bf>1: n.l=rotate_left(n.l); return rotate_right(n)
+    if bf<-1 and height(n.r.r)>=height(n.r.l): return rotate_left(n)
+    if bf<-1: n.r=rotate_right(n.r); return rotate_left(n)
+    return n
+def insert(n, v):
+    if not n: return AVLNode(v)
+    if v<n.v: n.l=insert(n.l,v)
+    elif v>n.v: n.r=insert(n.r,v)
+    return balance(n)
+root=None
+for v in [5,3,7,1,4]: root=insert(root,v)
+print(root.v)  # root after balancing
+`,
+    explanation: "An AVL tree maintains the invariant that every node's left and right subtree heights differ by at most one, guaranteeing O(log n) insert, delete, and search.",
+  },
+  {
+    id: "py-structures-matrix-ops",
+    language: "python",
+    title: "Matrix multiplication without numpy",
+    tag: "structures",
+    code: `def matmul(A, B):
+    rows_A, cols_A = len(A), len(A[0])
+    cols_B = len(B[0])
+    result = [[0]*cols_B for _ in range(rows_A)]
+    for i in range(rows_A):
+        for k in range(cols_A):
+            for j in range(cols_B):
+                result[i][j] += A[i][k] * B[k][j]
+    return result
+A = [[1,2],[3,4]]
+B = [[5,6],[7,8]]
+print(matmul(A, B))  # [[19, 22], [43, 50]]
+`,
+    explanation: "Naive matrix multiplication is O(n³); for large matrices numpy uses BLAS routines that are orders of magnitude faster, but the pure-Python version shows the algorithm clearly.",
+  },
+  {
+    id: "py-structures-topological-sort",
+    language: "python",
+    title: "Topological sort with Kahn's algorithm",
+    tag: "structures",
+    code: `from collections import defaultdict, deque
+def toposort(nodes, edges):
+    indeg = {n: 0 for n in nodes}
+    adj = defaultdict(list)
+    for u, v in edges: adj[u].append(v); indeg[v] += 1
+    q = deque(n for n in nodes if indeg[n] == 0)
+    result = []
+    while q:
+        u = q.popleft(); result.append(u)
+        for v in adj[u]:
+            indeg[v] -= 1
+            if indeg[v] == 0: q.append(v)
+    return result if len(result) == len(nodes) else []
+print(toposort([0,1,2,3], [(0,1),(0,2),(1,3),(2,3)]))
+# [0, 1, 2, 3]
+`,
+    explanation: "Kahn's algorithm builds a topological order by repeatedly removing nodes with no incoming edges; an empty result signals a cycle, making it useful for build dependency resolution.",
+  },
+  {
+    id: "py-structures-disjoint-set-forest",
+    language: "python",
+    title: "Disjoint set forest with rank and path halving",
+    tag: "structures",
+    code: `class DSF:
+    def __init__(self, n): self.p=[*range(n)]; self.r=[0]*n
+    def find(self, x):
+        while self.p[x]!=x: self.p[x]=self.p[self.p[x]]; x=self.p[x]
+        return x
+    def union(self, a, b):
+        a,b=self.find(a),self.find(b)
+        if a==b: return False
+        if self.r[a]<self.r[b]: a,b=b,a
+        self.p[b]=a
+        if self.r[a]==self.r[b]: self.r[a]+=1
+        return True
+dsf=DSF(6)
+for u,v in [(0,1),(1,2),(3,4)]: dsf.union(u,v)
+print(dsf.find(0)==dsf.find(2))  # True
+print(dsf.find(0)==dsf.find(3))  # False
+`,
+    explanation: "Path halving (pointing each node to its grandparent during find) combined with union by rank gives amortised near-O(1) operations for Kruskal's MST and network connectivity problems.",
+  },
+  {
+    id: "py-structures-fenwick-tree",
+    language: "python",
+    title: "Fenwick tree (BIT) for O(log n) prefix sums",
+    tag: "structures",
+    code: `class FenwickTree:
+    def __init__(self, n): self.t=[0]*(n+1); self.n=n
+    def update(self, i, delta):
+        while i<=self.n: self.t[i]+=delta; i+=i&(-i)
+    def query(self, i):
+        s=0
+        while i>0: s+=self.t[i]; i-=i&(-i)
+        return s
+    def range_sum(self, l, r): return self.query(r)-self.query(l-1)
+ft=FenwickTree(8)
+for i,v in enumerate([3,2,1,4,5,6,7,8],1): ft.update(i,v)
+print(ft.range_sum(2,5))  # 2+1+4+5=12
+`,
+    explanation: "A Fenwick tree (Binary Indexed Tree) supports point updates and prefix-sum queries in O(log n) using the lowest set bit trick, making it ideal for online counting problems.",
+  },
+  {
+    id: "py-structures-priority-queue",
+    language: "python",
+    title: "Priority queue via heapq with custom priorities",
+    tag: "structures",
+    code: `import heapq
+pq = []
+for item, priority in [('task_c',3),('task_a',1),('task_b',2)]:
+    heapq.heappush(pq, (priority, item))
+while pq:
+    pri, task = heapq.heappop(pq)
+    print(f'{pri}: {task}')
+# 1: task_a / 2: task_b / 3: task_c
+`,
+    explanation: "heapq implements a min-heap; storing (priority, value) tuples makes the lowest-priority number the most urgent, which is the standard pattern for Dijkstra and task scheduling.",
+  },
+  {
+    id: "py-structures-lfu-cache",
+    language: "python",
+    title: "LFU cache evicts the least frequently used item",
+    tag: "structures",
+    code: `from collections import defaultdict, OrderedDict
+class LFUCache:
+    def __init__(self, cap):
+        self.cap=cap; self.min_freq=0
+        self.key_val={}; self.key_freq={}; self.freq_keys=defaultdict(OrderedDict)
+    def _inc(self, k):
+        f=self.key_freq[k]; self.key_freq[k]=f+1
+        self.freq_keys[f].pop(k)
+        if not self.freq_keys[f] and self.min_freq==f: self.min_freq+=1
+        self.freq_keys[f+1][k]=None
+    def get(self, k):
+        if k not in self.key_val: return -1
+        self._inc(k); return self.key_val[k]
+    def put(self, k, v):
+        if not self.cap: return
+        if k in self.key_val: self.key_val[k]=v; self._inc(k); return
+        if len(self.key_val)>=self.cap:
+            evict,_=self.freq_keys[self.min_freq].popitem(last=False)
+            del self.key_val[evict]; del self.key_freq[evict]
+        self.key_val[k]=v; self.key_freq[k]=1
+        self.freq_keys[1][k]=None; self.min_freq=1
+lfu=LFUCache(2); lfu.put(1,10); lfu.put(2,20)
+lfu.get(1); lfu.put(3,30)  # evicts 2 (freq=0)
+print(lfu.get(2))  # -1
+`,
+    explanation: "An LFU cache evicts the item accessed fewest times (with LRU as tiebreaker), implemented with a frequency-to-key OrderedDict map that maintains O(1) all operations.",
+  },
+  {
+    id: "py-structures-deque-ops",
+    language: "python",
+    title: "collections.deque as a double-ended queue",
+    tag: "structures",
+    code: `from collections import deque
+dq = deque([1, 2, 3], maxlen=5)
+dq.appendleft(0)
+dq.append(4)
+print(dq)               # deque([0, 1, 2, 3, 4])
+dq.rotate(2)            # rotate right by 2
+print(dq)               # deque([3, 4, 0, 1, 2])
+print(dq.popleft())     # 3
+`,
+    explanation: "deque provides O(1) append and pop from both ends; maxlen automatically discards the oldest element when full, making it ideal for a sliding-window log or history buffer.",
+  },
+  {
+    id: "py-structures-suffix-array",
+    language: "python",
+    title: "Suffix array for fast substring search",
+    tag: "structures",
+    code: `def build_suffix_array(s):
+    n = len(s)
+    suffixes = sorted(range(n), key=lambda i: s[i:])
+    return suffixes
+def count_occurrences(s, pattern):
+    sa = build_suffix_array(s)
+    import bisect
+    lo = bisect.bisect_left(sa, 0, key=lambda i: s[i:i+len(pattern)] < pattern)
+    hi = bisect.bisect_right(sa, 0, key=lambda i: s[i:i+len(pattern)] > pattern)
+    return hi - lo
+s = 'banana'
+sa = build_suffix_array(s)
+print(sa)  # sorted suffix indices
+`,
+    explanation: "A suffix array is a sorted array of all suffixes of a string; it enables O(m log n) pattern search and O(n log n) construction, used in text compression (BWT) and bioinformatics.",
+  },
+  {
+    id: "py-structures-interval-tree",
+    language: "python",
+    title: "Interval overlap detection with a sorted list",
+    tag: "structures",
+    code: `import bisect
+def overlaps(intervals, query):
+    intervals.sort()
+    lo, hi = query
+    result = []
+    for start, end in intervals:
+        if start > hi: break
+        if end >= lo: result.append((start, end))
+    return result
+intervals = [(1,3),(2,5),(6,9),(8,12)]
+print(overlaps(intervals, (4, 8)))  # [(2,5),(6,9),(8,12)]
+`,
+    explanation: "For static interval sets, sorting by start and binary-searching gives efficient overlap detection; for dynamic insertion use a dedicated interval tree (e.g., sortedcontainers.SortedList).",
+  },
+  {
+    id: "py-structures-min-stack",
+    language: "python",
+    title: "Min-stack returns minimum in O(1)",
+    tag: "structures",
+    code: `class MinStack:
+    def __init__(self): self.s=[]; self.mins=[]
+    def push(self, v):
+        self.s.append(v)
+        self.mins.append(min(v, self.mins[-1]) if self.mins else v)
+    def pop(self):
+        self.s.pop(); self.mins.pop()
+    def top(self): return self.s[-1]
+    def get_min(self): return self.mins[-1]
+ms=MinStack()
+for v in [5,3,7,2,4]: ms.push(v)
+print(ms.get_min())  # 2
+ms.pop(); ms.pop()
+print(ms.get_min())  # 3
+`,
+    explanation: "A parallel auxiliary stack stores the running minimum at each level; when an element is popped, the minimum reverts to the previous level, giving O(1) get_min without sorting.",
+  },
+  {
+    id: "py-structures-word-ladder",
+    language: "python",
+    title: "BFS for minimum word-transformation steps",
+    tag: "structures",
+    code: `from collections import deque
+def word_ladder(start, end, wordset):
+    queue = deque([(start, 1)])
+    visited = {start}
+    while queue:
+        word, steps = queue.popleft()
+        for i in range(len(word)):
+            for c in 'abcdefghijklmnopqrstuvwxyz':
+                nw = word[:i] + c + word[i+1:]
+                if nw == end: return steps + 1
+                if nw in wordset and nw not in visited:
+                    visited.add(nw); queue.append((nw, steps+1))
+    return 0
+words = {'hot','dot','dog','lot','log','cog'}
+print(word_ladder('hit', 'cog', words))  # 5
+`,
+    explanation: "Word ladder is a classic BFS problem where each step changes one letter; BFS guarantees the shortest path because all edges have equal weight.",
+  },
+  {
+    id: "py-caveat-nonlocal-scope",
+    language: "python",
+    title: "nonlocal is required to rebind enclosing variables",
+    tag: "caveats",
+    code: `def outer():
+    x = 10
+    def inner():
+        # x += 1  # UnboundLocalError without nonlocal!
+        nonlocal x
+        x += 1
+    inner(); inner()
+    return x
+print(outer())  # 12
+`,
+    explanation: "Without nonlocal, assigning to x inside inner creates a new local variable; Python detects the assignment and treats x as local throughout, causing UnboundLocalError when read before assignment.",
+  },
+  {
+    id: "py-caveat-empty-sequence-bool",
+    language: "python",
+    title: "Empty containers are falsy; non-empty are truthy",
+    tag: "caveats",
+    code: `for val in [[], {}, (), '', set(), 0, 0.0, None]:
+    print(repr(val), bool(val))
+# All False
+for val in [[0], {0:0}, (0,), '0', {0}, 1, 0.1]:
+    print(repr(val), bool(val))
+# All True
+`,
+    explanation: "Python's truth testing calls __bool__ or __len__; empty containers, zero numbers, and None are falsy, so if not mylist: is idiomatic for checking emptiness.",
+  },
+  {
+    id: "py-caveat-global-mutable",
+    language: "python",
+    title: "Reading a module-level list doesn't require 'global'",
+    tag: "caveats",
+    code: `items = []
+def add(x):
+    items.append(x)  # no 'global' needed — just mutating
+def reset():
+    global items
+    items = []       # 'global' required — rebinding
+add(1); add(2)
+print(items)  # [1, 2]
+reset()
+print(items)  # []
+`,
+    explanation: "global is only needed when you rebind (assign to) a module-level name inside a function; mutating a mutable object (list.append, dict.update) does not require global because the reference itself isn't changed.",
+  },
+  {
+    id: "py-caveat-except-bare",
+    language: "python",
+    title: "Bare 'except:' catches SystemExit and KeyboardInterrupt",
+    tag: "caveats",
+    code: `# BAD: catches Ctrl-C, sys.exit(), etc.
+# try:
+#     ...
+# except:  # catches BaseException
+#     pass
+
+# GOOD: catch only Exception subclasses
+try:
+    int('not a number')
+except Exception as e:
+    print(type(e).__name__, e)
+`,
+    explanation: "A bare except: clause catches all exceptions including BaseException subclasses like SystemExit and KeyboardInterrupt; always use except Exception: or a specific type to avoid masking fatal signals.",
+  },
+  {
+    id: "py-caveat-setattr-getattr-loop",
+    language: "python",
+    title: "setattr/getattr by string name enables dynamic dispatch",
+    tag: "caveats",
+    code: `class Config:
+    pass
+cfg = Config()
+for key, value in [('host','localhost'),('port',5432)]:
+    setattr(cfg, key, value)
+print(getattr(cfg, 'host'))         # localhost
+print(getattr(cfg, 'missing', 42))  # 42 (default)
+`,
+    explanation: "setattr and getattr treat attribute names as strings, enabling programmatic attribute setting (e.g., from a config dict); getattr's third argument provides a default to avoid AttributeError.",
+  },
+  {
+    id: "py-caveat-default-arg-mutation",
+    language: "python",
+    title: "Default mutable argument is created once, not per call",
+    tag: "caveats",
+    code: `def append_to(val, lst=[]):
+    lst.append(val)
+    return lst
+print(append_to(1))  # [1]
+print(append_to(2))  # [1, 2]  — shared!
+print(append_to(3))  # [1, 2, 3]
+
+# Fix:
+def append_to_fixed(val, lst=None):
+    if lst is None: lst = []
+    lst.append(val)
+    return lst
+`,
+    explanation: "Default argument values are evaluated once at function definition time; using a mutable default like [] shares the same list across all calls, causing cumulative state — use None as a sentinel instead.",
+  },
+  {
+    id: "py-caveat-chained-comparison",
+    language: "python",
+    title: "All chained comparisons evaluate left to right with no repeats",
+    tag: "caveats",
+    code: `def check(x):
+    print(f'checking {x}')
+    return x
+# Each operand is evaluated at most once:
+result = check(1) < check(3) < check(2)
+print(result)  # False (3 < 2 is False)
+# Equivalent: check(1)<check(3) and check(3)<check(2)
+# But check(3) is called only once
+`,
+    explanation: "Python evaluates each expression in a chained comparison exactly once; this avoids redundant side effects but can be surprising when the comparisons involve function calls with side effects.",
+  },
+  {
+    id: "py-caveat-tuple-singleton",
+    language: "python",
+    title: "A one-element tuple requires a trailing comma",
+    tag: "caveats",
+    code: `not_tuple = (42)   # just parenthesised int
+is_tuple  = (42,)  # tuple with one element
+print(type(not_tuple))  # <class 'int'>
+print(type(is_tuple))   # <class 'tuple'>
+print(len(is_tuple))    # 1
+`,
+    explanation: "Parentheses alone do not create a tuple; only the comma does — a trailing comma is required for single-element tuples, and can also be used in multi-element tuples for cleaner diffs.",
+  },
+  {
+    id: "py-caveat-negative-index-slice",
+    language: "python",
+    title: "Negative indices and slices wrap around the end",
+    tag: "caveats",
+    code: `lst = [0, 1, 2, 3, 4]
+print(lst[-1])     # 4  (last)
+print(lst[-2:])    # [3, 4]
+print(lst[:-2])    # [0, 1, 2]
+print(lst[::-1])   # [4, 3, 2, 1, 0] (reversed)
+print(lst[10:])    # []  — out-of-bounds slice is empty
+`,
+    explanation: "Negative indices count from the end; slice indices that exceed the sequence length are silently clamped, so out-of-bounds slices produce empty sequences rather than raising IndexError.",
+  },
+  {
+    id: "py-caveat-generator-one-shot",
+    language: "python",
+    title: "Generators are exhausted after one full iteration",
+    tag: "caveats",
+    code: `gen = (x**2 for x in range(5))
+print(list(gen))   # [0, 1, 4, 9, 16]
+print(list(gen))   # []  — exhausted!
+# Fix: use a function or convert to list
+def squares(): return (x**2 for x in range(5))
+print(list(squares()))  # [0, 1, 4, 9, 16]
+`,
+    explanation: "A generator object can be iterated only once; after exhaustion it raises StopIteration on every next() call; store results in a list or use a generator function to create a fresh generator each time.",
+  },
+  {
+    id: "py-caveat-unpacking-star",
+    language: "python",
+    title: "Star assignment captures the 'rest' of an iterable",
+    tag: "caveats",
+    code: `first, *rest = [1, 2, 3, 4, 5]
+print(first)  # 1
+print(rest)   # [2, 3, 4, 5]
+*init, last = [1, 2, 3, 4, 5]
+print(last)   # 5
+a, *b, c = range(6)
+print(a, b, c)  # 0 [1, 2, 3, 4] 5
+`,
+    explanation: "Star (*) in assignment collects remaining elements into a list, enabling readable unpacking of first/last elements without slicing — the starred variable is always a list even if empty.",
+  },
+  {
+    id: "py-caveat-floor-division-negative",
+    language: "python",
+    title: "Floor division rounds toward negative infinity",
+    tag: "caveats",
+    code: `print(7 // 2)    #  3   (floor of 3.5)
+print(-7 // 2)   # -4   (floor of -3.5 is -4, not -3)
+print(7 % 2)     #  1
+print(-7 % 2)    #  1   (always non-negative when divisor positive)
+import math
+print(math.trunc(-7 / 2))  # -3  (truncation toward zero)
+`,
+    explanation: "Python's // always floors toward negative infinity, unlike C's integer division which truncates toward zero; the modulo result always has the same sign as the divisor.",
+  },
+  {
+    id: "py-caveat-bytes-iteration",
+    language: "python",
+    title: "Iterating bytes yields integers, not characters",
+    tag: "caveats",
+    code: `data = b'ABC'
+for b in data:
+    print(b, type(b))  # 65 <class 'int'>, ...
+# Access by index also gives int:
+print(data[0])   # 65
+# To get single-byte bytes object:
+print(data[0:1]) # b'A'
+`,
+    explanation: "Iterating or indexing a bytes object yields integers (the byte values), unlike str which yields single-character strings; use slice notation b[i:i+1] to get a single-byte bytes object.",
+  },
+  {
+    id: "py-caveat-del-vs-remove",
+    language: "python",
+    title: "del removes by index; list.remove removes by value",
+    tag: "caveats",
+    code: `lst = [10, 20, 30, 20, 40]
+del lst[1]             # remove by index
+print(lst)             # [10, 30, 20, 40]
+lst.remove(20)         # remove first occurrence by value
+print(lst)             # [10, 30, 40]
+# For all occurrences:
+lst2 = [1, 2, 2, 3]
+lst2 = [x for x in lst2 if x != 2]
+print(lst2)            # [1, 3]
+`,
+    explanation: "del lst[i] uses the index and is O(n) due to shifting; list.remove(v) scans for the first matching value and is also O(n); removing all occurrences requires a comprehension.",
+  },
+  {
+    id: "py-types-typeis",
+    language: "python",
+    title: "TypeIs (3.13+) is a stricter TypeGuard that narrows both branches",
+    tag: "types",
+    code: `from typing import TypeIs
+def is_str(x: object) -> TypeIs[str]:
+    return isinstance(x, str)
+def process(val: int | str) -> None:
+    if is_str(val):
+        print(val.upper())  # val: str here
+    else:
+        print(val + 1)      # val: int here
+process('hello')
+process(42)
+`,
+    explanation: "TypeIs (PEP 742, Python 3.13) is like TypeGuard but also narrows the false branch; the type checker infers the complementary type in the else branch, providing exhaustive type narrowing.",
+  },
+  {
+    id: "py-types-readonly",
+    language: "python",
+    title: "ReadOnly[] prevents mutation of TypedDict fields",
+    tag: "types",
+    code: `from typing import TypedDict, ReadOnly
+class Config(TypedDict):
+    host: ReadOnly[str]  # cannot be reassigned
+    port: int
+cfg: Config = {'host': 'localhost', 'port': 5432}
+# cfg['host'] = 'other'  # type checker error
+cfg['port'] = 5433  # OK
+print(cfg)
+`,
+    explanation: "ReadOnly[T] inside a TypedDict (PEP 705, Python 3.13) marks a field as read-only, allowing the type checker to prevent accidental reassignment while still permitting the field to be set at construction.",
+  },
+  {
+    id: "py-types-concatenate",
+    language: "python",
+    title: "Concatenate prepends parameters to a ParamSpec",
+    tag: "types",
+    code: `from typing import Callable, Concatenate, ParamSpec, TypeVar
+P = ParamSpec('P')
+R = TypeVar('R')
+def inject_context(fn: Callable[Concatenate[str, P], R]) -> Callable[P, R]:
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+        return fn('ctx', *args, **kwargs)
+    return wrapper
+@inject_context
+def greet(ctx: str, name: str) -> str: return f'[{ctx}] Hello {name}'
+print(greet('Alice'))  # [ctx] Hello Alice
+`,
+    explanation: "Concatenate[X, P] prepends type X to a ParamSpec P, letting you type decorators that inject a leading argument while preserving the remaining signature.",
+  },
+  {
+    id: "py-types-typealias",
+    language: "python",
+    title: "type statement creates explicit type aliases (3.12+)",
+    tag: "types",
+    code: `type Vector = list[float]
+type Matrix = list[Vector]
+type Callback[T] = (T) -> None
+
+def scale(v: Vector, factor: float) -> Vector:
+    return [x * factor for x in v]
+
+print(scale([1.0, 2.0, 3.0], 2.0))  # [2.0, 4.0, 6.0]
+`,
+    explanation: "The type statement (PEP 695, Python 3.12) creates a TypeAliasType, making type aliases first-class and generic; it replaces TypeAlias from typing and is understood by type checkers without annotation syntax.",
+  },
+  {
+    id: "py-types-abstractmethod-property",
+    language: "python",
+    title: "@abstractmethod forces subclasses to implement a method",
+    tag: "types",
+    code: `from abc import ABC, abstractmethod
+class Serializer(ABC):
+    @abstractmethod
+    def serialize(self, obj) -> str: ...
+    @abstractmethod
+    def deserialize(self, data: str): ...
+class JsonSerializer(Serializer):
+    import json
+    def serialize(self, obj): return __import__('json').dumps(obj)
+    def deserialize(self, data): return __import__('json').loads(data)
+s = JsonSerializer()
+print(s.serialize({'a': 1}))
+`,
+    explanation: "abstractmethod raises TypeError if a concrete subclass does not override all abstract methods; this enforces the interface contract at instantiation time rather than when the method is first called.",
+  },
+  {
+    id: "py-types-structural-subtype",
+    language: "python",
+    title: "Structural subtyping with Protocol avoids explicit registration",
+    tag: "types",
+    code: `from typing import Protocol
+class Drawable(Protocol):
+    def draw(self) -> str: ...
+class Circle:
+    def draw(self) -> str: return 'O'
+class Rectangle:
+    def draw(self) -> str: return '[]'
+def render(shape: Drawable) -> None:
+    print(shape.draw())
+render(Circle())     # O
+render(Rectangle())  # []
+`,
+    explanation: "Protocol enables structural subtyping (duck typing with type annotations); a class satisfies a Protocol if it has the required attributes/methods, without inheriting from or registering with it.",
+  },
+  {
+    id: "py-types-invariant-covariant",
+    language: "python",
+    title: "Generic containers are invariant; covariance requires out",
+    tag: "types",
+    code: `from typing import TypeVar
+T = TypeVar('T')           # invariant
+T_co = TypeVar('T_co', covariant=True)  # covariant
+
+# list[str] is NOT a list[object] — mutation would break safety
+# def process(items: list[object]) -> None: ...
+# process(['a', 'b'])  # mypy error: list is invariant
+
+# Sequence[str] IS a Sequence[object] — read-only
+from typing import Sequence
+def process(items: Sequence[object]) -> None: ...
+process(['a', 'b'])  # OK
+`,
+    explanation: "Mutable generic containers are invariant because allowing list[str] where list[object] is expected would let callers insert non-str objects; read-only types like Sequence use out to be safely covariant.",
+  },
+  {
+    id: "py-types-generic-class",
+    language: "python",
+    title: "Generic classes (3.12+ syntax) with type T",
+    tag: "types",
+    code: `class Stack[T]:
+    def __init__(self) -> None: self._items: list[T] = []
+    def push(self, item: T) -> None: self._items.append(item)
+    def pop(self) -> T: return self._items.pop()
+    def __len__(self) -> int: return len(self._items)
+s = Stack[int]()
+s.push(1); s.push(2)
+print(s.pop())  # 2
+`,
+    explanation: "The class Stack[T] syntax (PEP 695, Python 3.12) is the modern way to define generic classes without importing TypeVar; the type checker infers T from usage.",
+  },
+  {
+    id: "py-types-callable-protocol",
+    language: "python",
+    title: "Protocol with __call__ types callable objects",
+    tag: "types",
+    code: `from typing import Protocol
+class Transform(Protocol):
+    def __call__(self, s: str) -> str: ...
+def apply(text: str, fn: Transform) -> str:
+    return fn(text)
+print(apply('hello', str.upper))     # HELLO
+print(apply('hello', lambda s: s[::-1]))  # olleh
+`,
+    explanation: "A Protocol with __call__ is more expressive than Callable[..., R] because it can document parameter names and support keyword arguments; any callable matching the signature satisfies it.",
+  },
+  {
+    id: "py-types-overload-return",
+    language: "python",
+    title: "@overload with distinct return types per input type",
+    tag: "types",
+    code: `from typing import overload
+@overload
+def to_str(x: int) -> str: ...
+@overload
+def to_str(x: list) -> list[str]: ...
+def to_str(x):
+    if isinstance(x, int): return str(x)
+    return [str(i) for i in x]
+result: str = to_str(42)           # inferred str
+result2: list[str] = to_str([1, 2])  # inferred list[str]
+`,
+    explanation: "@overload allows the type checker to infer a precise return type for each combination of argument types, providing much better call-site inference than a single Union return type.",
+  },
+  {
+    id: "py-types-type-alias-new",
+    language: "python",
+    title: "TypeAlias (3.10) annotates type aliases explicitly",
+    tag: "types",
+    code: `from typing import TypeAlias
+Vector: TypeAlias = list[float]
+Matrix: TypeAlias = list[Vector]
+
+def dot(a: Vector, b: Vector) -> float:
+    return sum(x*y for x,y in zip(a,b))
+
+print(dot([1.0,2.0,3.0], [4.0,5.0,6.0]))  # 32.0
+`,
+    explanation: "TypeAlias (PEP 613) tells the type checker that a name is intentionally a type alias rather than a regular variable, preventing false positives when the alias is used in annotations.",
+  },
+  {
+    id: "py-types-forwardref",
+    language: "python",
+    title: "ForwardRef resolves string annotations to types",
+    tag: "types",
+    code: `from typing import ForwardRef, get_type_hints
+class Node:
+    def __init__(self, val: int, next: 'Node | None' = None):
+        self.val = val; self.next = next
+hints = get_type_hints(Node.__init__)
+print(hints['next'])  # Node | None
+# ForwardRef('Node') is resolved by get_type_hints
+`,
+    explanation: "String annotations are stored as ForwardRef objects and resolved lazily by get_type_hints(); this allows classes to reference themselves and avoids circular import issues.",
+  },
+  {
+    id: "py-types-namedtuple-fields",
+    language: "python",
+    title: "NamedTuple with typed fields and defaults",
+    tag: "types",
+    code: `from typing import NamedTuple
+class Point(NamedTuple):
+    x: float
+    y: float
+    label: str = ''
+p = Point(1.0, 2.0)
+print(p.x, p.y, p.label)  # 1.0 2.0 (empty)
+print(p._asdict())         # OrderedDict or dict
+print(p._replace(label='origin'))
+`,
+    explanation: "Typed NamedTuple provides the concise immutability of namedtuple with field-level type annotations, IDE completion, defaults, and _asdict/_replace helpers.",
+  },
+  {
+    id: "py-types-paramspec-kwargs",
+    language: "python",
+    title: "P.kwargs and P.args preserve signature in wrappers",
+    tag: "types",
+    code: `from typing import Callable, ParamSpec, TypeVar
+P = ParamSpec('P'); R = TypeVar('R')
+def retry(fn: Callable[P, R], times: int = 3) -> Callable[P, R]:
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+        for _ in range(times):
+            try: return fn(*args, **kwargs)
+            except Exception: pass
+        raise RuntimeError('All retries failed')
+    return wrapper
+@retry
+def divide(a: int, b: int) -> float:
+    return a / b
+print(divide(10, 2))  # 5.0
+`,
+    explanation: "ParamSpec.args and ParamSpec.kwargs capture the positional and keyword arguments separately so the wrapper's *args: P.args, **kwargs: P.kwargs perfectly mirrors the wrapped function's signature.",
+  },
+  {
+    id: "py-families-argparse",
+    language: "python",
+    title: "argparse for command-line argument parsing",
+    tag: "families",
+    code: `import argparse, sys
+parser = argparse.ArgumentParser(description='Demo')
+parser.add_argument('name')
+parser.add_argument('--count', type=int, default=1)
+parser.add_argument('--verbose', action='store_true')
+# args = parser.parse_args()  # reads sys.argv
+args = parser.parse_args(['Alice', '--count', '3'])
+print(args.name, args.count, args.verbose)
+# Alice 3 False
+`,
+    explanation: "argparse generates help text, handles type conversion, enforces required vs optional arguments, and supports sub-commands; it's the standard library alternative to third-party click or typer.",
+  },
+  {
+    id: "py-families-datetime",
+    language: "python",
+    title: "datetime: date, time, datetime, timedelta, timezone",
+    tag: "families",
+    code: `from datetime import datetime, timedelta, timezone
+now = datetime.now(tz=timezone.utc)
+print(now.isoformat())
+future = now + timedelta(days=7, hours=3)
+print(future.strftime('%Y-%m-%d %H:%M'))
+parsed = datetime.fromisoformat('2026-05-08T12:00:00+00:00')
+print(parsed.date())
+`,
+    explanation: "Always attach timezone info (tz=timezone.utc) to datetimes you compare or serialise; naive datetimes (no tz) can cause subtle bugs when DST changes or cross-timezone comparisons occur.",
+  },
+  {
+    id: "py-families-json-advanced",
+    language: "python",
+    title: "json with custom encoder and decoder",
+    tag: "families",
+    code: `import json
+from datetime import date
+class DateEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, date): return o.isoformat()
+        return super().default(o)
+data = {'today': date(2026, 5, 8), 'count': 3}
+print(json.dumps(data, cls=DateEncoder))
+# {"today": "2026-05-08", "count": 3}
+`,
+    explanation: "Subclassing json.JSONEncoder and overriding default() lets you serialise arbitrary Python objects; for decoding, pass object_hook to json.loads to reconstruct objects from dicts.",
+  },
+  {
+    id: "py-families-csv",
+    language: "python",
+    title: "csv module for reading and writing delimited files",
+    tag: "families",
+    code: `import csv, io
+rows = [['name','age'],['Alice','30'],['Bob','25']]
+buf = io.StringIO()
+writer = csv.writer(buf)
+writer.writerows(rows)
+buf.seek(0)
+reader = csv.DictReader(buf)
+for row in reader:
+    print(row)  # {'name': 'Alice', 'age': '30'}
+`,
+    explanation: "csv.writer handles quoting, escaping, and newlines automatically; csv.DictReader maps each row to a dict using the first row as headers, making it idiomatic for processing columnar data.",
+  },
+  {
+    id: "py-families-threading-patterns",
+    language: "python",
+    title: "Thread-safe queue with threading.Queue",
+    tag: "families",
+    code: `import threading, queue, time
+work = queue.Queue()
+def worker():
+    while True:
+        item = work.get()
+        if item is None: break
+        print(f'Processed {item}')
+        work.task_done()
+t = threading.Thread(target=worker, daemon=True)
+t.start()
+for i in range(3): work.put(i)
+work.put(None)  # sentinel to stop
+t.join()
+`,
+    explanation: "threading.Queue is the preferred inter-thread communication mechanism; it's thread-safe without explicit locks, supports blocking get and task_done for join(), and is compatible with the producer-consumer pattern.",
+  },
+  {
+    id: "py-families-os-path",
+    language: "python",
+    title: "os and os.path for portable filesystem operations",
+    tag: "families",
+    code: `import os
+print(os.getcwd())
+print(os.path.join('/tmp', 'data', 'file.txt'))
+print(os.path.exists('/tmp'))
+print(os.path.expanduser('~'))
+print(os.path.splitext('report.pdf'))  # ('report', '.pdf')
+os.makedirs('/tmp/test_dir', exist_ok=True)
+`,
+    explanation: "os.path provides portable path manipulation; prefer pathlib.Path for new code, but os.path remains important for interoperability with third-party code that returns plain strings.",
+  },
+  {
+    id: "py-families-contextlib",
+    language: "python",
+    title: "contextlib: suppress, redirect_stdout, ExitStack",
+    tag: "families",
+    code: `from contextlib import suppress, redirect_stdout, ExitStack
+import io
+# Suppress specific exceptions:
+with suppress(FileNotFoundError):
+    open('does_not_exist.txt')
+# Redirect stdout:
+buf = io.StringIO()
+with redirect_stdout(buf):
+    print('captured')
+print(buf.getvalue())  # captured
+`,
+    explanation: "contextlib provides reusable context managers: suppress silently ignores specified exceptions, redirect_stdout captures output, and ExitStack dynamically manages a variable number of context managers.",
+  },
+  {
+    id: "py-families-operator-module",
+    language: "python",
+    title: "operator module provides function equivalents of operators",
+    tag: "families",
+    code: `from operator import add, mul, attrgetter, itemgetter
+from functools import reduce
+print(reduce(add, [1,2,3,4]))  # 10
+print(reduce(mul, [1,2,3,4]))  # 24
+get_name = attrgetter('name')
+get_zero = itemgetter(0)
+from dataclasses import dataclass
+@dataclass
+class P: name: str
+print(get_name(P('Alice')))  # Alice
+print(get_zero([9,8,7]))     # 9
+`,
+    explanation: "The operator module exposes all Python operators as functions, enabling their use as callbacks to map/reduce and sort without lambda; attrgetter and itemgetter are particularly useful for data pipelines.",
+  },
+  {
+    id: "py-families-itertools2",
+    language: "python",
+    title: "itertools: chain, groupby, takewhile, dropwhile",
+    tag: "families",
+    code: `from itertools import chain, groupby, takewhile, dropwhile
+flat = list(chain([1,2],[3,4],[5]))
+print(flat)  # [1,2,3,4,5]
+data = sorted('aabbcc')
+for key, group in groupby(data):
+    print(key, list(group))
+print(list(takewhile(lambda x: x<4, [1,2,3,4,5])))
+# [1,2,3]
+`,
+    explanation: "itertools.chain concatenates iterables lazily; groupby groups consecutive equal elements (requires sorted input for all-equal grouping); takewhile/dropwhile slice a lazy stream by a predicate.",
+  },
+  {
+    id: "py-families-collections2",
+    language: "python",
+    title: "collections: Counter, OrderedDict, defaultdict patterns",
+    tag: "families",
+    code: `from collections import Counter, defaultdict
+words = 'the cat sat on the mat the cat'.split()
+cnt = Counter(words)
+print(cnt.most_common(3))
+# [('the',3),('cat',2),('sat',1)]
+dd = defaultdict(list)
+for word in words: dd[word[0]].append(word)
+print(dict(dd))
+`,
+    explanation: "Counter is a subclass of dict for tallying, with most_common() for frequency analysis; defaultdict provides automatic default values for missing keys, avoiding KeyError in aggregation patterns.",
+  },
+  {
+    id: "py-families-abc-patterns",
+    language: "python",
+    title: "ABC with mixins for interface composition",
+    tag: "families",
+    code: `from abc import ABC, abstractmethod
+class Serializable(ABC):
+    @abstractmethod
+    def to_dict(self) -> dict: ...
+class JsonMixin:
+    def to_json(self) -> str:
+        import json
+        return json.dumps(self.to_dict())
+class User(Serializable, JsonMixin):
+    def __init__(self, name): self.name = name
+    def to_dict(self): return {'name': self.name}
+print(User('Alice').to_json())  # {"name": "Alice"}
+`,
+    explanation: "Combining an ABC (enforces the contract) with a concrete mixin (provides derived behaviour) lets you assemble classes from composable pieces while the ABC ensures all required methods are implemented.",
+  },
+  {
+    id: "py-families-http-server",
+    language: "python",
+    title: "http.server for quick development servers",
+    tag: "families",
+    code: `from http.server import HTTPServer, BaseHTTPRequestHandler
+class Handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-Type', 'text/plain')
+        self.end_headers()
+        self.wfile.write(b'hello')
+    def log_message(self, *a): pass  # silence logs
+# server = HTTPServer(('', 8080), Handler)
+# server.serve_forever()
+print('Server class ready')
+`,
+    explanation: "http.server provides a minimal HTTP server suitable for local development or simple file serving; for production, use WSGI frameworks (Flask, Django) or ASGI (FastAPI, Starlette).",
+  },
+  {
+    id: "py-families-compression",
+    language: "python",
+    title: "gzip, bz2, and lzma for file compression",
+    tag: "families",
+    code: `import gzip, io
+data = b'hello world ' * 1000
+compressed = gzip.compress(data, compresslevel=6)
+print(f'Original: {len(data)}, Compressed: {len(compressed)}')
+decompressed = gzip.decompress(compressed)
+print(decompressed[:11])  # b'hello world'
+# For files: gzip.open(), bz2.open(), lzma.open()
+`,
+    explanation: "gzip.compress and decompress work on bytes; for files use gzip.open() which is a drop-in replacement for open() that transparently compresses/decompresses on read/write.",
+  },
+  {
+    id: "py-families-socket-basics",
+    language: "python",
+    title: "socket module for raw TCP client and server",
+    tag: "families",
+    code: `import socket, threading
+def echo_server(port):
+    with socket.socket() as s:
+        s.bind(('', port)); s.listen(1)
+        conn, _ = s.accept()
+        with conn: conn.sendall(conn.recv(1024))
+port = 19999
+t = threading.Thread(target=echo_server, args=(port,), daemon=True)
+t.start()
+with socket.socket() as c:
+    c.connect(('127.0.0.1', port))
+    c.sendall(b'hello')
+    print(c.recv(1024))  # b'hello'
+`,
+    explanation: "The socket module provides the lowest-level network API; TCP requires bind+listen+accept on the server and connect on the client — all higher-level libraries (http, asyncio transports) build on this.",
+  },
+  {
+    id: "py-families-xml",
+    language: "python",
+    title: "xml.etree.ElementTree for XML parsing and generation",
+    tag: "families",
+    code: `import xml.etree.ElementTree as ET
+xml_str = '<root><item id="1">a</item><item id="2">b</item></root>'
+root = ET.fromstring(xml_str)
+for item in root.findall('item'):
+    print(item.get('id'), item.text)
+# Build:
+tree_root = ET.Element('data')
+ET.SubElement(tree_root, 'value').text = 'x'
+print(ET.tostring(tree_root, encoding='unicode'))
+`,
+    explanation: "ElementTree provides a Pythonic API for reading and writing XML; use XPath expressions in findall() for more complex queries, or lxml for full XPath 1.0 and better performance.",
+  },
+  {
+    id: "py-classes-mixin-logging",
+    language: "python",
+    title: "Logging mixin adds structured logging to any class",
+    tag: "classes",
+    code: `import logging
+class LogMixin:
+    @property
+    def _log(self):
+        return logging.getLogger(type(self).__name__)
+    def log_info(self, msg, **ctx):
+        self._log.info(msg, extra=ctx)
+class Service(LogMixin):
+    def do_work(self):
+        self.log_info('started', user='alice')
+        return 42
+logging.basicConfig(level=logging.INFO)
+Service().do_work()
+`,
+    explanation: "A mixin is a class designed to be mixed into another class via multiple inheritance; it adds cross-cutting behaviour (logging, serialisation) without being a meaningful standalone class.",
+  },
+  {
+    id: "py-classes-super-mro",
+    language: "python",
+    title: "Cooperative super() follows the MRO in diamond inheritance",
+    tag: "classes",
+    code: `class A:
+    def method(self): print('A'); super().method()
+class B(A):
+    def method(self): print('B'); super().method()
+class C(A):
+    def method(self): print('C'); super().method()
+class D(B, C):
+    def method(self): print('D'); super().method()
+class Base:
+    def method(self): print('Base')
+# Normally object has no method, need a stopping base:
+class A2(Base):
+    def method(self): print('A2'); super().method()
+class B2(A2):
+    def method(self): print('B2'); super().method()
+class C2(A2):
+    def method(self): print('C2'); super().method()
+class D2(B2, C2):
+    def method(self): print('D2'); super().method()
+D2().method()  # D2 B2 C2 A2 Base
+`,
+    explanation: "When every class in a hierarchy calls super().method(), the MRO guarantees each base class is called exactly once in C3 linearisation order — the foundation of cooperative multiple inheritance.",
+  },
+  {
+    id: "py-classes-observer-pattern",
+    language: "python",
+    title: "Observer pattern with a typed event bus",
+    tag: "classes",
+    code: `from collections import defaultdict
+from typing import Callable, TypeVar
+T = TypeVar('T')
+class EventBus:
+    def __init__(self): self._handlers: dict = defaultdict(list)
+    def subscribe(self, event: str, fn: Callable) -> None:
+        self._handlers[event].append(fn)
+    def publish(self, event: str, *args, **kwargs) -> None:
+        for fn in self._handlers[event]: fn(*args, **kwargs)
+bus = EventBus()
+bus.subscribe('login', lambda u: print(f'{u} logged in'))
+bus.subscribe('login', lambda u: print(f'Audit: {u}'))
+bus.publish('login', 'Alice')
+`,
+    explanation: "An event bus decouples publishers from subscribers completely; multiple handlers can subscribe to the same event, and the publisher has no knowledge of who is listening.",
+  },
+  {
+    id: "py-classes-strategy-pattern",
+    language: "python",
+    title: "Strategy pattern replaces subclassing with composition",
+    tag: "classes",
+    code: `from typing import Callable
+class Compressor:
+    def __init__(self, strategy: Callable[[bytes], bytes]):
+        self._strategy = strategy
+    def compress(self, data: bytes) -> bytes:
+        return self._strategy(data)
+import gzip, bz2
+gzip_comp = Compressor(gzip.compress)
+bz2_comp  = Compressor(bz2.compress)
+data = b'hello world' * 100
+print(len(gzip_comp.compress(data)), len(bz2_comp.compress(data)))
+`,
+    explanation: "Injecting a callable as a strategy avoids a subclass for every algorithm variant; in Python a function is often a sufficient strategy without a full class hierarchy.",
+  },
+  {
+    id: "py-classes-iterator-class",
+    language: "python",
+    title: "Iterator protocol: __iter__ and __next__",
+    tag: "classes",
+    code: `class CountDown:
+    def __init__(self, start): self.n = start
+    def __iter__(self): return self
+    def __next__(self):
+        if self.n <= 0: raise StopIteration
+        self.n -= 1
+        return self.n + 1
+for i in CountDown(3):
+    print(i, end=' ')  # 3 2 1
+print(list(CountDown(5)))
+`,
+    explanation: "Implementing __iter__ (returns self) and __next__ (returns the next value or raises StopIteration) makes an object usable in for loops, list(), and all iterator-consuming functions.",
+  },
+  {
+    id: "py-classes-context-manager-class",
+    language: "python",
+    title: "Context manager class with __enter__ and __exit__",
+    tag: "classes",
+    code: `import sqlite3
+class ManagedConnection:
+    def __init__(self, path): self.path = path
+    def __enter__(self):
+        self.conn = sqlite3.connect(self.path)
+        return self.conn
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type: self.conn.rollback()
+        else:        self.conn.commit()
+        self.conn.close()
+        return False  # don't suppress exception
+with ManagedConnection(':memory:') as conn:
+    conn.execute('CREATE TABLE t (x INTEGER)')
+`,
+    explanation: "__enter__ returns the resource, __exit__ handles cleanup; returning False re-raises exceptions, returning True suppresses them — a pattern used for transaction management and resource lifetime.",
+  },
+  {
+    id: "py-classes-descriptor-validator",
+    language: "python",
+    title: "Descriptor for reusable attribute validation",
+    tag: "classes",
+    code: `class Positive:
+    def __set_name__(self, owner, name): self.name = name
+    def __get__(self, obj, objtype=None):
+        if obj is None: return self
+        return obj.__dict__.get(self.name)
+    def __set__(self, obj, value):
+        if value <= 0: raise ValueError(f'{self.name} must be positive')
+        obj.__dict__[self.name] = value
+class Rectangle:
+    width  = Positive()
+    height = Positive()
+    def __init__(self, w, h): self.width=w; self.height=h
+r = Rectangle(3, 4)
+print(r.width, r.height)  # 3 4
+`,
+    explanation: "A data descriptor (implements both __get__ and __set__) intercepts attribute access on every instance; it enforces validation once and reuses it across all classes that declare the descriptor.",
+  },
+  {
+    id: "py-classes-singleton-metaclass",
+    language: "python",
+    title: "Singleton via metaclass __call__",
+    tag: "classes",
+    code: `class SingletonMeta(type):
+    _instances = {}
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super().__call__(*args, **kwargs)
+        return cls._instances[cls]
+class Config(metaclass=SingletonMeta):
+    def __init__(self): self.value = 42
+a = Config(); b = Config()
+print(a is b)        # True
+print(a.value)       # 42
+`,
+    explanation: "Overriding __call__ in a metaclass intercepts instantiation; a class registry dict stores the first instance and returns it on subsequent calls, ensuring exactly one instance per class.",
+  },
+  {
+    id: "py-classes-abstract-base",
+    language: "python",
+    title: "ABC enforces interface contracts in a plugin system",
+    tag: "classes",
+    code: `from abc import ABC, abstractmethod
+class Plugin(ABC):
+    @abstractmethod
+    def name(self) -> str: ...
+    @abstractmethod
+    def run(self, data: dict) -> dict: ...
+class UpperPlugin(Plugin):
+    def name(self): return 'upper'
+    def run(self, data): return {k:v.upper() for k,v in data.items() if isinstance(v,str)}
+plugin = UpperPlugin()
+print(plugin.run({'a':'hello','b':'world'}))  # {'a':'HELLO','b':'WORLD'}
+`,
+    explanation: "Abstract base classes serve as self-documenting contracts; any class that inherits Plugin and omits a required method raises TypeError at instantiation time, not when the method is first called.",
+  },
+  {
+    id: "py-classes-enum-class",
+    language: "python",
+    title: "Enum with methods and properties",
+    tag: "classes",
+    code: `from enum import Enum
+class Planet(Enum):
+    MERCURY = (3.303e+23, 2.4397e6)
+    VENUS   = (4.869e+24, 6.0518e6)
+    EARTH   = (5.976e+24, 6.37814e6)
+    def __init__(self, mass, radius):
+        self.mass = mass; self.radius = radius
+    @property
+    def surface_gravity(self):
+        G = 6.67430e-11
+        return G * self.mass / self.radius**2
+print(f'{Planet.EARTH.surface_gravity:.2f}')  # 9.80
+`,
+    explanation: "Enum members can carry arbitrary data by defining __init__ with extra parameters; adding @property and other methods makes enums rich value objects rather than bare constants.",
+  },
+  {
+    id: "py-classes-dataclass-mixin",
+    language: "python",
+    title: "Dataclass mixin adds computed behaviour to generated code",
+    tag: "classes",
+    code: `from dataclasses import dataclass
+class GeoMixin:
+    lat: float
+    lon: float
+    @property
+    def coords(self): return (self.lat, self.lon)
+    def is_northern(self): return self.lat > 0
+@dataclass
+class Location(GeoMixin):
+    name: str
+    lat: float
+    lon: float
+loc = Location('Paris', 48.85, 2.35)
+print(loc.coords)          # (48.85, 2.35)
+print(loc.is_northern())   # True
+`,
+    explanation: "Combining a mixin with @dataclass separates auto-generated boilerplate (__init__, __repr__) from hand-written computed properties, keeping the class declaration concise.",
+  },
+  {
+    id: "py-classes-cached-property-class",
+    language: "python",
+    title: "cached_property as a lazy attribute on a class",
+    tag: "classes",
+    code: `from functools import cached_property
+class ExpensiveComputation:
+    def __init__(self, n): self.n = n
+    @cached_property
+    def result(self):
+        print('computing...')
+        return sum(range(self.n))
+obj = ExpensiveComputation(1_000_000)
+print(obj.result)  # computing... / 499999500000
+print(obj.result)  # 499999500000 (no recompute)
+print('result' in obj.__dict__)  # True
+`,
+    explanation: "cached_property stores the computed value directly in the instance __dict__ under the same name; subsequent attribute access finds the cached value before the descriptor is consulted.",
+  },
+  {
+    id: "py-classes-factory-method",
+    language: "python",
+    title: "Factory method pattern using classmethod",
+    tag: "classes",
+    code: `from datetime import datetime
+class Event:
+    def __init__(self, name, dt): self.name=name; self.dt=dt
+    @classmethod
+    def from_iso(cls, name, iso_str):
+        return cls(name, datetime.fromisoformat(iso_str))
+    @classmethod
+    def now(cls, name):
+        return cls(name, datetime.utcnow())
+    def __repr__(self): return f'Event({self.name!r}, {self.dt})'
+e = Event.from_iso('launch', '2026-05-08T12:00:00')
+print(e)
+`,
+    explanation: "Factory classmethods provide named constructors with descriptive intent; they receive the class as cls so subclasses inherit the factory and produce instances of the subclass automatically.",
+  },
+  {
+    id: "py-classes-prototype-pattern",
+    language: "python",
+    title: "Prototype pattern clones objects to avoid re-initialisation",
+    tag: "classes",
+    code: `import copy
+class Config:
+    def __init__(self, host, port, tags=None):
+        self.host=host; self.port=port; self.tags=tags or []
+    def clone(self, **overrides):
+        new = copy.deepcopy(self)
+        for k, v in overrides.items(): setattr(new, k, v)
+        return new
+base = Config('localhost', 5432, tags=['dev'])
+prod = base.clone(host='prod-db', tags=['prod'])
+print(base.host, prod.host)   # localhost prod-db
+print(base.tags, prod.tags)   # ['dev'] ['prod']
+`,
+    explanation: "The Prototype pattern creates new objects by cloning an existing one; in Python deepcopy provides the foundation, and a clone() method adds named overrides for common variations.",
+  },
+  {
+    id: "py-classes-adapter-pattern",
+    language: "python",
+    title: "Adapter wraps an incompatible interface",
+    tag: "classes",
+    code: `class XmlLogger:
+    def log_xml(self, tag, msg): print(f'<{tag}>{msg}</{tag}>')
+class LoggerAdapter:
+    def __init__(self, xml_logger): self._log = xml_logger
+    def info(self, msg):    self._log.log_xml('info', msg)
+    def warning(self, msg): self._log.log_xml('warn', msg)
+logger = LoggerAdapter(XmlLogger())
+logger.info('server started')  # <info>server started</info>
+logger.warning('low memory')   # <warn>low memory</warn>
+`,
+    explanation: "The Adapter pattern wraps an existing class behind an expected interface without modifying it; the adapter translates calls so the client code can work with incompatible third-party or legacy APIs.",
   }
 ];

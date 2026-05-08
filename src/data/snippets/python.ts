@@ -22483,5 +22483,2272 @@ class ImmutablePoint(tuple):
     def y(self): return self[1]`,
     explanation: "`__new__` allocates the instance; `__init__` initializes it. `__init__` is only called if `__new__` returns an instance of `cls`. Use `__new__` for immutable type subclassing (tuple, int, str) where you must set content at allocation time, and for singletons/flyweights that control instance creation.",
   },
+{
+    id: "py-types-namedtuple-typed",
+    language: "python",
+    title: "NamedTuple with type annotations",
+    tag: "types",
+    code: `from typing import NamedTuple
 
+class Point(NamedTuple):
+    x: float
+    y: float
+    label: str = "point"   # optional field with default
+
+p = Point(1.0, 2.0)
+print(p)          # Point(x=1.0, y=2.0, label='point')
+print(p.x, p.y)   # 1.0 2.0
+print(p[0])       # 1.0  — still a tuple, index access works
+
+# Immutable: can't modify fields
+try:
+    p.x = 5.0
+except AttributeError as e:
+    print(e)  # can't set attribute`,
+    explanation: "The class-based `NamedTuple` syntax (Python 3.6+) adds type annotations and optional default values while remaining a proper tuple subclass — giving you immutability, positional indexing, and named attribute access in one type.",
+  },
+  {
+    id: "py-pow-three-arg",
+    language: "python",
+    title: "pow(base, exp, mod) — modular exponentiation",
+    tag: "snippet",
+    code: `# Three-argument pow computes (base ** exp) % mod efficiently
+# Uses fast exponentiation — much faster than (2**1000) % 997
+result = pow(2, 1000, 997)
+print(result)           # some value in 0..996
+
+# Without the third arg, 2**1000 is a huge integer first
+slow = (2 ** 1000) % 997  # same answer but allocates a huge int
+print(result == slow)   # True
+
+# Used in RSA, Diffie-Hellman, and competitive programming
+print(pow(3, 200, 13))  # 9`,
+    explanation: "`pow(base, exp, mod)` computes modular exponentiation in O(log exp) time without ever materializing the full `base**exp` integer — for cryptography and competitive programming this is essential.",
+  },
+  {
+    id: "py-classes-dunder-bool",
+    language: "python",
+    title: "__bool__ and __len__ control truthiness",
+    tag: "classes",
+    code: `class Box:
+    def __init__(self, items):
+        self.items = items
+
+    def __len__(self):
+        return len(self.items)
+
+    # __bool__ is checked first; falls back to __len__ if absent
+    def __bool__(self):
+        return len(self.items) > 0
+
+b_full  = Box([1, 2, 3])
+b_empty = Box([])
+
+print(bool(b_full))   # True
+print(bool(b_empty))  # False
+
+if b_full:
+    print("has items")  # prints this`,
+    explanation: "Python checks `__bool__` first for truthiness; if absent, it falls back to `__len__` (non-zero = truthy); if neither is defined, instances are always truthy — define `__bool__` when empty/non-empty semantics make sense.",
+  },
+  {
+    id: "py-understand-list-scope3",
+    language: "python",
+    title: "List comprehension variables don't leak (Python 3)",
+    tag: "understanding",
+    code: `# Python 2 bug: loop variable leaked out
+# Python 3 fixed this: comprehension has its own scope
+
+result = [i * 2 for i in range(5)]
+try:
+    print(i)
+except NameError:
+    print("i not defined outside comprehension")  # prints this
+
+# Generator and dict/set comps also have their own scope
+gen = (j for j in range(3))
+try:
+    print(j)
+except NameError:
+    print("j not defined")  # prints this`,
+    explanation: "In Python 3, list/dict/set comprehensions and generator expressions each get their own scope, so the loop variable never leaks into the enclosing function — Python 2's leaking behavior was a notorious gotcha.",
+  },
+  {
+    id: "py-dict-vs-defaultdict",
+    language: "python",
+    title: "dict raises KeyError; defaultdict auto-creates",
+    tag: "structures",
+    code: `from collections import defaultdict
+
+d = {}
+try:
+    d["missing"]
+except KeyError:
+    print("KeyError raised")
+
+# defaultdict factory runs on missing key access
+dd = defaultdict(list)
+dd["key"].append(1)   # no KeyError; creates [] first
+print(dd["key"])      # [1]
+print(dd["other"])    # []  (new empty list created)
+
+# dict.get() is a lightweight alternative
+print(d.get("missing", "default"))  # 'default'`,
+    explanation: "Regular `dict` raises `KeyError` on missing access; `defaultdict` calls the factory to create a default; `dict.get(key, default)` returns a default without storing it — choose based on whether you want the key created or not.",
+  },
+  {
+    id: "py-understand-none-singleton",
+    language: "python",
+    title: "None is a singleton — use 'is', not '=='",
+    tag: "understanding",
+    code: `# None is the sole instance of NoneType
+x = None
+print(x is None)    # True  — correct idiom
+print(x == None)    # True  — works but can be overridden
+
+class Tricky:
+    def __eq__(self, other):
+        return True  # equals everything!
+
+t = Tricky()
+print(t == None)   # True  (wrong answer)
+print(t is None)   # False (correct)
+
+# Always check for None with 'is' or 'is not'
+if x is not None:
+    print("has value")`,
+    explanation: "Since `None` is a singleton, `is None` and `is not None` are the correct checks — using `==` works by default but can be fooled by classes that override `__eq__`.",
+  },
+  {
+    id: "py-classes-abstract-property2",
+    language: "python",
+    title: "Abstract property forces subclasses to implement it",
+    tag: "classes",
+    code: `from abc import ABC, abstractmethod
+
+class Shape(ABC):
+    @property
+    @abstractmethod
+    def area(self) -> float: ...
+
+    @property
+    @abstractmethod
+    def perimeter(self) -> float: ...
+
+class Circle(Shape):
+    def __init__(self, radius: float):
+        self._r = radius
+
+    @property
+    def area(self) -> float:
+        return 3.14159 * self._r ** 2
+
+    @property
+    def perimeter(self) -> float:
+        return 2 * 3.14159 * self._r
+
+c = Circle(5)
+print(c.area)       # 78.53975
+print(c.perimeter)  # 31.4159`,
+    explanation: "Combining `@property` and `@abstractmethod` (in that order) creates an abstract property — subclasses must implement a `@property` with the same name, ensuring a consistent attribute-style interface across all concrete shapes.",
+  },
+  {
+    id: "py-understand-class-body-scope",
+    language: "python",
+    title: "Class body scope doesn't extend into methods or comps",
+    tag: "understanding",
+    code: `x = "global"
+
+class MyClass:
+    x = "class"
+    # This comprehension cannot see class-body 'x'!
+    items = [x for _ in range(3)]  # uses GLOBAL x, not class x
+
+print(MyClass.items)  # ['global', 'global', 'global']
+
+class MyClass2:
+    x = "class"
+    # Method CAN access class attr via self or class name:
+    def get_x(self):
+        return MyClass2.x  # 'class'`,
+    explanation: "Class body scope is NOT a closure — comprehensions and lambdas defined inside a class body look up free variables in the enclosing module scope (skipping the class scope), which trips up people who expect class variables to be visible inside nested expressions.",
+  },
+  {
+    id: "py-divmod-usage",
+    language: "python",
+    title: "divmod() returns quotient and remainder",
+    tag: "snippet",
+    code: `# divmod(a, b) == (a // b, a % b) but computed in one step
+q, r = divmod(17, 5)
+print(q, r)           # 3 2
+
+# Useful for time conversion
+total_seconds = 3725
+minutes, seconds = divmod(total_seconds, 60)
+hours, minutes = divmod(minutes, 60)
+print(f"{hours}h {minutes}m {seconds}s")  # 1h 2m 5s`,
+    explanation: "`divmod(a, b)` returns `(quotient, remainder)` as a single tuple, avoiding two separate `//` and `%` operations — especially readable for unit conversions.",
+  },
+  {
+    id: "py-classes-descriptor-get",
+    language: "python",
+    title: "Descriptor __get__ intercepts attribute access",
+    tag: "classes",
+    code: `class Celsius:
+    def __set_name__(self, owner, name):
+        self.name = name
+
+    def __get__(self, obj, objtype=None):
+        if obj is None:
+            return self   # accessed on class, return descriptor
+        return obj.__dict__.get(self.name, 0)
+
+    def __set__(self, obj, value):
+        if value < -273.15:
+            raise ValueError("Below absolute zero!")
+        obj.__dict__[self.name] = value
+
+class Thermometer:
+    temperature = Celsius()
+
+t = Thermometer()
+t.temperature = 100
+print(t.temperature)   # 100
+
+try:
+    t.temperature = -300
+except ValueError as e:
+    print(e)`,
+    explanation: "A descriptor is a class with `__get__`, `__set__`, or `__delete__` that intercepts attribute access on another class — `__set_name__` (Python 3.6+) gives the descriptor its own attribute name, enabling reusable validation logic without metaclasses.",
+  },
+  {
+    id: "py-caveat-copy-vs-deepcopy",
+    language: "python",
+    title: "Shallow copy vs deep copy for nested objects",
+    tag: "caveats",
+    code: `import copy
+
+original = [[1, 2], [3, 4]]
+
+shallow = original.copy()         # or list(original) or original[:]
+shallow[0].append(99)
+
+print(original)  # [[1, 2, 99], [3, 4]]  — inner list mutated!
+
+deep = copy.deepcopy(original)
+deep[0].append(88)
+
+print(original)  # [[1, 2, 99], [3, 4]]  — original unchanged
+print(deep)      # [[1, 2, 99, 88], [3, 4]]`,
+    explanation: "A shallow copy duplicates the outer container but shares inner objects — mutations to nested lists/dicts propagate back; `copy.deepcopy()` recursively copies everything at the cost of more memory and time.",
+  },
+  {
+    id: "py-families-queue-types",
+    language: "python",
+    title: "Queue vs LifoQueue vs PriorityQueue (thread-safe)",
+    tag: "families",
+    code: `import queue
+
+# Queue: FIFO, thread-safe
+q = queue.Queue()
+q.put(1); q.put(2); q.put(3)
+print(q.get())  # 1
+
+# LifoQueue: LIFO (stack), thread-safe
+lq = queue.LifoQueue()
+lq.put(1); lq.put(2); lq.put(3)
+print(lq.get())  # 3
+
+# PriorityQueue: min-heap, thread-safe
+pq = queue.PriorityQueue()
+pq.put((3, "low")); pq.put((1, "high")); pq.put((2, "med"))
+print(pq.get())  # (1, 'high')
+
+# collections.deque is faster for single-thread use`,
+    explanation: "`queue.Queue`, `LifoQueue`, and `PriorityQueue` are thread-safe blocking queues built on `collections.deque` or `heapq` — use them for producer-consumer patterns in threading; for single-thread use, raw `deque` or `heapq` are faster.",
+  },
+  {
+    id: "py-zip-strict-check",
+    language: "python",
+    title: "zip(strict=True) catches length mismatches",
+    tag: "snippet",
+    code: `keys = ["a", "b", "c"]
+vals = [1, 2, 3]
+
+# strict=True raises ValueError if lengths differ (Python 3.10+)
+pairs = dict(zip(keys, vals, strict=True))
+print(pairs)  # {'a': 1, 'b': 2, 'c': 3}
+
+short_vals = [1, 2]
+try:
+    list(zip(keys, short_vals, strict=True))
+except ValueError as e:
+    print(e)  # zip() has arguments with different lengths`,
+    explanation: "`zip(..., strict=True)` (Python 3.10+) raises `ValueError` when the iterables have different lengths — catches silent data truncation bugs that plain `zip()` silently ignores.",
+  },
+  {
+    id: "py-families-dict-variants",
+    language: "python",
+    title: "dict vs OrderedDict vs defaultdict",
+    tag: "families",
+    code: `from collections import OrderedDict, defaultdict
+
+# dict (3.7+): preserves insertion order
+d = {"b": 2, "a": 1, "c": 3}
+print(list(d.keys()))  # ['b', 'a', 'c']
+
+# OrderedDict: also ordered, but has move_to_end() / order equality
+od = OrderedDict([("b", 2), ("a", 1)])
+od.move_to_end("b")
+print(list(od.keys()))  # ['a', 'b']
+
+# defaultdict: calls factory for missing keys
+dd = defaultdict(list)
+dd["x"].append(1)   # no KeyError
+
+# Key difference: OrderedDict equality checks order
+od1 = OrderedDict([("a", 1), ("b", 2)])
+od2 = OrderedDict([("b", 2), ("a", 1)])
+print(od1 == od2)   # False (order matters!)
+print(dict(od1) == dict(od2))  # True`,
+    explanation: "`dict` (3.7+) preserves insertion order but has no order-sensitive equality; `OrderedDict` adds `move_to_end()` and order-sensitive equality; `defaultdict` auto-creates missing values — choose by what extra behavior you need.",
+  },
+  {
+    id: "py-negative-index",
+    language: "python",
+    title: "Negative indexing and slicing",
+    tag: "snippet",
+    code: `items = [10, 20, 30, 40, 50]
+
+print(items[-1])    # 50  (last)
+print(items[-2])    # 40  (second-to-last)
+
+# Slicing with negative indices
+print(items[-3:])   # [30, 40, 50] (last 3)
+print(items[:-2])   # [10, 20, 30] (all but last 2)
+print(items[-3:-1]) # [30, 40]
+
+# Reverse a sequence
+print(items[::-1])  # [50, 40, 30, 20, 10]`,
+    explanation: "Negative indices count from the end: `-1` is the last element, `-n` is the nth from the end. Combined with slicing they let you express 'last N', 'all but last N', and reversal without computing lengths.",
+  },
+  {
+    id: "py-heapq-top-n",
+    language: "python",
+    title: "heapq.nlargest/nsmallest vs sorting",
+    tag: "structures",
+    code: `import heapq
+
+data = [15, 3, 42, 8, 7, 99, 1, 23]
+
+print(heapq.nlargest(3, data))   # [99, 42, 23]
+print(heapq.nsmallest(3, data))  # [1, 3, 7]
+
+# With a key function
+items = [{"v": 10}, {"v": 5}, {"v": 20}]
+top = heapq.nlargest(2, items, key=lambda d: d["v"])
+print(top)  # [{'v': 20}, {'v': 10}]
+
+# Rule of thumb: use nlargest/nsmallest when n << len(data)
+# Otherwise sorted()[-n:] is simpler and comparable speed`,
+    explanation: "`heapq.nlargest(n, iterable)` and `nsmallest` run in O(k log n) time (k = iterable length) — faster than full sort for small n, but `sorted()` wins when n is close to k.",
+  },
+  {
+    id: "py-star-unpack-middle",
+    language: "python",
+    title: "Star expression captures the middle",
+    tag: "snippet",
+    code: `data = [1, 2, 3, 4, 5, 6]
+
+first, *middle, last = data
+print(first)   # 1
+print(middle)  # [2, 3, 4, 5]
+print(last)    # 6
+
+# Also works on any iterable
+head, *tail = range(5)
+print(head)  # 0
+print(tail)  # [1, 2, 3, 4]`,
+    explanation: "The starred target `*name` captures all leftover items as a list; it can appear in the middle or at either end, and the surrounding names get exactly one value each.",
+  },
+  {
+    id: "py-families-str-bytes-view",
+    language: "python",
+    title: "str vs bytes vs memoryview protocol",
+    tag: "families",
+    code: `# str: Unicode text (immutable, no buffer protocol)
+s = "hello"
+
+# bytes: binary data (immutable, has buffer protocol)
+b = b"hello"
+
+# memoryview: window into a buffer (no copy)
+mv = memoryview(b)
+
+# Key differences
+print(s[0])       # 'h'  — returns str
+print(b[0])       # 104  — returns int!
+print(mv[0])      # 104  — also int
+
+# str needs encode() to become bytes
+print(s.encode("utf-8") == b)  # True
+
+# memoryview slicing is zero-copy
+print(bytes(mv[1:4]))  # b'ell'`,
+    explanation: "`str` is Unicode text (no buffer protocol); `bytes` is an immutable byte sequence (implements buffer protocol, indexing returns `int`); `memoryview` wraps any buffer-protocol object for zero-copy slicing — three distinct levels of abstraction.",
+  },
+  {
+    id: "py-sortedlist-bisect",
+    language: "python",
+    title: "bisect.insort keeps a list sorted",
+    tag: "structures",
+    code: `import bisect
+
+nums = [1, 3, 5, 7, 9]
+
+# insort inserts while maintaining sorted order (O(n) due to shift)
+bisect.insort(nums, 4)
+print(nums)  # [1, 3, 4, 5, 7, 9]
+
+# bisect_left/bisect_right find insertion positions in O(log n)
+pos = bisect.bisect_left(nums, 5)
+print(pos)   # 3  (index where 5 would go on left)
+
+# Efficient search for 'rightmost value <= target'
+def find_le(a, x):
+    i = bisect.bisect_right(a, x)
+    return a[i-1] if i else None
+
+print(find_le(nums, 6))   # 5`,
+    explanation: "`bisect.insort` inserts into a sorted list in O(log n) search + O(n) shift; `bisect_left/right` find insertion points in O(log n) — the standard library for sorted-list operations without a third-party package.",
+  },
+  {
+    id: "py-caveat-sort-vs-sorted",
+    language: "python",
+    title: "list.sort() modifies in place; sorted() returns new",
+    tag: "caveats",
+    code: `nums = [3, 1, 4, 1, 5, 9, 2]
+
+result = nums.sort()   # returns None!
+print(result)          # None
+print(nums)            # [1, 1, 2, 3, 4, 5, 9]  — mutated
+
+nums = [3, 1, 4, 1, 5, 9, 2]
+result = sorted(nums)  # returns a new sorted list
+print(result)          # [1, 1, 2, 3, 4, 5, 9]
+print(nums)            # [3, 1, 4, 1, 5, 9, 2]  — unchanged`,
+    explanation: "`list.sort()` sorts in place and returns `None` — assigning its return value is a common bug; `sorted()` always returns a new sorted list and works on any iterable, not just lists.",
+  },
+  {
+    id: "py-families-bytes-bytearray",
+    language: "python",
+    title: "bytes vs bytearray vs memoryview",
+    tag: "families",
+    code: `import sys
+
+data = bytes(range(256))   # immutable, 256 bytes
+
+# bytearray: mutable in-place editing
+ba = bytearray(data)
+ba[0] = 255
+
+# memoryview: zero-copy slice of a buffer
+mv = memoryview(data)
+chunk = mv[10:20]             # no data copy!
+print(bytes(chunk).hex())     # 0a0b0c0d0e0f101112 13
+
+# Size comparison
+print(sys.getsizeof(data))    # 281
+print(sys.getsizeof(mv))      # 200  (just the view header)
+
+# Use case: large binary data manipulation
+mv[0:4] = bytearray(b'\\x00\\x00\\x00\\x00')  # won't work on bytes`,
+    explanation: "`bytes` is immutable and hashable; `bytearray` is mutable for in-place editing; `memoryview` provides zero-copy slices of any buffer-protocol object — use `memoryview` when slicing large binary buffers without copying data.",
+  },
+  {
+    id: "py-understand-bool-subclass",
+    language: "python",
+    title: "bool is a subclass of int",
+    tag: "understanding",
+    code: `print(isinstance(True, int))   # True
+print(isinstance(False, int))  # True
+
+# True == 1 and False == 0
+print(True == 1)   # True
+print(False == 0)  # True
+
+# But they are distinct singletons
+print(True is 1)   # False
+print(type(True))  # <class 'bool'>
+
+# Arithmetic with bools
+print([1, 2, 3][True])   # 2  (index 1)
+print([1, 2, 3][False])  # 1  (index 0)`,
+    explanation: "`bool` is a subclass of `int` with exactly two instances, so booleans participate in arithmetic and can be used as indices — True is 1 and False is 0, but `True is 1` is `False` because they're different objects.",
+  },
+  {
+    id: "py-round-banker",
+    language: "python",
+    title: "Python uses banker's rounding",
+    tag: "snippet",
+    code: `# Python rounds halves to the nearest EVEN number (banker's rounding)
+print(round(0.5))   # 0  (rounds to even)
+print(round(1.5))   # 2  (rounds to even)
+print(round(2.5))   # 2  (rounds to even)
+print(round(3.5))   # 4  (rounds to even)
+
+# This differs from 'round half up' used in many other languages
+# Use Decimal for explicit control
+from decimal import Decimal, ROUND_HALF_UP
+d = Decimal("2.5")
+print(d.quantize(Decimal("1"), rounding=ROUND_HALF_UP))  # 3`,
+    explanation: "Python's `round()` uses IEEE 754 banker's rounding (round-half-to-even), which reduces cumulative bias in statistics — but surprises anyone expecting always-round-up behavior; use `Decimal` if you need a specific rounding mode.",
+  },
+  {
+    id: "py-classes-init-subclass2",
+    language: "python",
+    title: "__init_subclass__ hooks into subclass creation",
+    tag: "classes",
+    code: `class Plugin:
+    _registry = {}
+
+    def __init_subclass__(cls, plugin_name=None, **kwargs):
+        super().__init_subclass__(**kwargs)
+        if plugin_name:
+            Plugin._registry[plugin_name] = cls
+
+class AudioPlugin(Plugin, plugin_name="audio"):
+    def process(self): return "audio"
+
+class VideoPlugin(Plugin, plugin_name="video"):
+    def process(self): return "video"
+
+print(Plugin._registry)
+# {'audio': <class 'AudioPlugin'>, 'video': <class 'VideoPlugin'>}
+
+# Auto-registration without metaclass boilerplate
+p = Plugin._registry["audio"]()
+print(p.process())  # audio`,
+    explanation: "`__init_subclass__` is called whenever a class is subclassed and receives keyword arguments from the class definition — it's the lightweight alternative to metaclasses for plugin registries and auto-configuration.",
+  },
+  {
+    id: "py-types-none-type",
+    language: "python",
+    title: "None and NoneType",
+    tag: "types",
+    code: `print(type(None))    # <class 'NoneType'>
+print(type(None).__name__)  # NoneType
+
+# None is a singleton
+a = None
+b = None
+print(a is b)   # True
+
+# Functions without return implicitly return None
+def no_return():
+    x = 1
+
+print(no_return())  # None
+print(no_return() is None)  # True
+
+# Type hint for optional
+from typing import Optional
+def greet(name: Optional[str] = None) -> str:
+    return f"Hi {name}" if name is not None else "Hi!"
+
+print(greet())        # Hi!
+print(greet("Alice")) # Hi Alice`,
+    explanation: "`NoneType` is a singleton class with `None` as its only instance; functions that fall off the end implicitly return `None`; in type hints, `Optional[T]` means `T | None`.",
+  },
+  {
+    id: "py-understand-generator-lazy3",
+    language: "python",
+    title: "Generators are lazy: body doesn't run until iterated",
+    tag: "understanding",
+    code: `def noisy():
+    print("A")
+    yield 1
+    print("B")
+    yield 2
+    print("C")
+
+gen = noisy()   # Nothing printed yet
+print("created")
+
+val = next(gen)  # prints "A"
+print(f"got {val}")  # got 1
+
+val = next(gen)  # prints "B"
+print(f"got {val}")  # got 2
+# Prints "C" only when next() is called again (StopIteration after)`,
+    explanation: "A generator function returns immediately when called; its body runs only when `next()` is called, executing up to the next `yield` — this laziness enables infinite sequences and efficient pipelining.",
+  },
+  {
+    id: "py-caveat-extend-vs-plus",
+    language: "python",
+    title: "list += extends in place; list + list creates new",
+    tag: "caveats",
+    code: `a = [1, 2]
+b = a
+a += [3, 4]    # __iadd__: extends a IN PLACE
+print(b)       # [1, 2, 3, 4]  b is still aliased to a!
+
+a = [1, 2]
+b = a
+a = a + [3, 4]  # __add__: creates a NEW list, rebinds a
+print(b)        # [1, 2]  b unchanged
+
+# Same asymmetry for tuples (which are immutable):
+t = (1, 2)
+t += (3, 4)     # creates a new tuple (tuples are immutable)
+print(type(t))  # <class 'tuple'>`,
+    explanation: "`list += x` calls `__iadd__` which mutates the list in place (all aliases see the change), whereas `list = list + x` creates a new list and rebinds the name — aliases to the original are unaffected.",
+  },
+  {
+    id: "py-caveat-except-scope3",
+    language: "python",
+    title: "Exception variable is unbound after the except block",
+    tag: "caveats",
+    code: `for attempt in range(3):
+    try:
+        raise RuntimeError("fail")
+    except RuntimeError as e:
+        last = e     # save it while we can
+    # 'e' is deleted here to break the reference cycle
+
+print(last)  # RuntimeError('fail')  — saved copy works
+
+# A common gotcha in loops:
+errors = []
+for i in range(3):
+    try:
+        int("bad")
+    except ValueError as e:
+        errors.append(str(e))  # str(e) is fine; e will be deleted
+
+print(errors)  # ['invalid literal...', ...]`,
+    explanation: "Python 3 deletes the exception `as` binding when the `except` block exits to avoid reference cycles with traceback objects — always capture what you need (e.g., `str(e)`) inside the block.",
+  },
+  {
+    id: "py-classes-mixin-pattern",
+    language: "python",
+    title: "Mixin adds behaviour without full inheritance",
+    tag: "classes",
+    code: `class JsonMixin:
+    def to_json(self):
+        import json
+        return json.dumps(self.__dict__)
+
+    @classmethod
+    def from_json(cls, json_str):
+        import json
+        return cls(**json.loads(json_str))
+
+class LogMixin:
+    def log(self, msg):
+        print(f"[{type(self).__name__}] {msg}")
+
+class User(JsonMixin, LogMixin):
+    def __init__(self, name, age):
+        self.name = name
+        self.age = age
+
+u = User("Alice", 30)
+print(u.to_json())     # {"name": "Alice", "age": 30}
+u.log("created")       # [User] created`,
+    explanation: "Mixins are small classes that provide specific reusable methods without being standalone base classes — they use multiple inheritance to compose behaviour, and work best when they don't add `__init__` or conflicting state.",
+  },
+  {
+    id: "py-caveat-recursive-repr",
+    language: "python",
+    title: "Self-referential containers show '...' in repr",
+    tag: "caveats",
+    code: `lst = [1, 2, 3]
+lst.append(lst)    # lst now contains itself!
+
+print(lst)  # [1, 2, 3, [...]]  — Python detects the cycle
+
+# Equality check would recurse infinitely
+# Python has cycle detection for repr but NOT for ==
+import sys
+# Don't do: lst == lst  (it works by identity, but deep == would loop)
+
+# Copying a circular structure requires deepcopy cycle detection
+import copy
+lst2 = copy.deepcopy(lst)
+print(lst2)   # [1, 2, 3, [...]]`,
+    explanation: "Python's `repr()` detects and breaks reference cycles (showing `[...]`) so printing a self-referential container doesn't recurse infinitely; `copy.deepcopy()` also handles cycles, but naive recursive traversal would loop forever.",
+  },
+  {
+    id: "py-understand-tuple-comma",
+    language: "python",
+    title: "The comma makes a tuple, not the parentheses",
+    tag: "understanding",
+    code: `# What are the types of these?
+a = (1)
+b = (1,)
+c = 1,
+
+print(type(a))   # <class 'int'>    — just parenthesised int
+print(type(b))   # <class 'tuple'>  — tuple due to trailing comma
+print(type(c))   # <class 'tuple'>  — tuple without parens!
+
+# Common bug in return statements
+def oops():
+    return (42)   # returns int, not tuple
+
+def correct():
+    return (42,)  # returns tuple`,
+    explanation: "A single-element tuple requires a trailing comma: `(1,)` or just `1,` — the parentheses are optional and are only grouping; without the comma, `(1)` is just the integer `1`.",
+  },
+  {
+    id: "py-classes-enum-features",
+    language: "python",
+    title: "Enum with methods and properties",
+    tag: "classes",
+    code: `from enum import Enum, auto
+
+class Color(Enum):
+    RED   = auto()
+    GREEN = auto()
+    BLUE  = auto()
+
+    @property
+    def hex(self):
+        mapping = {Color.RED: "#FF0000", Color.GREEN: "#00FF00",
+                   Color.BLUE: "#0000FF"}
+        return mapping[self]
+
+    def mix(self, other):
+        return f"mixed {self.name} and {other.name}"
+
+print(Color.RED.hex)              # #FF0000
+print(Color.RED.mix(Color.BLUE))  # mixed RED and BLUE
+print(Color(1))                   # Color.RED
+print(Color["GREEN"])             # Color.GREEN`,
+    explanation: "Enum members can have `@property` methods and regular instance methods — accessing the enum member calls the property or method on that member, enabling rich enum types with associated behaviour beyond just names and values.",
+  },
+  {
+    id: "py-understand-chained-assign3",
+    language: "python",
+    title: "Chained assignment shares one object",
+    tag: "understanding",
+    code: `# All three names point to the SAME list object
+a = b = c = []
+
+a.append(1)
+print(b)  # [1]  — b sees it!
+print(c)  # [1]  — c sees it too!
+
+# For immutable types (int, str) this is harmless
+x = y = 0
+x += 1        # creates a new int; y unchanged
+print(y)      # 0
+
+# To get independent lists:
+a, b, c = [], [], []`,
+    explanation: "Chained assignment `a = b = c = expr` evaluates `expr` once and binds all names to the same object — fine for immutables (rebinding replaces the object), but a trap for mutable ones like lists.",
+  },
+  {
+    id: "py-families-dataclass-namedtuple2",
+    language: "python",
+    title: "dataclass vs NamedTuple vs TypedDict",
+    tag: "families",
+    code: `from dataclasses import dataclass
+from typing import NamedTuple, TypedDict
+
+@dataclass
+class DC:
+    x: int; y: int  # mutable, supports methods, inheritance
+
+class NT(NamedTuple):
+    x: int; y: int  # immutable tuple subclass, hashable
+
+class TD(TypedDict):
+    x: int; y: int  # plain dict at runtime, type-checked statically
+
+dc = DC(1, 2); dc.x = 9      # OK
+nt = NT(1, 2)                 # nt[0] == 1, hash() works
+td: TD = {"x": 1, "y": 2}   # just a dict, no special methods
+
+print(isinstance(nt, tuple))  # True
+print(isinstance(td, dict))   # True
+print(dc)   # DC(x=9, y=2)`,
+    explanation: "Choose `dataclass` for mutable records with methods; `NamedTuple` for immutable tuple-compatible records that need hashing or positional indexing; `TypedDict` when you need a plain `dict` with static type annotations.",
+  },
+  {
+    id: "py-understand-neg-modulo3",
+    language: "python",
+    title: "Python modulo always has sign of divisor",
+    tag: "understanding",
+    code: `# Python: result has the same sign as the divisor
+print( 7 %  3)   #  1
+print(-7 %  3)   #  2  (not -1!)
+print( 7 % -3)   # -2  (not  1!)
+print(-7 % -3)   # -1
+
+# C/Java: result has sign of dividend
+# Python's definition: a == (a // b) * b + (a % b) always holds
+print(-7 //  3)  # -3  (floor division)
+print(-7  %  3)  #  2  (check: -7 == -3*3 + 2 = -9+2 = -7 ✓)`,
+    explanation: "Python's `%` uses floored division (result sign matches divisor), unlike C/Java's truncated division (result sign matches dividend) — Python's version satisfies `a == (a//b)*b + (a%b)` for all integers including negatives.",
+  },
+  {
+    id: "py-classes-dataclass-post-init2",
+    language: "python",
+    title: "__post_init__ validates dataclass fields",
+    tag: "classes",
+    code: `from dataclasses import dataclass, field
+
+@dataclass
+class Interval:
+    start: float
+    end: float
+    label: str = "interval"
+
+    def __post_init__(self):
+        # Validation runs after __init__
+        if self.start >= self.end:
+            raise ValueError(f"start must be < end: {self.start} >= {self.end}")
+        # Derived attribute
+        self.length = self.end - self.start
+
+i = Interval(1.0, 5.0)
+print(i.length)  # 4.0
+
+try:
+    Interval(5.0, 1.0)
+except ValueError as e:
+    print(e)`,
+    explanation: "`__post_init__` runs after the dataclass-generated `__init__` fills in the fields — the standard place for field validation, computed/derived attributes, and any initialisation that depends on multiple fields.",
+  },
+  {
+    id: "py-caveat-float-rounding",
+    language: "python",
+    title: "0.1 + 0.2 != 0.3 due to float representation",
+    tag: "caveats",
+    code: `print(0.1 + 0.2)         # 0.30000000000000004
+print(0.1 + 0.2 == 0.3)  # False!
+
+# Use math.isclose for approximate float comparison
+import math
+print(math.isclose(0.1 + 0.2, 0.3))  # True
+
+# Or use Decimal for exact decimal arithmetic
+from decimal import Decimal
+print(Decimal("0.1") + Decimal("0.2"))  # 0.3
+print(Decimal("0.1") + Decimal("0.2") == Decimal("0.3"))  # True`,
+    explanation: "Most decimal fractions cannot be represented exactly in binary floating-point, so `0.1 + 0.2` accumulates rounding error; use `math.isclose()` for comparisons and `Decimal` when exact decimal arithmetic matters.",
+  },
+  {
+    id: "py-types-typevar-bound",
+    language: "python",
+    title: "TypeVar with bound constrains to subtypes",
+    tag: "types",
+    code: `from typing import TypeVar
+
+class Animal:
+    def speak(self) -> str:
+        return "..."
+
+class Dog(Animal):
+    def speak(self) -> str:
+        return "Woof"
+
+T = TypeVar("T", bound=Animal)
+
+def make_speak(animal: T) -> T:
+    print(animal.speak())
+    return animal   # return type is same as input type
+
+dog = make_speak(Dog())   # Woof
+print(type(dog))          # <class 'Dog'>  — preserved, not Animal`,
+    explanation: "`TypeVar(bound=Base)` constrains the type variable to `Base` or any of its subclasses — the return type matches the exact input type (not the base), enabling type-safe APIs that preserve subtype identity.",
+  },
+  {
+    id: "py-types-typeddict-total",
+    language: "python",
+    title: "TypedDict with total=False makes all keys optional",
+    tag: "types",
+    code: `from typing import TypedDict
+
+class Movie(TypedDict):
+    title: str   # required
+    year: int    # required
+
+class MovieOptional(TypedDict, total=False):
+    title: str   # optional
+    year: int    # optional
+    rating: float  # optional
+
+# Mix required and optional with inheritance
+class Film(TypedDict):
+    title: str             # required
+
+class FilmExtra(Film, total=False):
+    year: int              # optional
+    director: str          # optional
+
+m: FilmExtra = {"title": "Dune"}  # OK — year and director optional
+print(m["title"])  # Dune`,
+    explanation: "`TypedDict(total=False)` makes all keys optional (not required at runtime but tracked by type checkers); combining a `total=True` base with a `total=False` subclass is the standard pattern for mixing required and optional fields.",
+  },
+  {
+    id: "py-types-bytes-immutable",
+    language: "python",
+    title: "bytes is immutable; bytearray is mutable",
+    tag: "types",
+    code: `b = b"hello"
+try:
+    b[0] = 72   # H
+except TypeError as e:
+    print(e)   # 'bytes' object does not support item assignment
+
+# bytearray is the mutable version
+ba = bytearray(b"hello")
+ba[0] = 72    # ASCII for 'H'
+print(ba)     # bytearray(b'Hello')
+print(bytes(ba))  # b'Hello'
+
+# bytes are indexable to ints
+print(b[0])   # 104  (ASCII for 'h')
+print(b[0:2]) # b'he'  (slicing returns bytes)`,
+    explanation: "`bytes` is an immutable sequence of integers 0-255 (like a `tuple` of bytes); `bytearray` is the mutable counterpart (like a `list`) — both are converted with `bytes(ba)` and `bytearray(b)`.",
+  },
+  {
+    id: "py-classes-property-cached2",
+    language: "python",
+    title: "cached_property computes once then stores",
+    tag: "classes",
+    code: `from functools import cached_property
+import time
+
+class DataProcessor:
+    def __init__(self, data: list):
+        self._data = data
+
+    @cached_property
+    def summary(self):
+        # Expensive computation — runs only once
+        print("computing...")
+        return {"count": len(self._data), "sum": sum(self._data)}
+
+dp = DataProcessor([1, 2, 3, 4, 5])
+print(dp.summary)   # computing... then {'count': 5, 'sum': 15}
+print(dp.summary)   # {'count': 5, 'sum': 15} — no recomputation
+# Stored in dp.__dict__['summary'] — shadows the descriptor`,
+    explanation: "`functools.cached_property` (Python 3.8+) computes a property value on first access and caches it in the instance's `__dict__`, shadowing the descriptor on subsequent accesses — lazy evaluation with zero overhead after the first call.",
+  },
+  {
+    id: "py-types-union-pipe3",
+    language: "python",
+    title: "X | Y union type syntax (Python 3.10+)",
+    tag: "types",
+    code: `# Python 3.10+ allows | for union types at runtime too
+def stringify(value: int | float | str) -> str:
+    return str(value)
+
+print(stringify(42))     # '42'
+print(stringify(3.14))   # '3.14'
+print(stringify("hi"))   # 'hi'
+
+# isinstance also accepts | unions (3.10+)
+x = 3.14
+print(isinstance(x, int | float))  # True
+
+# None union is the new Optional
+def greet(name: str | None = None) -> str:
+    return f"Hi {name or 'stranger'}!"
+
+print(greet())       # Hi stranger!
+print(greet("Bob"))  # Hi Bob!`,
+    explanation: "Python 3.10 introduced `X | Y` as built-in union type syntax, usable in annotations, `isinstance()`, and at runtime — replacing `Union[X, Y]` and `Optional[X]` from `typing` with cleaner, more readable syntax.",
+  },
+  {
+    id: "py-chainmap-priority",
+    language: "python",
+    title: "ChainMap for layered configuration lookup",
+    tag: "structures",
+    code: `from collections import ChainMap
+
+# Later maps are fallbacks; earlier maps shadow them
+cli_args  = {"debug": True, "output": "file.txt"}
+env_vars  = {"output": "stdout", "timeout": 30}
+defaults  = {"debug": False, "output": "stdout", "timeout": 60}
+
+config = ChainMap(cli_args, env_vars, defaults)
+print(config["debug"])    # True  (from cli_args)
+print(config["output"])   # file.txt  (from cli_args)
+print(config["timeout"])  # 30  (from env_vars, not defaults)
+
+# Writing always goes to the FIRST map
+config["new_key"] = "added"
+print(list(cli_args.keys()))  # debug, output, new_key`,
+    explanation: "`ChainMap` chains multiple dicts into a single view with a priority order; lookups walk the chain left-to-right, and writes always go to the first map — perfect for CLI-args > env-vars > defaults layering.",
+  },
+  {
+    id: "py-caveat-class-var-mutate",
+    language: "python",
+    title: "Mutable class variable is shared across all instances",
+    tag: "caveats",
+    code: `class Student:
+    grades = []          # shared mutable class variable
+
+s1 = Student()
+s2 = Student()
+
+s1.grades.append(90)     # mutates the CLASS variable!
+print(s2.grades)         # [90]  — surprise!
+
+# Fix: use instance variable in __init__
+class Student:
+    def __init__(self):
+        self.grades = []  # each instance gets its own list`,
+    explanation: "Mutable class variables (lists, dicts) are shared among all instances — `s1.grades.append(90)` mutates the class-level list, not an instance copy; always assign fresh mutables in `__init__` if each instance needs its own.",
+  },
+  {
+    id: "py-counter-ops",
+    language: "python",
+    title: "Counter supports arithmetic and set-like operations",
+    tag: "structures",
+    code: `from collections import Counter
+
+a = Counter({"x": 3, "y": 2, "z": 1})
+b = Counter({"x": 1, "y": 4, "w": 2})
+
+print(a + b)   # Counter({'y': 6, 'x': 4, 'w': 2, 'z': 1})
+print(a - b)   # Counter({'x': 2, 'z': 1})  — negatives dropped
+print(a & b)   # Counter({'x': 1, 'y': 2})  — min of each
+print(a | b)   # Counter({'y': 4, 'x': 3, 'w': 2, 'z': 1}) — max
+
+# subtract() allows negative counts (unlike -)
+a.subtract(b)
+print(a)  # Counter({'x': 2, 'z': 1, 'y': -2, 'w': -2})`,
+    explanation: "`Counter` supports `+` (combine), `-` (subtract, dropping non-positives), `&` (intersection = min), and `|` (union = max); `subtract()` is the in-place version that keeps negative counts.",
+  },
+  {
+    id: "py-types-bool-values",
+    language: "python",
+    title: "True and False are the only two bool instances",
+    tag: "types",
+    code: `print(type(True))   # <class 'bool'>
+print(bool.__bases__)  # (<class 'int'>,)  — bool inherits int
+
+# There are exactly two bool instances
+import sys
+print(sys.getrefcount(True) > 1)  # True — many references
+
+# Boolean results of comparisons
+x = 5
+print(type(x > 3))   # <class 'bool'>
+print(type(x == 5))  # <class 'bool'>
+
+# bool() constructor uses truthiness rules
+print(bool(0))    # False
+print(bool([]))   # False
+print(bool([0]))  # True  — non-empty list, even if it contains 0`,
+    explanation: "`bool` is a sealed subclass of `int` with exactly two singleton instances; `True` and `False` are returned by comparison operators and `bool()`, which applies Python's truthiness rules to any object.",
+  },
+  {
+    id: "py-array-module3",
+    language: "python",
+    title: "array.array: typed, memory-efficient array",
+    tag: "structures",
+    code: `import array, sys
+
+# 'i' = signed int, 'd' = double, 'b' = signed byte
+ints = array.array('i', range(100))
+lst  = list(range(100))
+
+print(sys.getsizeof(ints))  # ~456 bytes
+print(sys.getsizeof(lst))   # ~856 bytes  (approx)
+
+# array supports slicing, extend, append like list
+ints.append(100)
+ints.extend([101, 102])
+print(ints[0], ints[-1])  # 0 102
+
+# But all elements must match the declared type
+try:
+    ints.append("x")
+except TypeError as e:
+    print(e)  # an integer is required`,
+    explanation: "`array.array` stores elements as raw C-style typed values (no Python object overhead per element), so a 100-element int array uses roughly half the memory of a list — useful when you have large homogeneous numeric data and don't want NumPy.",
+  },
+  {
+    id: "py-caveat-del-vs-pop",
+    language: "python",
+    title: "del vs dict.pop(): one raises on missing key",
+    tag: "caveats",
+    code: `d = {"a": 1, "b": 2, "c": 3}
+
+# del raises KeyError if key missing
+del d["a"]
+print(d)  # {'b': 2, 'c': 3}
+
+try:
+    del d["missing"]
+except KeyError:
+    print("del raises KeyError")
+
+# pop() with default never raises
+val = d.pop("b")           # returns 2
+val2 = d.pop("missing", 0) # returns default 0
+print(val, val2)           # 2 0`,
+    explanation: "`del d[key]` raises `KeyError` if the key is absent; `d.pop(key, default)` returns the default instead — use `pop` when the key might not exist to avoid the try/except boilerplate.",
+  },
+  {
+    id: "py-heapq-heapify",
+    language: "python",
+    title: "heapq.heapify converts a list in-place in O(n)",
+    tag: "structures",
+    code: `import heapq
+
+nums = [5, 8, 1, 3, 9, 2, 7]
+
+# heapify rearranges in-place in O(n)
+heapq.heapify(nums)
+print(nums)       # [1, 3, 2, 8, 9, 5, 7]  (heap-ordered)
+print(nums[0])    # 1  — minimum guaranteed at index 0
+
+# heapify + heappop gives heap sort
+sorted_nums = []
+while nums:
+    sorted_nums.append(heapq.heappop(nums))
+print(sorted_nums)  # [1, 2, 3, 5, 7, 8, 9]`,
+    explanation: "`heapq.heapify(lst)` rearranges a list into heap order in O(n) — faster than pushing n items one at a time (O(n log n)), because it uses a bottom-up construction algorithm.",
+  },
+  {
+    id: "py-caveat-is-vs-eq3",
+    language: "python",
+    title: "is vs == for strings — interning surprises",
+    tag: "caveats",
+    code: `a = "hello"
+b = "hello"
+print(a is b)    # True  — CPython interns short literals
+
+a = "hello world"
+b = "hello world"
+print(a is b)    # True  — still interned in CPython
+
+# But dynamically constructed strings may not be:
+a = "hel" + "lo"
+b = "hello"
+print(a is b)    # True  in CPython (compile-time constant folding)
+
+a = "hel" + "lo" + " world"
+b = "hello world"
+print(a is b)    # May be False!  Do NOT rely on is for strings`,
+    explanation: "CPython interns many string literals as an implementation optimisation, so `is` often returns `True` for equal strings — but this is not guaranteed by the language spec; always use `==` for string equality.",
+  },
+  {
+    id: "py-families-list-tuple-cmp",
+    language: "python",
+    title: "list vs tuple: mutability and memory",
+    tag: "families",
+    code: `import sys
+
+lst = [1, 2, 3, 4, 5]
+tup = (1, 2, 3, 4, 5)
+
+print(sys.getsizeof(lst))  # 120 bytes (overallocates for growth)
+print(sys.getsizeof(tup))  # 80 bytes  (exact allocation)
+
+# list: mutable, dynamic resize, O(1) amortized append
+lst.append(6)
+lst[0] = 99
+
+# tuple: immutable, hashable (if elements are), faster iteration
+print(hash(tup))  # some integer
+
+# Tuple is idiomatic for heterogeneous records
+point = (3.0, 4.0)   # (x, y)
+# list is idiomatic for homogeneous collections
+scores = [88, 92, 75]`,
+    explanation: "Tuples use about 33% less memory than equivalent lists and are faster to create and iterate; they're idiomatic for heterogeneous records with fixed structure, while lists suit homogeneous, dynamically-sized sequences.",
+  },
+  {
+    id: "py-deque-window",
+    language: "python",
+    title: "deque with maxlen as a fixed-size sliding window",
+    tag: "structures",
+    code: `from collections import deque
+
+# maxlen caps the size; oldest element auto-discards when full
+window = deque(maxlen=3)
+for x in range(7):
+    window.append(x)
+    print(list(window))
+# [0]
+# [0, 1]
+# [0, 1, 2]
+# [1, 2, 3]  <- 0 dropped
+# [2, 3, 4]
+# [3, 4, 5]
+# [4, 5, 6]`,
+    explanation: "`deque(maxlen=N)` gives a circular buffer: once full, appending to the right automatically drops from the left (and vice versa for `appendleft`) — ideal for rolling windows without manual length management.",
+  },
+  {
+    id: "py-types-protocol-runtime3",
+    language: "python",
+    title: "Protocol with runtime_checkable for isinstance",
+    tag: "types",
+    code: `from typing import Protocol, runtime_checkable
+
+@runtime_checkable
+class Drawable(Protocol):
+    def draw(self) -> None: ...
+
+class Circle:
+    def draw(self) -> None:
+        print("O")
+
+class Square:
+    def draw(self) -> None:
+        print("[]")
+
+class NotDrawable:
+    pass
+
+print(isinstance(Circle(), Drawable))      # True
+print(isinstance(NotDrawable(), Drawable)) # False
+
+# Works without inheritance — structural typing
+shapes = [Circle(), Square()]
+for s in shapes:
+    s.draw()`,
+    explanation: "`@runtime_checkable` makes a `Protocol` usable with `isinstance()` at runtime (checking only method names, not signatures) — enabling duck-type checks without requiring subclassing, similar to Go interfaces.",
+  },
+  {
+    id: "py-understand-print-end3",
+    language: "python",
+    title: "print() end and sep parameters",
+    tag: "understanding",
+    code: `# What does this print?
+for i in range(5):
+    print(i, end=" ")
+# 0 1 2 3 4  (all on one line with trailing space)
+
+print()  # newline
+
+# sep controls what goes between multiple arguments
+print(1, 2, 3, sep=", ")   # 1, 2, 3
+print(1, 2, 3, sep="")     # 123
+print(*"hello", sep="-")   # h-e-l-l-o`,
+    explanation: "`print()` has `end='\\n'` by default; overriding `end` and `sep` lets you control line termination and argument separation, enabling concise formatting without manual string joining.",
+  },
+  {
+    id: "py-defaultdict-list",
+    language: "python",
+    title: "defaultdict(list) for grouping",
+    tag: "structures",
+    code: `from collections import defaultdict
+
+# Group words by first letter without setdefault boilerplate
+words = ["apple", "avocado", "banana", "blueberry", "cherry"]
+grouped = defaultdict(list)
+for word in words:
+    grouped[word[0]].append(word)
+
+print(dict(grouped))
+# {'a': ['apple', 'avocado'],
+#  'b': ['banana', 'blueberry'],
+#  'c': ['cherry']}`,
+    explanation: "`defaultdict(list)` auto-creates an empty list for missing keys on first access, eliminating the `if key not in d: d[key] = []` boilerplate — the factory callable runs each time a missing key is accessed.",
+  },
+  {
+    id: "py-sorted-multi-key",
+    language: "python",
+    title: "Sort by multiple fields using a tuple key",
+    tag: "snippet",
+    code: `students = [
+    {"name": "Alice", "grade": "B", "age": 20},
+    {"name": "Bob",   "grade": "A", "age": 22},
+    {"name": "Carol", "grade": "A", "age": 21},
+    {"name": "Dave",  "grade": "B", "age": 20},
+]
+
+# Primary key: grade, secondary: age, tertiary: name
+result = sorted(students, key=lambda s: (s["grade"], s["age"], s["name"]))
+for s in result:
+    print(s["name"], s["grade"], s["age"])
+# Bob A 22, Carol A 21, Alice B 20, Dave B 20`,
+    explanation: "Returning a tuple from the key function gives lexicographic multi-field sorting: elements are first compared on the first tuple element, then the second on ties, and so on.",
+  },
+  {
+    id: "py-classes-staticmethod2",
+    language: "python",
+    title: "staticmethod: neither self nor cls",
+    tag: "classes",
+    code: `class Validator:
+    def __init__(self, value):
+        self.value = Validator.validate(value)   # call via class
+
+    @staticmethod
+    def validate(value):
+        if not isinstance(value, (int, float)):
+            raise TypeError(f"Expected number, got {type(value)}")
+        if value < 0:
+            raise ValueError("Must be non-negative")
+        return value
+
+    @classmethod
+    def from_string(cls, s):
+        return cls(float(s))
+
+v = Validator(42)
+print(v.value)   # 42
+
+# Can also call on instance, class, or directly as a function
+Validator.validate(10)`,
+    explanation: "`@staticmethod` groups a utility function inside a class without receiving `self` or `cls` — use it when the function is logically related to the class but doesn't need access to instance or class state.",
+  },
+  {
+    id: "py-deque-rotate-usage",
+    language: "python",
+    title: "deque.rotate() shifts elements in O(k)",
+    tag: "structures",
+    code: `from collections import deque
+
+d = deque([1, 2, 3, 4, 5])
+
+d.rotate(2)       # rotate right by 2
+print(list(d))    # [4, 5, 1, 2, 3]
+
+d.rotate(-2)      # rotate left by 2
+print(list(d))    # [1, 2, 3, 4, 5]  (back to original)
+
+# Round-robin scheduling: process front, then move to back
+tasks = deque(["A", "B", "C"])
+for _ in range(6):
+    task = tasks[0]
+    tasks.rotate(-1)  # bring next to front
+    print(task, end=" ")
+# A B C A B C`,
+    explanation: "`deque.rotate(n)` moves n items from the right end to the left (positive n) or left to right (negative n) in O(k) — efficient for circular buffer and round-robin scheduling patterns.",
+  },
+  {
+    id: "py-classes-classmethod-alt",
+    language: "python",
+    title: "classmethod as an alternative constructor",
+    tag: "classes",
+    code: `class Date:
+    def __init__(self, year, month, day):
+        self.year, self.month, self.day = year, month, day
+
+    @classmethod
+    def from_iso(cls, iso_string):
+        y, m, d = iso_string.split("-")
+        return cls(int(y), int(m), int(d))
+
+    @classmethod
+    def today(cls):
+        import datetime
+        d = datetime.date.today()
+        return cls(d.year, d.month, d.day)
+
+    def __repr__(self):
+        return f"Date({self.year}, {self.month}, {self.day})"
+
+d = Date.from_iso("2026-05-08")
+print(d)  # Date(2026, 5, 8)`,
+    explanation: "`@classmethod` receives the class as the first argument (`cls`), making it the standard pattern for alternative constructors — it works correctly with subclasses because `cls` refers to the actual class, not the base.",
+  },
+  {
+    id: "py-filter-none-truthy",
+    language: "python",
+    title: "filter(None, iterable) removes falsy values",
+    tag: "snippet",
+    code: `mixed = [0, 1, "", "hello", None, [], [1, 2], False, True]
+
+# filter(None, iterable) keeps only truthy items
+cleaned = list(filter(None, mixed))
+print(cleaned)  # [1, 'hello', [1, 2], True]
+
+# Equivalent list comp (often more readable)
+cleaned2 = [x for x in mixed if x]
+print(cleaned2)  # [1, 'hello', [1, 2], True]`,
+    explanation: "Passing `None` as the function to `filter()` uses each element's own truthiness as the predicate — useful to strip out `None`, empty strings, 0, and empty containers in one pass.",
+  },
+  {
+    id: "py-understand-empty-truthiness",
+    language: "python",
+    title: "Empty containers and zero are falsy",
+    tag: "understanding",
+    code: `falsy_values = [0, 0.0, 0j, "", b"", [], (), {}, set(), None, False]
+
+for v in falsy_values:
+    print(repr(v), bool(v))
+# All print False
+
+# Common idiom: check emptiness
+lst = []
+if not lst:
+    print("list is empty")  # prints this
+
+# But be careful: 0 is also falsy
+count = 0
+if not count:
+    print("no items OR count is zero")  # ambiguous!`,
+    explanation: "Python's truthiness rules say zero values, empty containers, `None`, and `False` are all falsy — `if lst:` is idiomatic for checking a non-empty collection, but `if count is not None:` is safer when 0 is a valid value.",
+  },
+  {
+    id: "py-classes-dunder-call",
+    language: "python",
+    title: "__call__ makes an instance callable",
+    tag: "classes",
+    code: `class Multiplier:
+    def __init__(self, factor):
+        self.factor = factor
+
+    def __call__(self, value):
+        return value * self.factor
+
+double = Multiplier(2)
+triple = Multiplier(3)
+
+print(double(5))     # 10
+print(triple(5))     # 15
+print(callable(double))  # True
+
+# Use case: stateful function-like objects
+class Counter:
+    def __init__(self): self.n = 0
+    def __call__(self): self.n += 1; return self.n
+
+c = Counter()
+print(c(), c(), c())  # 1 2 3`,
+    explanation: "Implementing `__call__` makes instances callable like functions — useful for stateful callables (counters, memoizers, middleware), or when you need to pass an object wherever a function is expected.",
+  },
+  {
+    id: "py-counter-topn",
+    language: "python",
+    title: "Counter.most_common() for top-N frequencies",
+    tag: "structures",
+    code: `from collections import Counter
+
+words = ["apple", "banana", "apple", "cherry", "banana", "apple"]
+freq = Counter(words)
+
+print(freq.most_common(2))   # [('apple', 3), ('banana', 2)]
+print(freq["apple"])          # 3
+print(freq["missing"])        # 0  (not KeyError)
+
+# Update from another iterable
+freq.update(["banana", "date"])
+print(freq.most_common(3))
+# [('apple', 3), ('banana', 3), ('cherry', 1)]`,
+    explanation: "`Counter.most_common(n)` returns the n most frequent elements in descending order using a heap internally — O(k log n) where k is the number of distinct elements, faster than sorting the whole dict for large inputs.",
+  },
+  {
+    id: "py-types-float-repr",
+    language: "python",
+    title: "float repr shows the shortest roundtrip string",
+    tag: "types",
+    code: `# Python 3.1+ uses David Gay's algorithm for float repr
+x = 0.1
+print(repr(x))    # 0.1  (shortest string that round-trips)
+print(x)          # 0.1  (same as repr for floats)
+
+# But internally it's not exactly 0.1
+import struct
+packed = struct.pack('d', x)
+print(packed.hex())  # 3fb999999999999a (IEEE 754)
+
+# The repr is the SHORTEST string that parses back to the same float
+print(float("0.1") == x)  # True
+print(repr(1/3))  # 0.3333333333333333  (17 significant digits)`,
+    explanation: "Python 3.1+ shows the shortest decimal representation that round-trips to the same float (David Gay's `dtoa`), so `repr(0.1)` shows `0.1` rather than the full `0.1000000000000000055511151...` mantissa.",
+  },
+  {
+    id: "py-bool-arithmetic",
+    language: "python",
+    title: "bool is a subclass of int",
+    tag: "snippet",
+    code: `# True == 1, False == 0 — arithmetic works directly
+print(True + True)    # 2
+print(True * 7)       # 7
+print(False + 5)      # 5
+
+# Handy trick: count truthy items
+nums = [0, 1, 2, 0, 3, 0]
+zeros = sum(x == 0 for x in nums)
+print(zeros)          # 3
+
+# sum() of bools counts True values
+flags = [True, False, True, True, False]
+print(sum(flags))     # 3`,
+    explanation: "`bool` is a subclass of `int`, so `True` and `False` behave as 1 and 0 in arithmetic — `sum(condition for x in iterable)` is the idiomatic way to count matching items.",
+  },
+  {
+    id: "py-caveat-late-binding3",
+    language: "python",
+    title: "Lambda in loop captures variable by reference, not value",
+    tag: "caveats",
+    code: `# All lambdas close over the SAME 'i', which ends at 4
+funcs = [lambda: i for i in range(5)]
+print([f() for f in funcs])  # [4, 4, 4, 4, 4]
+
+# Fix 1: use a default argument to bind the value at creation time
+funcs = [lambda i=i: i for i in range(5)]
+print([f() for f in funcs])  # [0, 1, 2, 3, 4]
+
+# Fix 2: use functools.partial
+from functools import partial
+def identity(x): return x
+funcs = [partial(identity, i) for i in range(5)]
+print([f() for f in funcs])  # [0, 1, 2, 3, 4]`,
+    explanation: "Closures capture variables by reference, not by value — a lambda in a loop refers to the loop variable itself, so all closures see the final value; the `i=i` default-argument trick captures the current value at lambda creation time.",
+  },
+  {
+    id: "py-families-set-frozenset",
+    language: "python",
+    title: "set vs frozenset: mutable vs hashable",
+    tag: "families",
+    code: `# set: mutable, O(1) lookup/add/remove, not hashable
+s = {1, 2, 3}
+s.add(4)
+s.discard(2)
+
+# frozenset: immutable, O(1) lookup, hashable (can be dict key)
+fs = frozenset({1, 2, 3})
+# fs.add(4)  # AttributeError — no mutation methods
+
+# Both support set operations
+print(s & fs)    # intersection
+print(s | fs)    # union
+print(s - fs)    # difference
+
+# frozenset as dict key or set element
+graph = {frozenset({1, 2}): 5, frozenset({2, 3}): 3}
+print(graph[frozenset({2, 1})])  # 5  (order-independent)`,
+    explanation: "`set` is mutable and unhashable; `frozenset` is immutable and hashable, making it usable as a dict key or element of another set — both support the same set-algebra operations with O(1) average membership test.",
+  },
+  {
+    id: "py-ordereddict-move-to_end",
+    language: "python",
+    title: "OrderedDict.move_to_end() for LRU-style ordering",
+    tag: "structures",
+    code: `from collections import OrderedDict
+
+od = OrderedDict()
+od["a"] = 1
+od["b"] = 2
+od["c"] = 3
+
+# Move 'a' to the end (most-recently-used)
+od.move_to_end("a")
+print(list(od.keys()))   # ['b', 'c', 'a']
+
+# Move 'c' to the front (last=False)
+od.move_to_end("c", last=False)
+print(list(od.keys()))   # ['c', 'b', 'a']
+
+# popitem(last=True) removes from end, (last=False) from front
+print(od.popitem(last=False))  # ('c', 3)`,
+    explanation: "`OrderedDict.move_to_end(key, last=True)` is the key building block for an LRU cache: move to end on access, pop from the front when the cache is full — `functools.lru_cache` uses a similar doubly-linked list internally.",
+  },
+  {
+    id: "py-understand-augmented-list",
+    language: "python",
+    title: "'+=' on a list mutates; '+' creates a new list",
+    tag: "understanding",
+    code: `a = [1, 2, 3]
+b = a
+
+# += calls __iadd__, which mutates a in place
+a += [4, 5]
+print(b)  # [1, 2, 3, 4, 5]  — b sees the change!
+
+a = [1, 2, 3]
+b = a
+# + calls __add__, creating a brand-new list
+a = a + [4, 5]
+print(b)  # [1, 2, 3]  — b is unaffected`,
+    explanation: "`+=` on a list calls `__iadd__` which extends the existing list in place, whereas `+` creates a new list and rebinds the name — aliases to the original list see `+=` changes but not `=... +` ones.",
+  },
+  {
+    id: "py-types-fraction-exact",
+    language: "python",
+    title: "Fraction provides exact rational arithmetic",
+    tag: "types",
+    code: `from fractions import Fraction
+
+# Exact representation without floating-point error
+a = Fraction(1, 3)   # 1/3
+b = Fraction(1, 6)   # 1/6
+
+print(a + b)         # 1/2  (exact!)
+print(a * b)         # 1/18
+print(a - b)         # 1/6
+
+# From float — shows the exact binary representation
+print(Fraction(0.1))  # 3602879701896397/36028797018963968  (unexpected!)
+print(Fraction("0.1"))  # 1/10  (use string for intended value)
+print(float(Fraction(1, 3)))  # 0.3333333333333333`,
+    explanation: "`Fraction` stores numerator and denominator as exact integers, giving rational arithmetic with no rounding error — `Fraction(0.1)` reveals the true binary approximation, while `Fraction('0.1')` gives the intended 1/10.",
+  },
+  {
+    id: "py-classes-class-getitem2",
+    language: "python",
+    title: "__class_getitem__ enables MyClass[T] syntax",
+    tag: "classes",
+    code: `class TypedQueue:
+    def __class_getitem__(cls, item):
+        # Return a specialised subclass at runtime
+        name = f"{cls.__name__}[{item.__name__}]"
+        return type(name, (cls,), {"_element_type": item})
+
+    def __init__(self):
+        self._items = []
+
+    def push(self, x):
+        if hasattr(self, "_element_type"):
+            if not isinstance(x, self._element_type):
+                raise TypeError(f"Expected {self._element_type}")
+        self._items.append(x)
+
+IntQueue = TypedQueue[int]
+q = IntQueue()
+q.push(1)
+try:
+    q.push("x")
+except TypeError as e:
+    print(e)`,
+    explanation: "`__class_getitem__(cls, item)` handles `MyClass[T]` subscript syntax at runtime — used by `list[int]`, `dict[str, int]`, and custom generic types to return parameterised type objects for both typing and runtime use.",
+  },
+  {
+    id: "py-types-paramspec",
+    language: "python",
+    title: "ParamSpec preserves decorator argument types",
+    tag: "types",
+    code: `from typing import Callable, TypeVar
+from typing import ParamSpec
+import functools
+
+P = ParamSpec("P")
+R = TypeVar("R")
+
+def log_calls(fn: Callable[P, R]) -> Callable[P, R]:
+    @functools.wraps(fn)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+        print(f"calling {fn.__name__}")
+        return fn(*args, **kwargs)
+    return wrapper
+
+@log_calls
+def add(a: int, b: int) -> int:
+    return a + b
+
+result = add(1, 2)  # calling add
+print(result)       # 3`,
+    explanation: "`ParamSpec` (Python 3.10+) captures a callable's full parameter specification so that decorators can be typed in a way that preserves the original function's argument types and keyword arguments for type checkers.",
+  },
+  {
+    id: "py-caveat-dict-key-type",
+    language: "python",
+    title: "Only hashable (immutable) types can be dict keys",
+    tag: "caveats",
+    code: `# Immutable types are hashable — fine as keys
+d = {1: "int", (1, 2): "tuple", "str": "str"}
+
+# Lists are mutable and unhashable
+try:
+    d[[1, 2]] = "list"
+except TypeError as e:
+    print(e)   # unhashable type: 'list'
+
+# A tuple containing a list is also unhashable
+try:
+    d[(1, [2])] = "nested"
+except TypeError as e:
+    print(e)   # unhashable type: 'list'
+
+# frozenset is hashable
+d[frozenset([1, 2])] = "frozenset"
+print(d[frozenset([2, 1])])   # frozenset`,
+    explanation: "Dict keys must be hashable — all immutable built-in types qualify, but a tuple is only hashable if all its elements are hashable; mutable containers (list, dict, set) always fail.",
+  },
+  {
+    id: "py-classes-slots-vs-dict2",
+    language: "python",
+    title: "__slots__ eliminates __dict__ to save memory",
+    tag: "classes",
+    code: `import sys
+
+class WithDict:
+    def __init__(self, x, y):
+        self.x = x; self.y = y
+
+class WithSlots:
+    __slots__ = ("x", "y")
+    def __init__(self, x, y):
+        self.x = x; self.y = y
+
+d = WithDict(1, 2)
+s = WithSlots(1, 2)
+
+print(sys.getsizeof(d))           # ~48 bytes
+print(sys.getsizeof(d.__dict__))  # ~232 bytes
+print(sys.getsizeof(s))           # ~56 bytes (no __dict__)
+
+try:
+    s.z = 3   # can't add arbitrary attrs
+except AttributeError as e:
+    print(e)`,
+    explanation: "`__slots__` replaces each instance's `__dict__` with fixed-size slot descriptors, reducing per-instance memory by ~200+ bytes and speeding up attribute access — the tradeoff is no dynamic attribute assignment.",
+  },
+  {
+    id: "py-heapq-push-pop",
+    language: "python",
+    title: "heapq: Python's binary min-heap",
+    tag: "structures",
+    code: `import heapq
+
+heap = []
+heapq.heappush(heap, 5)
+heapq.heappush(heap, 1)
+heapq.heappush(heap, 3)
+heapq.heappush(heap, 2)
+
+print(heap[0])             # 1  (smallest, always at index 0)
+print(heapq.heappop(heap)) # 1
+print(heapq.heappop(heap)) # 2
+print(heapq.heappop(heap)) # 3`,
+    explanation: "`heapq` implements a min-heap on a regular list: `heappush` adds in O(log n), `heappop` removes the smallest in O(log n), and `heap[0]` peeks at the minimum in O(1).",
+  },
+  {
+    id: "py-families-pathlib-os",
+    language: "python",
+    title: "pathlib.Path vs os.path",
+    tag: "families",
+    code: `from pathlib import Path
+import os
+
+p = Path("/tmp/demo/file.txt")
+
+# pathlib: OOP, chaining, readable
+print(p.parent)       # /tmp/demo
+print(p.name)         # file.txt
+print(p.stem)         # file
+print(p.suffix)       # .txt
+print(p / "sibling")  # /tmp/demo/file.txt/sibling
+
+# os.path: functional, works on plain strings
+print(os.path.basename("/tmp/demo/file.txt"))  # file.txt
+print(os.path.dirname("/tmp/demo/file.txt"))   # /tmp/demo
+print(os.path.join("/tmp", "demo", "file.txt")) # /tmp/demo/file.txt
+
+# Prefer pathlib for new code — much cleaner API`,
+    explanation: "`pathlib.Path` is the modern OOP path API (Python 3.4+) with operator overloading for joining and rich attribute access; `os.path` remains useful when you need string paths for legacy APIs or maximal compatibility.",
+  },
+  {
+    id: "py-families-io-types",
+    language: "python",
+    title: "StringIO vs BytesIO: in-memory file-like objects",
+    tag: "families",
+    code: `import io
+
+# StringIO: in-memory text stream
+sio = io.StringIO()
+sio.write("hello ")
+sio.write("world")
+sio.seek(0)
+print(sio.read())     # hello world
+
+# BytesIO: in-memory binary stream
+bio = io.BytesIO(b"binary data")
+print(bio.read(6))    # b'binary'
+print(bio.tell())     # 6
+
+# Useful for testing code that expects file objects
+def process_file(f):
+    return f.read().upper()
+
+print(process_file(io.StringIO("test")))  # TEST`,
+    explanation: "`StringIO` and `BytesIO` are in-memory file-like objects that implement the full `io` API — ideal for testing code that reads/writes to files, or for passing text/binary data where a file path is expected.",
+  },
+  {
+    id: "py-counter-subtract",
+    language: "python",
+    title: "Counter.subtract keeps negative counts",
+    tag: "structures",
+    code: `from collections import Counter
+
+inventory = Counter({"apples": 5, "bananas": 3, "cherries": 10})
+order     = Counter({"apples": 3, "bananas": 5, "dates": 2})
+
+# subtract modifies in place, keeps negatives (unlike -)
+inventory.subtract(order)
+print(inventory)
+# Counter({'cherries': 10, 'apples': 2, 'bananas': -2, 'dates': -2})
+
+# Negative counts mean 'out of stock'
+out_of_stock = [item for item, qty in inventory.items() if qty < 0]
+print(out_of_stock)  # ['bananas', 'dates']`,
+    explanation: "`Counter.subtract()` reduces counts in place and keeps negatives (meaning deficit), unlike the `-` operator which silently drops non-positive results — useful for inventory, accounting, or any domain with deficits.",
+  },
+  {
+    id: "py-caveat-str-vs-bytes",
+    language: "python",
+    title: "str and bytes never compare equal",
+    tag: "caveats",
+    code: `s = "hello"
+b = b"hello"
+
+print(s == b)    # False — different types, never equal
+print(type(s))   # <class 'str'>
+print(type(b))   # <class 'bytes'>
+
+# Encode str to bytes or decode bytes to str first
+print(s == b.decode("utf-8"))    # True
+print(s.encode("utf-8") == b)    # True
+
+# Concatenation also fails
+try:
+    s + b
+except TypeError as e:
+    print(e)  # can only concatenate str (not "bytes") to str`,
+    explanation: "`str` and `bytes` are distinct types in Python 3 — they never compare equal regardless of content, and mixing them in operations raises `TypeError`; you must explicitly encode/decode to switch between them.",
+  },
+  {
+    id: "py-understand-floor-div3",
+    language: "python",
+    title: "Floor division (//) rounds toward negative infinity",
+    tag: "understanding",
+    code: `# // always rounds DOWN (toward -infinity), not toward zero
+print( 7 //  2)   #  3
+print(-7 //  2)   # -4  (not -3!)
+print( 7 // -2)   # -4  (not -3!)
+print(-7 // -2)   #  3
+
+# Compare with int() which truncates toward zero
+print(int(-7 / 2))  # -3  (truncation)
+print(-7 // 2)      # -4  (floor)
+
+# For non-negative dividends, they agree
+print(7 // 2 == int(7 / 2))  # True`,
+    explanation: "`//` is floor division: it always rounds toward negative infinity, not toward zero — `int(-7/2)` gives `-3` (truncation) but `-7//2` gives `-4` (floor), a common source of bugs in algorithms.",
+  },
+  {
+    id: "py-caveat-global-local-same",
+    language: "python",
+    title: "Using a global name as local without global decl causes UnboundLocalError",
+    tag: "caveats",
+    code: `counter = 0
+
+def increment():
+    # Python sees 'counter += 1' and marks 'counter' as local
+    # But it's referenced before the assignment!
+    counter += 1   # UnboundLocalError!
+
+try:
+    increment()
+except UnboundLocalError as e:
+    print(e)  # local variable 'counter' referenced before assignment
+
+# Fix 1: use global keyword
+def increment_fixed():
+    global counter
+    counter += 1`,
+    explanation: "If a function assigns to a name anywhere in its body, Python treats that name as local throughout the entire function — so even reading it before the assignment raises `UnboundLocalError`; declare `global` or use a mutable container to avoid this.",
+  },
+  {
+    id: "py-dict-merge-bar",
+    language: "python",
+    title: "Dict merge with | operator (3.9+)",
+    tag: "snippet",
+    code: `defaults = {"color": "red", "size": 10, "bold": False}
+overrides = {"size": 20, "bold": True}
+
+# | creates a new merged dict; right side wins on duplicates
+merged = defaults | overrides
+print(merged)  # {'color': 'red', 'size': 20, 'bold': True}
+
+# |= updates in place
+defaults |= overrides
+print(defaults)  # {'color': 'red', 'size': 20, 'bold': True}`,
+    explanation: "`|` (Python 3.9+) replaces the verbose `{**a, **b}` pattern for dict merging; the right operand wins for duplicate keys, and `|=` updates in place.",
+  },
+  {
+    id: "py-types-typeguard",
+    language: "python",
+    title: "TypeGuard narrows types inside if-blocks",
+    tag: "types",
+    code: `from typing import TypeGuard
+
+def is_str_list(val: list) -> TypeGuard[list[str]]:
+    return all(isinstance(x, str) for x in val)
+
+def process(items: list[int | str]) -> None:
+    if is_str_list(items):
+        # type checker knows items: list[str] here
+        joined = ", ".join(items)   # no type error
+        print(joined)
+    else:
+        total = sum(x for x in items if isinstance(x, int))
+        print(total)
+
+process(["a", "b", "c"])  # a, b, c
+process([1, 2, 3])        # 6`,
+    explanation: "`TypeGuard[T]` in a function's return annotation tells type checkers that when the function returns `True`, the first argument is narrowed to type `T` — enabling custom type-narrowing predicates beyond `isinstance()`.",
+  },
+  {
+    id: "py-classes-multiple-inherit",
+    language: "python",
+    title: "MRO (C3 linearisation) determines method lookup order",
+    tag: "classes",
+    code: `class A:
+    def hello(self): print("A")
+
+class B(A):
+    def hello(self): print("B")
+
+class C(A):
+    def hello(self): print("C")
+
+class D(B, C):
+    pass
+
+D().hello()          # B — B comes before C in D's MRO
+print(D.__mro__)
+# (<class 'D'>, <class 'B'>, <class 'C'>, <class 'A'>, <class 'object'>)
+
+# super() follows the MRO, not just parent
+class B2(A):
+    def hello(self): super().hello(); print("B2")
+
+class D2(B2, C):
+    pass
+
+D2().hello()  # prints C then B2 (MRO order with super chaining)`,
+    explanation: "Python's C3 linearisation algorithm computes the Method Resolution Order (MRO) for multiple inheritance, ensuring each class appears only once and respects left-to-right declaration order — `super()` follows the MRO, so mixins can chain calls cooperatively.",
+  },
+  {
+    id: "py-ellipsis-placeholder",
+    language: "python",
+    title: "Ellipsis (...) as a stub",
+    tag: "snippet",
+    code: `def todo_function() -> int:
+    ...   # cleaner than 'pass' for unimplemented stubs
+
+class AbstractBase:
+    def process(self, data: list) -> dict:
+        ...
+
+# Also used in type hints for variable-length tuple
+from typing import Tuple
+def accepts_any_ints(t: Tuple[int, ...]) -> int:
+    return sum(t)
+
+print(accepts_any_ints((1, 2, 3)))  # 6`,
+    explanation: "`...` (the `Ellipsis` singleton) is idiomatic as a function/class body placeholder, signalling 'not yet implemented' more clearly than `pass`; it also appears in type hints for homogeneous-length-any tuples.",
+  },
+  {
+    id: "py-star-expr-middle",
+    language: "python",
+    title: "Starred assignment with named first and last",
+    tag: "snippet",
+    code: `path_parts = ["", "home", "user", "docs", "file.txt"]
+
+# Classic: first element and everything else
+root, *rest = path_parts
+print(root)   # ''
+print(rest)   # ['home', 'user', 'docs', 'file.txt']
+
+# Middle capture — useful for header/body/footer patterns
+header, *body, footer = ["H1", "line1", "line2", "line3", "F1"]
+print(header)  # H1
+print(body)    # ['line1', 'line2', 'line3']
+print(footer)  # F1`,
+    explanation: "Extended iterable unpacking lets you name the first, last, or middle sections independently; the starred name always gets a list, even if it captures zero items.",
+  },
+  {
+    id: "py-understand-except-var-del",
+    language: "python",
+    title: "Exception variable is deleted after the except block",
+    tag: "understanding",
+    code: `try:
+    raise ValueError("oops")
+except ValueError as e:
+    msg = str(e)   # save it before the block ends
+    print(e)       # oops — works here
+
+# e is DELETED after the except block to break reference cycles
+try:
+    print(e)
+except NameError:
+    print("e is gone!")  # prints this
+
+print(msg)  # 'oops'  — saved copy still works`,
+    explanation: "Python deletes the `as` target after the `except` block to break the reference cycle between the exception and the traceback — save the message or the exception to a separate variable inside the block if you need it later.",
+  },
+  {
+    id: "py-defaultdict-counter",
+    language: "python",
+    title: "defaultdict(int) as a zero-initialised counter",
+    tag: "structures",
+    code: `from collections import defaultdict
+
+text = "mississippi"
+char_count = defaultdict(int)
+
+for ch in text:
+    char_count[ch] += 1   # no KeyError on first access
+
+print(dict(char_count))
+# {'m': 1, 'i': 4, 's': 4, 'p': 2}
+
+# defaultdict(int) is usually equivalent to Counter
+# but Counter has extra methods (most_common, subtract, etc.)`,
+    explanation: "`defaultdict(int)` auto-initialises missing keys to 0, letting you write `d[key] += 1` without a `try/except` or `.get(k, 0)` — essentially a manual `Counter` without the extra methods.",
+  },
+  {
+    id: "py-caveat-none-falsy",
+    language: "python",
+    title: "Falsy values: None, 0, '', [], {} are all distinct",
+    tag: "caveats",
+    code: `# All of these are falsy but they're different objects
+for val in [None, False, 0, 0.0, "", [], {}, set()]:
+    print(repr(val), "is falsy:", not val)
+
+# Distinguish them carefully
+def process(data=None):
+    if data is None:        # user didn't pass anything
+        data = []
+    if not data:            # empty list — different check!
+        return "empty"
+    return f"{len(data)} items"
+
+print(process())         # empty
+print(process([]))       # empty
+print(process([1, 2]))   # 2 items`,
+    explanation: "`None`, `False`, `0`, empty strings, and empty containers are all falsy, but they are semantically different — use `is None` to detect 'not provided', and `not lst` (or `len(lst) == 0`) for 'empty collection'.",
+  },
+  {
+    id: "py-classes-dunder-getitem2",
+    language: "python",
+    title: "__getitem__ and __setitem__ enable indexing",
+    tag: "classes",
+    code: `class Grid:
+    def __init__(self, rows, cols):
+        self.data = [[0]*cols for _ in range(rows)]
+
+    def __getitem__(self, key):
+        row, col = key
+        return self.data[row][col]
+
+    def __setitem__(self, key, value):
+        row, col = key
+        self.data[row][col] = value
+
+g = Grid(3, 3)
+g[1, 2] = 42          # calls __setitem__
+print(g[1, 2])         # 42  — calls __getitem__
+
+# Tuple key works with any object, not just numbers
+print(g[0, 0])         # 0`,
+    explanation: "`__getitem__` and `__setitem__` implement the `[]` operator; the key can be any object — a tuple like `(row, col)` enables NumPy-style two-dimensional indexing without needing a separate method.",
+  },
+  {
+    id: "py-fstring-eq-debug",
+    language: "python",
+    title: "f-string = for quick debug",
+    tag: "snippet",
+    code: `x = 42
+items = [1, 2, 3]
+
+# = after the variable name prints both name and value
+print(f"{x=}")          # x=42
+print(f"{items=}")      # items=[1, 2, 3]
+print(f"{len(items)=}") # len(items)=3
+print(f"{x * 2=}")      # x * 2=84`,
+    explanation: "The `{expr=}` syntax (Python 3.8+) prints the expression source text and its value — a quick drop-in for debugging without writing a separate `print(f'x = {x}')` every time.",
+  },
+  {
+    id: "py-caveat-float-comparison",
+    language: "python",
+    title: "Chaining float comparisons can give unexpected results",
+    tag: "caveats",
+    code: `import math
+
+x = float("nan")
+print(x == x)        # False  — NaN is not equal to itself!
+print(x != x)        # True
+print(math.isnan(x)) # True   — correct way to check
+
+# Infinity edge cases
+inf = float("inf")
+print(inf > 1e308)   # True
+print(inf - inf)     # nan
+print(inf + 1 == inf)# True
+
+# Never use == to compare floats
+print(0.1 + 0.2 == 0.3)      # False
+print(math.isclose(0.1+0.2, 0.3))  # True`,
+    explanation: "NaN is the only float value where `x != x` is `True` — use `math.isnan()` to test for NaN; use `math.isclose()` for approximate equality and `math.isinf()` for infinity checks.",
+  },
+  {
+    id: "py-types-complex-ops",
+    language: "python",
+    title: "Python has native complex number support",
+    tag: "types",
+    code: `z1 = 3 + 4j
+z2 = 1 - 2j
+
+print(z1 + z2)       # (4+2j)
+print(z1 * z2)       # (11-2j)
+print(abs(z1))       # 5.0  (magnitude = sqrt(9+16))
+print(z1.real)       # 3.0
+print(z1.imag)       # 4.0
+print(z1.conjugate()) # (3-4j)
+
+import cmath
+print(cmath.phase(z1))   # 0.9272952...  (angle in radians)
+print(cmath.polar(z1))   # (5.0, 0.9272...)  (r, phi)`,
+    explanation: "Python has a built-in `complex` type with literal syntax `a+bj`; the `cmath` module extends standard `math` functions to complex numbers, supporting polar form and common signal-processing operations.",
+  },
+  {
+    id: "py-frozenset-as-key",
+    language: "python",
+    title: "frozenset as a dict key or set element",
+    tag: "snippet",
+    code: `# Regular set is mutable and unhashable — can't be a dict key
+try:
+    d = {{"a", "b"}: 1}
+except TypeError as e:
+    print(e)  # unhashable type: 'set'
+
+# frozenset IS hashable
+edge_weights = {}
+edge_weights[frozenset({"A", "B"})] = 5
+edge_weights[frozenset({"B", "C"})] = 3
+
+print(edge_weights[frozenset({"B", "A"})])  # 5 (order-independent)`,
+    explanation: "`frozenset` is the immutable, hashable counterpart of `set`, making it usable as a dict key or set member — great for representing unordered pairs like undirected graph edges.",
+  },
+  {
+    id: "py-families-counter-set-cmp",
+    language: "python",
+    title: "Counter vs set: counting vs membership",
+    tag: "families",
+    code: `from collections import Counter
+
+words = ["cat", "dog", "cat", "bird", "dog", "cat"]
+
+counts = Counter(words)   # {element: frequency}
+unique = set(words)       # {element}
+
+print(counts["cat"])    # 3  — how many times
+print("cat" in unique)  # True — is it present?
+
+# Counter can do everything set can, plus counting
+print(set(counts.keys()) == unique)  # True
+
+# Set operations with Counter
+c1 = Counter(a=3, b=2)
+c2 = Counter(a=1, b=4, c=1)
+print(c1 & c2)  # Counter({'b': 2, 'a': 1})  — min of each
+print(c1 | c2)  # Counter({'b': 4, 'a': 3, 'c': 1})  — max`,
+    explanation: "`Counter` is a dict subclass that tracks frequencies, while `set` only tracks membership — use `set` when you only need O(1) membership tests, and `Counter` when you also need frequencies or multiset arithmetic.",
+  },
+  {
+    id: "py-types-int-unlimited",
+    language: "python",
+    title: "Python int has arbitrary precision",
+    tag: "types",
+    code: `# Python ints grow as large as available memory allows
+big = 2 ** 1000
+print(big)          # 1071508607...  (302 digits)
+print(type(big))    # <class 'int'>
+
+# No overflow — ever
+x = 10 ** 100      # googol
+print(x + 1)       # 100...01  (exact)
+
+# Comparison with sys.maxsize
+import sys
+print(sys.maxsize)           # 9223372036854775807  (2^63 - 1 on 64-bit)
+print(sys.maxsize + 1)       # 9223372036854775808  (no overflow!)
+print(type(sys.maxsize + 1)) # <class 'int'>`,
+    explanation: "Python integers have arbitrary precision and never overflow — they start as C `long` values but silently promote to a multi-precision representation when needed, trading some performance for unlimited range.",
+  },
+  {
+    id: "py-types-decimal-prec",
+    language: "python",
+    title: "Decimal with custom precision context",
+    tag: "types",
+    code: `from decimal import Decimal, getcontext
+
+# Default context: 28 significant digits
+getcontext().prec = 50
+print(Decimal(1) / Decimal(7))
+# 0.14285714285714285714285714285714285714285714285714
+
+# Set precision per-operation using localcontext
+from decimal import localcontext
+with localcontext() as ctx:
+    ctx.prec = 5
+    print(Decimal("1") / Decimal("3"))  # 0.33333
+
+# Back to original precision
+print(Decimal("1") / Decimal("3"))  # 0.14285...(50 digits)`,
+    explanation: "`decimal.getcontext().prec` sets the global decimal precision, while `localcontext()` applies a temporary precision inside a block — useful for financial calculations that need configurable precision without affecting other code.",
+  },
+  {
+    id: "py-understand-walrus-scope",
+    language: "python",
+    title: "Walrus operator scope leaks out of comprehensions",
+    tag: "understanding",
+    code: `# Regular comprehension variable does NOT leak
+squares = [y := x**2 for x in range(5)]
+
+# But y (walrus target) DOES leak into enclosing scope
+print(y)   # 16  (last value: 4**2)
+
+# x does NOT leak (normal loop var scoping for comprehensions)
+try:
+    print(x)
+except NameError as e:
+    print(e)  # name 'x' is not defined`,
+    explanation: "Unlike normal comprehension loop variables, walrus operator targets are assigned in the enclosing scope — a deliberate design choice that enables certain streaming patterns but can surprise you if you reuse the name.",
+  },
+  {
+    id: "py-format-binary",
+    language: "python",
+    title: "format() mini-language for binary/hex/octal",
+    tag: "snippet",
+    code: `n = 255
+print(format(n, 'b'))    # 11111111  (binary)
+print(format(n, 'o'))    # 377       (octal)
+print(format(n, 'x'))    # ff        (hex lowercase)
+print(format(n, 'X'))    # FF        (hex uppercase)
+print(format(n, '#010b')) # 0b11111111 (with prefix, width 10)
+
+# Also works inside f-strings
+print(f"{n:#010b}")      # 0b11111111
+print(f"{n:08b}")        # 11111111`,
+    explanation: "The format mini-language supports `b`, `o`, `x`, `X` for different numeric bases; the `#` flag adds the `0b`/`0o`/`0x` prefix and width specifiers pad to a fixed size.",
+  },
+  {
+    id: "py-understand-mutable-default3",
+    language: "python",
+    title: "Mutable default argument is shared across calls",
+    tag: "understanding",
+    code: `def append_to(item, lst=[]):   # lst is created ONCE at def time
+    lst.append(item)
+    return lst
+
+print(append_to(1))  # [1]
+print(append_to(2))  # [1, 2]  <-- surprising!
+print(append_to(3))  # [1, 2, 3]
+
+# Fix: use None as sentinel
+def append_to_fixed(item, lst=None):
+    if lst is None:
+        lst = []
+    lst.append(item)
+    return lst`,
+    explanation: "Default argument values are evaluated once when the `def` statement executes, not on each call — mutable defaults (lists, dicts) persist across calls, acting like static variables; use `None` as a sentinel instead.",
+  }
 ];

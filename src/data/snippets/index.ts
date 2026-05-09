@@ -15,6 +15,8 @@ import { systemsDesignSnippets } from "./systems-design";
 import { networkingSnippets } from "./networking";
 import { securitySnippets } from "./security";
 import { devopsSnippets } from "./devops";
+import { pythonSnippets20260509 } from "./python-2026-05-09";
+import { csharpSnippets20260509 } from "./csharp-2026-05-09";
 
 export type { Snippet, SnippetLanguage } from "./types";
 
@@ -29,4 +31,6 @@ export const snippets = [
   ...networkingSnippets,
   ...securitySnippets,
   ...devopsSnippets,
+  ...pythonSnippets20260509,
+  ...csharpSnippets20260509,
 ];

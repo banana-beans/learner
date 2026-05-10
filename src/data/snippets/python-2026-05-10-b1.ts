@@ -2419,5 +2419,7 @@ e3 = Event.from_json('{"name": "DjangoCon", "date": "2026-09-01"}')
 
 print(e1)   # Event('PyCon', 2026-05-15, 'Pittsburgh')
 print(e2)   # Event('EuroPython', 2026-07-14, 'TBD')
+print(e3)   # Event('DjangoCon', 2026-09-01, 'TBD')`,
+    explanation: "@classmethod factories give you alternate constructors with descriptive names. Using cls (not the class name) makes them subclass-friendly: a subclass calling from_dict gets an instance of the subclass back. This pattern is cleaner than overloading __init__ with optional args or type-sniffing the input.",
   },
 ];

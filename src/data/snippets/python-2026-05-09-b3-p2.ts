@@ -37,7 +37,7 @@ print(t2.safe_substitute(name='Bob'))
 # Dear Bob, your code is $code.
 
 # Use $$ for a literal dollar sign
-money = Template('Total: $$${amount}')
+money = Template('Total: $$\${amount}')
 print(money.substitute(amount='42.00'))   # Total: $42.00`,
     explanation: "string.Template is safer than str.format for user-supplied templates because it only substitutes explicitly named $variables and can't access arbitrary object attributes, preventing data exfiltration.",
   },

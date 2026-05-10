@@ -515,7 +515,7 @@ Console.WriteLine(string.Join(",", p.Process([3, 1, 4, 1, 5])));
 
 var ticker = new StockTicker();
 ticker.PriceChanged += (sym, price)
-    => Console.WriteLine($"{sym}: ${price:F2}");
+    => Console.WriteLine($"{sym}: \${price:F2}");
 
 ticker.Price = 100.50m;  // ACME: $100.50
 ticker.Price = 101.00m;  // ACME: $101.00`,

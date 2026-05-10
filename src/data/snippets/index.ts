@@ -39,6 +39,16 @@ import { csharpSnippets20260509B3P1 } from "./csharp-2026-05-09-b3-p1";
 import { csharpSnippets20260509B3P2 } from "./csharp-2026-05-09-b3-p2";
 import { csharpSnippets20260509B3P3 } from "./csharp-2026-05-09-b3-p3";
 import { csharpSnippets20260509B3P4 } from "./csharp-2026-05-09-b3-p4";
+import { pythonSnippets20260510B1 } from "./python-2026-05-10-b1";
+import { csharpSnippets20260510B1 } from "./csharp-2026-05-10-b1";
+import { pythonSnippets20260510B2 } from "./python-2026-05-10-b2";
+import { csharpSnippets20260510B2 } from "./csharp-2026-05-10-b2";
+import { pythonSnippets20260510B3 } from "./python-2026-05-10-b3";
+import { csharpSnippets20260510B3 } from "./csharp-2026-05-10-b3";
+import { pythonSnippets20260510B4 } from "./python-2026-05-10-b4";
+import { csharpSnippets20260510B4 } from "./csharp-2026-05-10-b4";
+import { pythonSnippets20260510B5 } from "./python-2026-05-10-b5";
+import { csharpSnippets20260510B5 } from "./csharp-2026-05-10-b5";
 
 export type { Snippet, SnippetLanguage } from "./types";
 
@@ -77,4 +87,14 @@ export const snippets = [
   ...csharpSnippets20260509B3P2,
   ...csharpSnippets20260509B3P3,
   ...csharpSnippets20260509B3P4,
+  ...pythonSnippets20260510B1,
+  ...csharpSnippets20260510B1,
+  ...pythonSnippets20260510B2,
+  ...csharpSnippets20260510B2,
+  ...pythonSnippets20260510B3,
+  ...csharpSnippets20260510B3,
+  ...pythonSnippets20260510B4,
+  ...csharpSnippets20260510B4,
+  ...pythonSnippets20260510B5,
+  ...csharpSnippets20260510B5,
 ];

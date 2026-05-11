@@ -5,56 +5,22 @@ done with `~~strikethrough~~` and date.
 
 ---
 
-## Open
+## Done
 
-### Snippet bundle size will block scaling past ~few thousand total
+### ~~Snippet bundle size will block scaling past ~few thousand total~~ (2026-05-10)
 
-**Discovered:** 2026-05-03 (after wiring graveyard + restructuring snippets).
+Fixed by serving snippets from a static API route (`src/app/api/snippets/[lang]/route.ts`) with `force-static` + `generateStaticParams`. Each language shard is prerendered at build time:
 
-**The problem.** Every snippet currently gets bundled into the client JS at
-build time. We're at ~191 snippets and the existing model already generates
-substantial bundles. The user goal is **10k per language × 10 branches =
-100k total snippets**. At average ~400 bytes per snippet (code + explanation
-+ inline comments), that's ~40 MB of raw JSON, ballooning to hundreds of MB
-of JS once tree-shaking and minification do their work and the client tries
-to parse and hold it all in memory.
+- `all.body` 3.1M, `python.body` 1.5M, `csharp.body` 1.6M, others ~13–15K each
+- Client `/scroll` chunk no longer carries snippet data (only types, which are erased)
+- Service worker (`public/sw.js` v2) caches `/api/snippets/*` cache-first, so offline access still works after first visit
+- Module-scoped shard cache in `scroll/page.tsx` makes filter switches instant
 
-This will break the app well before 10k per branch — likely somewhere
-around 2–5 k total snippets across branches.
-
-**Why it works today.** Next.js bundles `src/data/snippets/index.ts` →
-imports every per-language file → ships everything to the client on first
-visit to `/scroll`. Acceptable at 191; not acceptable at 100k.
-
-**Fix path (sketch).**
-
-1. Move each language file's array into a static JSON asset under
-   `public/snippets/{lang}.json` at build time (or generate them with a
-   small build script).
-2. Replace the static `import` in `src/data/snippets/index.ts` with a
-   dynamic per-language fetch:
-   ```ts
-   export async function loadSnippets(lang: SnippetLanguage): Promise<Snippet[]> {
-     const res = await fetch(`/snippets/${lang}.json`);
-     return res.json();
-   }
-   ```
-3. Update `/scroll` to load only the active filter's shard (and prefetch
-   "All" as a streaming concat).
-4. Service worker (`public/sw.js`) already caches same-origin static —
-   shards become free to revisit offline after first fetch.
-5. For the "All" filter: server-rendered shuffle + paginated `/api/scroll`
-   route, OR client-side concat of multiple shards lazy-loaded as the user
-   nears the end of the current pool.
-
-**When to do it.** Before adding more than ~500 more snippets to any one
-language file, OR before wiring the scheduled-agent path that generates
-content nightly. Whichever comes first.
-
-**Effort estimate.** ~1–2 hours including tests and verifying offline
-behavior with the SW.
+Also fixed during this session: duplicate snippet IDs caused by agent regenerating snippets across batches — `src/data/snippets/index.ts` now dedupes by id (first occurrence wins).
 
 ---
+
+## Open
 
 ### Per-snippet inline comments may feel cramped on iPhone
 

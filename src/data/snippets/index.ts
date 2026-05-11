@@ -50,9 +50,26 @@ import { csharpSnippets20260510B4 } from "./csharp-2026-05-10-b4";
 import { pythonSnippets20260510B5 } from "./python-2026-05-10-b5";
 import { csharpSnippets20260510B5 } from "./csharp-2026-05-10-b5";
 
+import type { Snippet } from "./types";
+
 export type { Snippet, SnippetLanguage } from "./types";
 
-export const snippets = [
+// The scheduled snippet agent occasionally regenerates a snippet under an
+// existing id across batches. Dedupe on id, first occurrence wins — so the
+// scroll feed renders unique React keys and the graveyard tracks a 1:1 map
+// between viewed and remaining content.
+function dedupeById(arr: Snippet[]): Snippet[] {
+  const seen = new Set<string>();
+  const out: Snippet[] = [];
+  for (const s of arr) {
+    if (seen.has(s.id)) continue;
+    seen.add(s.id);
+    out.push(s);
+  }
+  return out;
+}
+
+const allSnippets: Snippet[] = [
   ...pythonSnippets,
   ...typescriptSnippets,
   ...csharpSnippets,
@@ -98,3 +115,5 @@ export const snippets = [
   ...pythonSnippets20260510B5,
   ...csharpSnippets20260510B5,
 ];
+
+export const snippets: Snippet[] = dedupeById(allSnippets);

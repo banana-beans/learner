@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useRef, useLayoutEffect, useState, useCallback } from "react";
 import type { Branch, UserProgress, Curriculum } from "@/lib/types";
 import { getNodeState } from "@/engine/progression";
 import { BRANCH_META } from "@/lib/constants";
@@ -79,7 +79,12 @@ export function SkillTree({ branch, progress, curriculum }: SkillTreeProps) {
     });
   }, [branch, progress, curriculum]);
 
-  useEffect(() => {
+  // Measurement effect: connection lines are drawn between sibling DOM nodes,
+  // so we have to read post-layout positions and project them into SVG coords.
+  // setState during a layout effect is the standard pattern here — it runs
+  // synchronously before paint, so the user never sees a flash without lines.
+  useLayoutEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     calculateConnections();
 
     const observer = new ResizeObserver(calculateConnections);

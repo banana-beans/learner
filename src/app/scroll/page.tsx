@@ -1,12 +1,27 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { snippets, type Snippet, type SnippetLanguage } from "@/data/snippets";
+import type { Snippet, SnippetLanguage } from "@/data/snippets";
 import { BRANCH_META } from "@/lib/constants";
 import { useGraveyardStore } from "@/store/graveyard-store";
 import type { BranchId } from "@/lib/types";
 
 type Filter = "all" | SnippetLanguage;
+
+// Hard-coded language list. Stable, so we don't need a meta endpoint just to
+// build the filter chips.
+const LANG_KEYS: SnippetLanguage[] = [
+  "python",
+  "typescript",
+  "csharp",
+  "react",
+  "dsa",
+  "databases",
+  "systems-design",
+  "networking",
+  "security",
+  "devops",
+];
 
 // Short labels for the filter chips. Falls back to BRANCH_META.title for
 // languages we don't have a special abbreviation for.
@@ -23,6 +38,34 @@ const LANG_LABEL: Partial<Record<SnippetLanguage, string>> = {
   devops: "DevOps",
 };
 
+// Module-scoped cache. Snippets live behind a static API route now (so they
+// don't pollute the client bundle); once we've fetched a shard, keep it in
+// memory so filter switches are instant. Pages-level data only — survives a
+// route-internal soft nav but is dropped on full reload (which is fine because
+// the service worker caches the underlying HTTP response).
+const shardCache = new Map<Filter, Snippet[]>();
+const inflight = new Map<Filter, Promise<Snippet[]>>();
+
+async function loadShard(filter: Filter): Promise<Snippet[]> {
+  const cached = shardCache.get(filter);
+  if (cached) return cached;
+  const pending = inflight.get(filter);
+  if (pending) return pending;
+  const p = fetch(`/api/snippets/${filter}`)
+    .then((r) => r.json() as Promise<Snippet[]>)
+    .then((data) => {
+      shardCache.set(filter, data);
+      inflight.delete(filter);
+      return data;
+    })
+    .catch((err) => {
+      inflight.delete(filter);
+      throw err;
+    });
+  inflight.set(filter, p);
+  return p;
+}
+
 function shuffle<T>(arr: T[]): T[] {
   const out = [...arr];
   for (let i = out.length - 1; i > 0; i--) {
@@ -32,14 +75,12 @@ function shuffle<T>(arr: T[]): T[] {
   return out;
 }
 
-function poolFor(filter: Filter): Snippet[] {
-  return filter === "all" ? snippets : snippets.filter((s) => s.language === filter);
-}
-
 export default function ScrollPage() {
   const [filter, setFilter] = useState<Filter>("all");
   const [activeIdx, setActiveIdx] = useState(0);
   const [hydrated, setHydrated] = useState(false);
+  const [shard, setShard] = useState<Snippet[]>([]);
+  const [shardLoading, setShardLoading] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const viewed = useGraveyardStore((s) => s.viewed);
@@ -53,23 +94,43 @@ export default function ScrollPage() {
     setHydrated(true);
   }, []);
 
+  // Fetch the shard for the current filter. Cached in module scope, so this is
+  // a no-op for filters we've already loaded.
+  useEffect(() => {
+    let cancelled = false;
+    const cached = shardCache.get(filter);
+    if (cached) {
+      setShard(cached);
+      setShardLoading(false);
+      return;
+    }
+    setShardLoading(true);
+    loadShard(filter).then((data) => {
+      if (cancelled) return;
+      setShard(data);
+      setShardLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [filter]);
+
   // Stats for the current filter (total / seen / remaining).
   const stats = useMemo(() => {
-    const all = poolFor(filter);
-    const total = all.length;
-    const seen = all.filter((s) => viewed[s.id]).length;
+    const total = shard.length;
+    const seen = shard.filter((s) => viewed[s.id]).length;
     return { total, seen, remaining: total - seen };
-  }, [filter, viewed]);
+  }, [shard, viewed]);
 
-  // The active feed: pool minus graveyard, shuffled. Snapshot per (filter, hydrate)
-  // so marking-as-viewed during scroll doesn't reshuffle and yank cards out from
-  // under the user mid-read.
+  // The active feed: pool minus graveyard, shuffled. Snapshot per (filter,
+  // shard, hydrate) so marking-as-viewed during scroll doesn't reshuffle and
+  // yank cards out from under the user mid-read.
   const feed = useMemo<Snippet[]>(() => {
     if (!hydrated) return [];
-    const fresh = poolFor(filter).filter((s) => !viewed[s.id]);
+    const fresh = shard.filter((s) => !viewed[s.id]);
     return shuffle(fresh);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter, hydrated]);
+  }, [shard, hydrated]);
 
   // When activeIdx advances past N, mark card N as viewed.
   // Tracks the highest-seen index; we mark everything up to (activeIdx - 1).
@@ -128,20 +189,18 @@ export default function ScrollPage() {
       handleResetAll();
       return;
     }
-    // Reset only the IDs for the current language. We need a stable predicate;
-    // language is encoded in the snippet (not the id), so build a Set of IDs.
-    const idsInFilter = new Set(poolFor(filter).map((s) => s.id));
-    resetMatching((id) => !idsInFilter.has(id)); // KEEP others as viewed
+    // Reset only the IDs for the current language. We KEEP everything outside
+    // the current shard as viewed.
+    const idsInFilter = new Set(shard.map((s) => s.id));
+    resetMatching((id) => !idsInFilter.has(id));
   }
 
-  // Filter chip list — only show chips for languages that actually have snippets.
+  // Filter chip list — hard-coded language list, ordered the same as before.
   const filters: Array<{ key: Filter; label: string; color?: string }> = useMemo(() => {
-    const byLang: Record<string, number> = {};
-    for (const s of snippets) byLang[s.language] = (byLang[s.language] ?? 0) + 1;
     const list: Array<{ key: Filter; label: string; color?: string }> = [
       { key: "all", label: "All" },
     ];
-    for (const lang of Object.keys(byLang) as SnippetLanguage[]) {
+    for (const lang of LANG_KEYS) {
       const meta = BRANCH_META[lang as BranchId];
       list.push({
         key: lang,
@@ -164,11 +223,11 @@ export default function ScrollPage() {
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
           <span className="text-xs text-[var(--text-muted)] tabular-nums">
-            {hydrated ? `${stats.seen}/${stats.total} seen` : ""}
+            {hydrated && !shardLoading ? `${stats.seen}/${stats.total} seen` : ""}
           </span>
           <button
             onClick={handleResetCurrent}
-            disabled={!hydrated || stats.seen === 0}
+            disabled={!hydrated || shardLoading || stats.seen === 0}
             className="text-xs text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors disabled:opacity-30"
           >
             Reset {filter === "all" ? "all" : LANG_LABEL[filter] ?? filter}
@@ -204,8 +263,20 @@ export default function ScrollPage() {
         })}
       </div>
 
-      {/* Feed OR exhausted state */}
-      {hydrated && feed.length === 0 ? (
+      {/* Feed OR loading OR exhausted state */}
+      {hydrated && shardLoading ? (
+        <div
+          className="
+            flex flex-col items-center justify-center text-center gap-3
+            h-[calc(100dvh-220px)] md:h-[calc(100dvh-180px)]
+            rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-6
+          "
+        >
+          <div className="text-sm text-[var(--text-muted)] animate-pulse">
+            Loading snippets…
+          </div>
+        </div>
+      ) : hydrated && feed.length === 0 ? (
         <div
           className="
             flex flex-col items-center justify-center text-center gap-3

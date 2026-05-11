@@ -15,7 +15,9 @@
 // Bump the CACHE_VERSION to invalidate old caches on deploy.
 // ============================================================
 
-const CACHE_VERSION = "v1";
+// v2: started caching /api/snippets/* shards (scroll feed moved off the client
+// bundle into a static API route).
+const CACHE_VERSION = "v2";
 const SHELL_CACHE = `learner-shell-${CACHE_VERSION}`;
 const STATIC_CACHE = `learner-static-${CACHE_VERSION}`;
 const PYODIDE_CACHE = `learner-pyodide-${CACHE_VERSION}`;
@@ -70,8 +72,14 @@ function isStaticAsset(url) {
   return (
     url.pathname.startsWith("/_next/static/") ||
     url.pathname.startsWith("/icons/") ||
-    /\.(js|css|woff2?|ttf|otf|eot|svg|png|jpg|jpeg|webp|avif|gif)$/.test(url.pathname)
+    /\.(js|css|woff2?|ttf|otf|eot|svg|png|jpg|jpeg|webp|avif|gif|json)$/.test(url.pathname)
   );
+}
+
+// Snippet shards live behind a static API route (Next force-static). Treat
+// them as static so the feed works offline after first visit.
+function isSnippetsApi(url) {
+  return url.pathname.startsWith("/api/snippets/");
 }
 
 async function cacheFirst(request, cacheName) {
@@ -130,8 +138,8 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // 2. Same-origin static assets — cache-first.
-  if (isSameOrigin(url) && isStaticAsset(url)) {
+  // 2. Same-origin static assets and snippet shards — cache-first.
+  if (isSameOrigin(url) && (isStaticAsset(url) || isSnippetsApi(url))) {
     event.respondWith(cacheFirst(req, STATIC_CACHE));
     return;
   }

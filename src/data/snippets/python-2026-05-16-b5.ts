@@ -1708,28 +1708,6 @@ print(abs(math.remainder(100.7, y)) <= y / 2)  # True always`,
     explanation: "`math.remainder` implements the IEEE-754 `remainder` operation whose result lies in [−y/2, y/2]; it differs from Python's `%` operator (which uses floor division) for any case where the quotient rounds up.",
   },
   {
-    id: "py-b16-b5-cmath-rect",
-    language: "python",
-    title: "cmath.rect — polar to rectangular conversion",
-    tag: "snippet",
-    code: `import cmath, math
-
-# rect(r, phi) converts (magnitude, angle_radians) → complex
-z1 = cmath.rect(5, math.pi / 4)       # 45°, magnitude 5
-print(f"{z1.real:.4f} + {z1.imag:.4f}j")  # 3.5355 + 3.5355j
-
-z2 = cmath.rect(1, 0)                 # angle 0 → real number 1
-print(z2)                              # (1+0j)
-
-z3 = cmath.rect(2, math.pi)           # angle π → negative real
-print(z3.real)                         # -2.0 (imaginary is ~0)
-
-# Round-trip: polar → rect → polar
-r, phi = cmath.polar(z1)
-print(math.isclose(r, 5))             # True`,
-    explanation: "`cmath.rect(r, phi)` is the inverse of `cmath.polar` — it converts magnitude and phase angle back to rectangular form; together they make coordinate-system conversions clean and exact within floating-point limits.",
-  },
-  {
     id: "py-b16-b5-statistics-harmonic-mean",
     language: "python",
     title: "statistics.harmonic_mean",
@@ -1960,30 +1938,6 @@ print(f"{binomial_prob(5, 0, 0.2):.6f}")    # 0.327680
 total = sum(binomial_prob(10, k, 0.3) for k in range(11))
 print(f"{total:.10f}")                       # 1.0000000000`,
     explanation: "Combining `math.comb` (exact integer coefficient) with float power arithmetic gives an accurate binomial PMF; the exact integer path for the combination avoids precision loss from approximating C(n,k) as a float.",
-  },
-  {
-    id: "py-b16-b5-fractions-exact-decimal-conversion",
-    language: "python",
-    title: "Converting terminating decimals to exact Fraction",
-    tag: "understanding",
-    code: `from fractions import Fraction
-from decimal import Decimal
-
-# A terminating decimal has an exact rational representation
-# Pass via string to avoid float's inherent imprecision
-
-# WRONG: Fraction(0.1) captures the float's binary approximation
-print(Fraction(0.1))               # 3602879701896397/36028797018963968
-
-# CORRECT: use the string form
-print(Fraction('0.1'))             # 1/10
-
-# Or convert from Decimal (which IS decimal-exact)
-print(Fraction(Decimal('0.1')))    # 1/10
-
-# Non-terminating decimals cannot be represented exactly either way
-print(Fraction('1/3'))             # 1/3  (exact rational)`,
-    explanation: "Only terminating decimals (those whose denominator is a product of 2s and 5s) can be exactly represented by `Fraction`; always use the string or `Decimal` constructor path to avoid silently inheriting a float's binary rounding error.",
   },
   {
     id: "py-b16-b5-math-nextafter",

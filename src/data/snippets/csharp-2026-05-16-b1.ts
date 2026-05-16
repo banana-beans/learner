@@ -2311,4 +2311,461 @@ ArraySegment<int> sub = segment.Slice(1, 2);
 Console.WriteLine(string.Join(", ", sub));  // 40, 50`,
     explanation: "`ArraySegment<T>` is a struct that holds a reference to an existing array plus offset and count — it allows passing a window of an array without copying. For async code or stack-allocation, `Memory<T>` is the modern successor.",
   },
+  {
+    id: "cs-b16-b1-record-struct",
+    language: "csharp",
+    title: "record struct: value semantics + record features",
+    tag: "types",
+    code: `// record struct: value equality + with-expression + Deconstruct — on the stack
+record struct Point(double X, double Y)
+{
+    public double Length => Math.Sqrt(X * X + Y * Y);
+}
+
+var p1 = new Point(3, 4);
+var p2 = new Point(3, 4);
+
+// Value equality — structs normally use field-by-field comparison
+Console.WriteLine(p1 == p2);      // True
+
+// with-expression (was only available for records before)
+var p3 = p1 with { Y = 0 };
+Console.WriteLine(p3);            // Point { X = 3, Y = 0 }
+
+// Deconstruction
+var (x, y) = p1;
+Console.WriteLine(\`\${x}, \${y}\`);  // 3, 4
+
+// Stack-allocated — no heap allocation when local
+Console.WriteLine(p1.Length);     // 5`,
+    explanation: "`record struct` (C# 10) combines the value semantics of a struct (stack allocation, copy-on-assign) with the record conveniences of compiler-generated equality, `ToString`, `Deconstruct`, and `with` expressions — ideal for small immutable coordinate/vector types.",
+  },
+  {
+    id: "cs-b16-b1-span-vs-memory",
+    language: "csharp",
+    title: "Span<T> vs Memory<T> for async use",
+    tag: "structures",
+    code: `// Span<T>: ref struct — can only live on the stack
+// Cannot be used in async methods or stored in fields
+Span<byte> stackSpan = stackalloc byte[16];
+stackSpan[0] = 42;
+Console.WriteLine(stackSpan[0]);   // 42
+
+// Memory<T>: can cross async boundaries and be stored in fields
+Memory<byte> heapMemory = new byte[16];
+heapMemory.Span[0] = 42;          // access via .Span property
+
+// Async-compatible: Span<T> would be a compile error here
+async Task ProcessAsync(Memory<byte> mem)
+{
+    await Task.Delay(1);           // Span couldn't survive this await
+    Console.WriteLine(mem.Span[0]);  // 42
+}
+
+byte[] arr = [1, 2, 3, 4, 5, 6, 7, 8];
+await ProcessAsync(arr.AsMemory(2, 4));   // slice [3,4,5,6]`,
+    explanation: "`Span<T>` is a ref struct that cannot outlive the stack frame or cross `await` points — `Memory<T>` is the heap-friendly alternative that wraps the same contiguous memory but can be stored in fields and used in async methods.",
+  },
+  {
+    id: "cs-b16-b1-event-null-check",
+    language: "csharp",
+    title: "Event null check before invoke",
+    tag: "caveats",
+    code: `class Button
+{
+    // Event is null until at least one subscriber adds a handler
+    public event EventHandler? Clicked;
+
+    public void SimulateClick()
+    {
+        // WRONG: race condition — Clicked could become null between check and invoke
+        // if (Clicked != null) Clicked(this, EventArgs.Empty);
+
+        // CORRECT: copy reference first (thread-safe)
+        Clicked?.Invoke(this, EventArgs.Empty);
+        // ?. atomically reads and invokes — if null, does nothing
+    }
+}
+
+var btn = new Button();
+
+// No subscribers — Clicked is null
+btn.SimulateClick();  // no exception with ?.
+
+btn.Clicked += (s, e) => Console.WriteLine("Clicked!");
+btn.SimulateClick();  // Clicked!`,
+    explanation: "Events are multicast delegates that start as `null` — invoking a null delegate throws `NullReferenceException`. The `?.Invoke()` pattern is the thread-safe idiom: it reads the delegate reference once and short-circuits if null, avoiding the race between a null check and the invocation.",
+  },
+  {
+    id: "cs-b16-b1-generic-covariant-out",
+    language: "csharp",
+    title: "out generic type parameter in practice",
+    tag: "types",
+    code: `// IEnumerable<out T> is covariant — built into .NET
+IEnumerable<string> strings = ["hello", "world"];
+
+// Widening assignment: IEnumerable<string> -> IEnumerable<object>
+IEnumerable<object> objects = strings;  // no cast needed!
+Console.WriteLine(objects.First().GetType().Name);  // String
+
+// Build your own covariant interface
+interface IReader<out T>
+{
+    T Read();
+}
+
+class StringReader : IReader<string>
+{
+    public string Read() => "data";
+}
+
+IReader<object> reader = new StringReader();  // covariance
+Console.WriteLine(reader.Read());  // data
+
+// If T appeared in a parameter (input position), it would be invariant
+// interface IReadWrite<T> { T Read(); void Write(T v); }  — invariant`,
+    explanation: "A type parameter marked `out` can only appear in output (return) positions — this allows the compiler to prove that widening assignments are safe, because you're only reading `T` values (never writing), so a `string` can always be used where an `object` is expected.",
+  },
+  {
+    id: "cs-b16-b1-linq-firstordefault",
+    language: "csharp",
+    title: "FirstOrDefault with predicate and default",
+    tag: "snippet",
+    code: `var products = new[]
+{
+    new { Name = "Apple",  Price = 1.50 },
+    new { Name = "Banana", Price = 0.75 },
+    new { Name = "Cherry", Price = 4.00 },
+};
+
+// FirstOrDefault returns null (or default) if no match — no exception
+var cheap = products.FirstOrDefault(p => p.Price < 1.00);
+Console.WriteLine(cheap?.Name ?? "none");  // Banana
+
+var expensive = products.FirstOrDefault(p => p.Price > 10.00);
+Console.WriteLine(expensive?.Name ?? "none");  // none
+
+// With explicit default (C# 10+) — avoids null propagation
+var fallback = products.FirstOrDefault(
+    p => p.Price > 10.00,
+    defaultValue: new { Name = "Unknown", Price = 0.0 }
+);
+Console.WriteLine(fallback.Name);   // Unknown`,
+    explanation: "`FirstOrDefault` returns the first matching element or a default value (null for reference types, zero for value types) — the two-argument overload added in .NET 6 lets you specify a meaningful sentinel instead of null.",
+  },
+  {
+    id: "cs-b16-b1-argument-exception-hierarchy",
+    language: "csharp",
+    title: "ArgumentException hierarchy",
+    tag: "families",
+    code: `void Process(string? name, int age, IEnumerable<int> items)
+{
+    // ArgumentNullException: parameter is null when it shouldn't be
+    ArgumentNullException.ThrowIfNull(name);
+
+    // ArgumentException: parameter has an invalid value
+    if (name.Length == 0)
+        throw new ArgumentException("Name cannot be empty.", nameof(name));
+
+    // ArgumentOutOfRangeException: numeric value is out of acceptable range
+    ArgumentOutOfRangeException.ThrowIfNegative(age);
+    ArgumentOutOfRangeException.ThrowIfGreaterThan(age, 150);
+
+    // All three inherit from ArgumentException
+    // catch (ArgumentException) catches all three
+    Console.WriteLine(\`Processing \${name}, age \${age}\`);
+}
+
+try { Process(null, 25, []); }
+catch (ArgumentNullException e) { Console.WriteLine(e.ParamName); }  // name
+
+try { Process("Alice", -1, []); }
+catch (ArgumentOutOfRangeException e) { Console.WriteLine(e.Message); }`,
+    explanation: "`ArgumentNullException` and `ArgumentOutOfRangeException` are specialized subclasses of `ArgumentException` — .NET 6+ added static `ThrowIf*` helpers that eliminate the null check + throw boilerplate and make the `ParamName` always accurate via `[CallerArgumentExpression]`.",
+  },
+  {
+    id: "cs-b16-b1-string-vs-span-char",
+    language: "csharp",
+    title: "string vs Span<char> for zero-copy parsing",
+    tag: "families",
+    code: `string csv = "Alice,30,Berlin";
+
+// Traditional: Split allocates new strings for each token
+string[] parts = csv.Split(',');
+Console.WriteLine(parts[0]);   // Alice
+
+// Zero-allocation: parse directly from a Span<char>
+ReadOnlySpan<char> span = csv.AsSpan();
+int comma1 = span.IndexOf(',');
+ReadOnlySpan<char> name = span[..comma1];
+
+int comma2 = span[(comma1 + 1)..].IndexOf(',') + comma1 + 1;
+ReadOnlySpan<char> ageSpan = span[(comma1 + 1)..comma2];
+int age = int.Parse(ageSpan);
+
+Console.WriteLine(name.ToString());  // Alice (ToString allocates once)
+Console.WriteLine(age);              // 30`,
+    explanation: "String slicing with `AsSpan()` and `ReadOnlySpan<char>` avoids allocating new `string` objects for every token — parsers in hot paths (CSV readers, HTTP header parsing) use this technique to reduce GC pressure significantly.",
+  },
+  {
+    id: "cs-b16-b1-disposable-using-var",
+    language: "csharp",
+    title: "using var for scoped disposal (C# 8)",
+    tag: "snippet",
+    code: `// Classic using: braces define the scope
+using (var stream = new System.IO.MemoryStream())
+{
+    stream.WriteByte(42);
+    Console.WriteLine(stream.Length);  // 1
+}   // Dispose() called here
+
+// Modern using declaration (C# 8+): scope = end of enclosing block
+static void WriteAndRead()
+{
+    using var ms    = new System.IO.MemoryStream();
+    using var writer = new System.IO.StreamWriter(ms);
+
+    writer.Write("hello");
+    writer.Flush();
+
+    ms.Position = 0;
+    using var reader = new System.IO.StreamReader(ms);
+    Console.WriteLine(reader.ReadToEnd());  // hello
+}   // writer, reader, ms all Disposed in reverse order here
+
+WriteAndRead();`,
+    explanation: "`using var` (C# 8) eliminates brace nesting — the resource is disposed at the end of the enclosing block in reverse declaration order. This is purely syntactic sugar over the classic `using (...)` statement.",
+  },
+  {
+    id: "cs-b16-b1-static-local-function",
+    language: "csharp",
+    title: "Static local function prevents accidental capture",
+    tag: "classes",
+    code: `int multiplier = 3;
+
+// Regular local function: can accidentally capture outer variables
+int ScaleRegular(int x) => x * multiplier;   // captures 'multiplier'
+
+// Static local function: cannot capture — must pass everything explicitly
+static int ScaleStatic(int x, int m) => x * m;  // no capture allowed
+
+Console.WriteLine(ScaleRegular(5));           // 15
+Console.WriteLine(ScaleStatic(5, multiplier)); // 15
+
+// Practical: avoid closure allocation in tight loops
+int[] data = [1, 2, 3, 4, 5];
+int sum = 0;
+foreach (int n in data)
+{
+    sum += Transform(n);
+
+    static int Transform(int x) => x * x + 1;  // no allocation
+}
+Console.WriteLine(sum);   // 1+4+9+16+26 = 55 + 5 = 60... (1+1)+(4+1)+(9+1)+(16+1)+(25+1) = 60`,
+    explanation: "Adding `static` to a local function prevents it from capturing any variables from the enclosing scope — the compiler enforces this, eliminating accidental closures that would allocate a display class object on every call.",
+  },
+  {
+    id: "cs-b16-b1-pattern-list-pattern",
+    language: "csharp",
+    title: "List pattern matching (C# 11)",
+    tag: "snippet",
+    code: `int[] Classify(int[] arr) => arr switch
+{
+    []              => throw new ArgumentException("empty"),
+    [var single]    => [single * 2],          // exactly one element
+    [var first, ..] => [first, ..arr[1..]],   // two or more (spread)
+    _               => arr,
+};
+
+// List patterns in if/switch
+void Describe(int[] nums)
+{
+    if (nums is [1, 2, 3])
+        Console.WriteLine("exactly [1,2,3]");
+    else if (nums is [1, ..])
+        Console.WriteLine("starts with 1");
+    else if (nums is [.., 0])
+        Console.WriteLine("ends with 0");
+    else
+        Console.WriteLine("other");
+}
+
+Describe([1, 2, 3]);      // exactly [1,2,3]
+Describe([1, 99, 100]);   // starts with 1
+Describe([5, 3, 0]);      // ends with 0`,
+    explanation: "List patterns (C# 11) match against the shape and content of arrays or spans directly in `is` expressions and `switch` cases — `..` is a discard-slice that matches zero or more elements, enabling head/tail destructuring like Haskell or Python.",
+  },
+  {
+    id: "cs-b16-b1-ireadonlylist-contract",
+    language: "csharp",
+    title: "IReadOnlyList<T> as a safe API contract",
+    tag: "structures",
+    code: `class ProductCatalog
+{
+    private readonly List<string> _items = ["Apple", "Banana", "Cherry"];
+
+    // Expose as read-only — callers cannot Add/Remove
+    public IReadOnlyList<string> Items => _items;
+
+    public void AddItem(string item) => _items.Add(item);
+}
+
+var catalog = new ProductCatalog();
+IReadOnlyList<string> items = catalog.Items;
+
+Console.WriteLine(items.Count);    // 3
+Console.WriteLine(items[0]);       // Apple
+
+// Attempting mutation fails at compile time:
+// items.Add("Date");              // CS1061: no 'Add' method
+// items[0] = "Mango";            // CS0200: read-only indexer
+
+// Caller can cast — you can't stop a determined caller, but the intent is clear
+catalog.AddItem("Date");
+Console.WriteLine(items.Count);    // 4 — same underlying list`,
+    explanation: "`IReadOnlyList<T>` exposes `Count` and indexed access but hides mutation methods — returning it from a property communicates 'read this, don't modify it' to callers and prevents accidental mutation without the overhead of copying.",
+  },
+  {
+    id: "cs-b16-b1-object-base-type",
+    language: "csharp",
+    title: "object as the universal base type",
+    tag: "types",
+    code: `// Every type in C# implicitly inherits from object (System.Object)
+Console.WriteLine(typeof(int).BaseType);      // System.ValueType
+Console.WriteLine(typeof(int).BaseType!.BaseType);  // System.Object
+
+// object members available on everything
+int n = 42;
+Console.WriteLine(n.GetType().Name);   // Int32
+Console.WriteLine(n.GetHashCode());    // some int
+Console.WriteLine(n.Equals(42));       // True
+Console.WriteLine(n.ToString());       // 42
+
+// object can hold any value (with boxing for value types)
+object[] mixed = [1, "hello", 3.14, true, new int[] { 1, 2 }];
+foreach (object item in mixed)
+    Console.WriteLine(\`\${item.GetType().Name}: \${item}\`);`,
+    explanation: "All C# types inherit from `System.Object` — value types inherit through `System.ValueType`. `object` provides `GetType()`, `ToString()`, `Equals()`, and `GetHashCode()` to everything, and can store any value (boxing value types to the heap).",
+  },
+  {
+    id: "cs-b16-b1-delegate-invocation-list",
+    language: "csharp",
+    title: "Multicast delegate invocation list inspection",
+    tag: "understanding",
+    code: `Action handler = () => Console.WriteLine("A");
+handler += () => Console.WriteLine("B");
+handler += () => Console.WriteLine("C");
+
+// Inspect the invocation list
+Delegate[] list = handler.GetInvocationList();
+Console.WriteLine(list.Length);   // 3
+
+// Invoke in controlled order or conditionally
+foreach (Action a in list.Cast<Action>())
+{
+    try { a(); }
+    catch (Exception e) { Console.WriteLine(\`Error: \${e.Message}\`); }
+}
+// A
+// B
+// C
+
+// Without iteration, a multicast delegate swallows exceptions
+// from intermediate handlers — only the last exception propagates
+handler();`,
+    explanation: "`GetInvocationList()` returns the ordered array of individual delegates in a multicast delegate — iterating it lets you catch exceptions from each handler independently, whereas invoking the multicast directly only surfaces the last exception thrown.",
+  },
+  {
+    id: "cs-b16-b1-pattern-relational",
+    language: "csharp",
+    title: "Relational and logical patterns in switch",
+    tag: "snippet",
+    code: `static string ClassifyBMI(double bmi) => bmi switch
+{
+    < 18.5                   => "Underweight",
+    >= 18.5 and < 25.0       => "Normal weight",
+    >= 25.0 and < 30.0       => "Overweight",
+    >= 30.0                  => "Obese",
+    _                        => "Unknown",  // unreachable but satisfies exhaustiveness
+};
+
+Console.WriteLine(ClassifyBMI(17.0));   // Underweight
+Console.WriteLine(ClassifyBMI(22.5));   // Normal weight
+Console.WriteLine(ClassifyBMI(27.1));   // Overweight
+Console.WriteLine(ClassifyBMI(32.4));   // Obese
+
+// 'or' pattern
+static bool IsWeekend(DayOfWeek day) => day is DayOfWeek.Saturday or DayOfWeek.Sunday;
+Console.WriteLine(IsWeekend(DayOfWeek.Saturday));  // True
+Console.WriteLine(IsWeekend(DayOfWeek.Monday));    // False`,
+    explanation: "Relational patterns (`< 18.5`), combined with `and`/`or`/`not` logical patterns (C# 9), let you express numeric range checks and enum membership directly in `is` expressions and `switch` arms — far more readable than nested `if/else if` chains.",
+  },
+  {
+    id: "cs-b16-b1-cancellation-token",
+    language: "csharp",
+    title: "CancellationToken for cooperative cancellation",
+    tag: "snippet",
+    code: `using var cts = new CancellationTokenSource();
+CancellationToken token = cts.Token;
+
+// Cancel after 200ms
+cts.CancelAfter(TimeSpan.FromMilliseconds(200));
+
+async Task LongWork(CancellationToken ct)
+{
+    for (int i = 0; i < 10; i++)
+    {
+        ct.ThrowIfCancellationRequested();  // cooperative check
+        Console.WriteLine(\`Step \${i}\`);
+        await Task.Delay(50, ct);           // also honors cancellation
+    }
+}
+
+try
+{
+    await LongWork(token);
+}
+catch (OperationCanceledException)
+{
+    Console.WriteLine("Cancelled!");  // after ~200ms
+}`,
+    explanation: "`CancellationToken` enables cooperative cancellation — code periodically calls `ThrowIfCancellationRequested()` or passes the token to awaitable APIs. The token is read-only; the paired `CancellationTokenSource` is what triggers cancellation.",
+  },
+  {
+    id: "cs-b16-b1-nameof-expression",
+    language: "csharp",
+    title: "nameof for refactoring-safe names",
+    tag: "snippet",
+    code: `class Order
+{
+    private int _quantity;
+
+    public int Quantity
+    {
+        get => _quantity;
+        set
+        {
+            if (value < 0)
+                // nameof: resolved at compile time — refactoring renames it too
+                throw new ArgumentOutOfRangeException(nameof(value),
+                    \`\${nameof(Quantity)} must be non-negative\`);
+            _quantity = value;
+        }
+    }
+}
+
+// nameof in logging
+static void Process(string input, int count)
+{
+    Console.WriteLine(\`\${nameof(input)} = '{input}', \${nameof(count)} = \${count}\`);
+    // input = 'hello', count = 5
+}
+
+Process("hello", 5);
+
+var o = new Order();
+try { o.Quantity = -1; }
+catch (ArgumentOutOfRangeException e) { Console.WriteLine(e.ParamName); }  // value`,
+    explanation: "`nameof(x)` evaluates to the string name of a symbol at compile time — if you rename the variable or property via IDE refactoring, `nameof` updates automatically, preventing stale strings in error messages, logging, and `INotifyPropertyChanged` implementations.",
+  },
 ];

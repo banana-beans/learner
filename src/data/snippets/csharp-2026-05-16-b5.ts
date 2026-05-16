@@ -2105,4 +2105,408 @@ Console.WriteLine(SizeOf<Guid>());    // 16
 Console.WriteLine(System.Runtime.CompilerServices.Unsafe.SizeOf<Guid>());  // 16`,
     explanation: "The `unmanaged` constraint is required for `sizeof(T)` in a generic method because only unmanaged types have a compile-time-determined size; use `Unsafe.SizeOf<T>()` when you want the same result without an `unsafe` block.",
   },
+  {
+    id: "cs-b16-b5-span-lastindexof",
+    language: "csharp",
+    title: "Span<T> search methods — IndexOf, LastIndexOf, Contains",
+    tag: "snippet",
+    code: `using System;
+
+ReadOnlySpan<int> data = [3, 1, 4, 1, 5, 9, 2, 6, 1, 8];
+
+Console.WriteLine(data.IndexOf(1));          // 1  (first occurrence)
+Console.WriteLine(data.LastIndexOf(1));      // 8  (last occurrence)
+Console.WriteLine(data.Contains(9));         // True
+Console.WriteLine(data.IndexOf(42));         // -1 (not found)
+
+// Slice then search
+ReadOnlySpan<int> tail = data[5..];
+Console.WriteLine(tail.IndexOf(1));          // 3  (index within tail)`,
+    explanation: "`ReadOnlySpan<T>` exposes `IndexOf`, `LastIndexOf`, and `Contains` — all bounds-checked, allocation-free searches that work exactly like their `Array` equivalents but without needing a LINQ expression or temporary array.",
+  },
+  {
+    id: "cs-b16-b5-memory-marshal-write",
+    language: "csharp",
+    title: "MemoryMarshal.Write<T> — zero-copy struct write",
+    tag: "snippet",
+    code: `using System;
+using System.Runtime.InteropServices;
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+struct PacketHeader { public byte Version; public byte Flags; public ushort Length; }
+
+byte[] buf = new byte[32];
+var hdr = new PacketHeader { Version = 2, Flags = 0x01, Length = 28 };
+
+// Write struct directly into the byte buffer — no Marshal.StructureToPtr needed
+MemoryMarshal.Write(buf.AsSpan(), in hdr);
+
+Console.WriteLine(buf[0]);   // 2   (Version)
+Console.WriteLine(buf[1]);   // 1   (Flags)
+Console.WriteLine(buf[2]);   // 28  (Length low byte, little-endian)`,
+    explanation: "`MemoryMarshal.Write<T>` copies a blittable struct's bytes into a destination span at zero extra allocation cost, replacing the older pattern of pinning + `Marshal.StructureToPtr` for in-process binary serialisation.",
+  },
+  {
+    id: "cs-b16-b5-span-reverse-sort",
+    language: "csharp",
+    title: "Span<T> in-place sort and reverse",
+    tag: "snippet",
+    code: `using System;
+
+Span<int> nums = [5, 3, 8, 1, 9, 2, 7, 4, 6];
+
+// In-place quicksort — no allocation
+nums.Sort();
+Console.WriteLine(string.Join(", ", nums.ToArray()));
+// 1, 2, 3, 4, 5, 6, 7, 8, 9
+
+// In-place reverse
+nums.Reverse();
+Console.WriteLine(string.Join(", ", nums.ToArray()));
+// 9, 8, 7, 6, 5, 4, 3, 2, 1`,
+    explanation: "`Span<T>.Sort()` and `Span<T>.Reverse()` operate in-place without allocating a temporary array; the sort uses an introspective algorithm (introsort) that is as fast as `Array.Sort` but scoped to the span slice.",
+  },
+  {
+    id: "cs-b16-b5-stackalloc-inline-array",
+    language: "csharp",
+    title: "Inline arrays (C# 12) vs stackalloc",
+    tag: "snippet",
+    code: `using System;
+using System.Runtime.CompilerServices;
+
+// Inline array: fixed-length buffer embeddable in any struct (C# 12)
+[InlineArray(8)]
+struct FloatBuffer8
+{
+    private float _element0;   // anchor field — the rest are implicit
+}
+
+FloatBuffer8 buf = default;
+for (int i = 0; i < 8; i++)
+    buf[i] = i * 1.5f;
+
+Console.WriteLine(buf[3]);    // 4.5
+
+// Unlike stackalloc, inline arrays can be stored in structs/classes
+// and their lifetime is tied to the containing object, not the stack frame`,
+    explanation: "C# 12 inline arrays embed a fixed-length buffer directly inside a struct without the `unsafe` keyword; unlike `stackalloc` the buffer's lifetime matches the containing struct, making it usable in ref-struct fields or as a class field.",
+  },
+  {
+    id: "cs-b16-b5-binaryprimitives-float",
+    language: "csharp",
+    title: "BinaryPrimitives — reading float/double bytes",
+    tag: "snippet",
+    code: `using System;
+using System.Buffers.Binary;
+
+// Encode a double in little-endian byte order
+byte[] buf = new byte[8];
+BinaryPrimitives.WriteDoubleLittleEndian(buf, Math.PI);
+
+Console.WriteLine(BitConverter.ToString(buf));
+// 18-2D-44-54-FB-21-09-40  (IEEE-754 LE representation of π)
+
+// Round-trip
+double back = BinaryPrimitives.ReadDoubleLittleEndian(buf);
+Console.WriteLine(back);   // 3.141592653589793
+
+// Span overloads work too
+ReadOnlySpan<byte> span = buf;
+Console.WriteLine(BinaryPrimitives.ReadDoubleLittleEndian(span));`,
+    explanation: "`BinaryPrimitives` supports `float`, `double`, `Half`, and all integer widths in both endiannesses; it's the correct tool for binary file formats and network protocols that specify IEEE-754 floating-point byte order.",
+  },
+  {
+    id: "cs-b16-b5-marshal-sizeof-struct",
+    language: "csharp",
+    title: "Marshal.SizeOf vs sizeof — managed vs unmanaged layout",
+    tag: "caveats",
+    code: `using System;
+using System.Runtime.InteropServices;
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+struct Packed { public byte A; public int B; }   // 5 bytes packed
+
+// sizeof: compile-time managed layout (may add padding for alignment)
+unsafe { Console.WriteLine(sizeof(Packed)); }  // 8 (compiler aligns B to 4)
+
+// Marshal.SizeOf: unmanaged size after StructLayout rules apply
+Console.WriteLine(Marshal.SizeOf<Packed>());   // 5  (Pack=1 removes padding)
+
+// The two can differ — always use Marshal.SizeOf when calculating
+// native struct sizes for P/Invoke buffer sizing`,
+    explanation: "`sizeof` reports the managed in-memory size (which may include padding for CPU alignment), while `Marshal.SizeOf` applies `StructLayout` attributes to compute the actual native struct size — they can differ significantly with `Pack` settings.",
+  },
+  {
+    id: "cs-b16-b5-span-overlaps",
+    language: "csharp",
+    title: "Span.Overlaps — detect aliasing",
+    tag: "caveats",
+    code: `using System;
+
+byte[] arr = new byte[16];
+Span<byte> a = arr.AsSpan(0, 8);
+Span<byte> b = arr.AsSpan(4, 8);   // overlaps a by 4 bytes
+Span<byte> c = arr.AsSpan(8, 8);   // adjacent, no overlap
+
+Console.WriteLine(a.Overlaps(b));        // True
+Console.WriteLine(a.Overlaps(c));        // False
+
+// Overlaps with offset output
+bool ov = a.Overlaps(b, out int offset);
+Console.WriteLine(\`overlaps=\${ov} offset=\${offset}\`);  // overlaps=True offset=4`,
+    explanation: "`Span<T>.Overlaps` detects aliasing between two spans backed by the same memory region — critical before calling `CopyTo` (which is undefined for overlapping spans) or running vectorised algorithms that assume independent buffers.",
+  },
+  {
+    id: "cs-b16-b5-unsafe-initblock",
+    language: "csharp",
+    title: "Unsafe.InitBlock — fast memory zeroing",
+    tag: "snippet",
+    code: `using System;
+using System.Runtime.CompilerServices;
+
+unsafe
+{
+    byte[] arr = new byte[256];
+    fixed (byte* p = arr)
+    {
+        // Equivalent to memset(p, 0xAB, 256)
+        Unsafe.InitBlock(p, 0xAB, 256);
+        Console.WriteLine(arr[0].ToString("X2"));    // AB
+        Console.WriteLine(arr[255].ToString("X2"));  // AB
+
+        // Zero a block — faster than a loop on large buffers
+        Unsafe.InitBlock(p, 0x00, 256);
+        Console.WriteLine(arr[128]);                 // 0
+    }
+}`,
+    explanation: "`Unsafe.InitBlock` maps directly to the JIT's `initblk` IL opcode which the runtime implements as a `memset`-equivalent; for large buffers this is faster than a manual loop and clearer than pinning + `Marshal.Set`.",
+  },
+  {
+    id: "cs-b16-b5-span-startswith-endswith",
+    language: "csharp",
+    title: "ReadOnlySpan<char> StartsWith, EndsWith, TrimStart",
+    tag: "snippet",
+    code: `using System;
+
+ReadOnlySpan<char> line = "   Hello, World!   ".AsSpan();
+
+// Trim without allocating a new string
+ReadOnlySpan<char> trimmed = line.Trim();
+Console.WriteLine(trimmed.ToString());              // "Hello, World!"
+
+Console.WriteLine(trimmed.StartsWith("Hello"));     // True
+Console.WriteLine(trimmed.EndsWith("World!"));      // True
+
+// Case-insensitive comparison
+Console.WriteLine(trimmed.StartsWith("hello",
+    StringComparison.OrdinalIgnoreCase));            // True`,
+    explanation: "`ReadOnlySpan<char>` exposes `Trim`, `StartsWith`, `EndsWith`, and `Contains` that operate on the span slice without allocating intermediate strings — a significant win when scanning lines in large text-processing loops.",
+  },
+  {
+    id: "cs-b16-b5-native-memory-aligned",
+    language: "csharp",
+    title: "NativeMemory.AlignedAlloc for SIMD alignment",
+    tag: "snippet",
+    code: `using System;
+using System.Runtime.InteropServices;
+
+unsafe
+{
+    // Allocate 256 bytes aligned to a 32-byte boundary (AVX2 requirement)
+    nuint size = 256;
+    nuint align = 32;
+    void* ptr = NativeMemory.AlignedAlloc(size, align);
+    try
+    {
+        // Verify alignment
+        Console.WriteLine((nuint)ptr % align == 0);  // True
+
+        float* floats = (float*)ptr;
+        for (int i = 0; i < 8; i++) floats[i] = i;
+        Console.WriteLine(floats[7]);   // 7
+    }
+    finally
+    {
+        NativeMemory.AlignedFree(ptr);   // must use AlignedFree, not Free
+    }
+}`,
+    explanation: "`NativeMemory.AlignedAlloc` allocates memory at a specific power-of-two alignment required for SIMD intrinsics that demand 16-, 32-, or 64-byte aligned addresses; always pair with `NativeMemory.AlignedFree`.",
+  },
+  {
+    id: "cs-b16-b5-gchandle-weak",
+    language: "csharp",
+    title: "GCHandle.Weak — weak references to managed objects",
+    tag: "types",
+    code: `using System;
+using System.Runtime.InteropServices;
+
+class Cache { public string Data = "expensive result"; }
+
+var obj = new Cache();
+
+// Weak handle: GC can collect obj even while handle is alive
+GCHandle handle = GCHandle.Alloc(obj, GCHandleType.Weak);
+
+Console.WriteLine(handle.IsAllocated);                // True
+Console.WriteLine(((Cache?)handle.Target)?.Data);     // expensive result
+
+// After GC collects obj:
+obj = null!;
+GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
+
+Console.WriteLine(handle.Target is null);             // True (probably)
+handle.Free();`,
+    explanation: "`GCHandle.Weak` lets you hold a non-rooting reference to a managed object; `handle.Target` returns `null` once the GC has collected the object, making it suitable for caches where eviction is acceptable.",
+  },
+  {
+    id: "cs-b16-b5-unsafe-copymemory",
+    language: "csharp",
+    title: "Unsafe.CopyBlock — fast memory copy",
+    tag: "snippet",
+    code: `using System;
+using System.Runtime.CompilerServices;
+
+unsafe
+{
+    byte[] src = [10, 20, 30, 40, 50, 60, 70, 80];
+    byte[] dst = new byte[8];
+
+    fixed (byte* s = src, d = dst)
+    {
+        // Copy 8 bytes — maps to memcpy / movs instruction
+        Unsafe.CopyBlock(d, s, (uint)src.Length);
+    }
+
+    Console.WriteLine(dst[0]);   // 10
+    Console.WriteLine(dst[7]);   // 80
+
+    // Non-pinning variant using refs (no unsafe block needed if refs are local):
+    // Unsafe.CopyBlock(ref dst[0], ref src[0], (uint)src.Length);
+}`,
+    explanation: "`Unsafe.CopyBlock` emits the `cpblk` IL opcode, which the JIT lowers to `rep movs` or a vectorised copy; it's the fastest safe way to copy raw memory between pinned managed buffers.",
+  },
+  {
+    id: "cs-b16-b5-span-sequence-equal",
+    language: "csharp",
+    title: "Span<T>.SequenceCompareTo — lexicographic comparison",
+    tag: "snippet",
+    code: `using System;
+
+ReadOnlySpan<int> a = [1, 2, 3];
+ReadOnlySpan<int> b = [1, 2, 4];
+ReadOnlySpan<int> c = [1, 2, 3];
+
+// Returns negative/zero/positive like string.Compare
+Console.WriteLine(a.SequenceCompareTo(b));   // -1  (a < b)
+Console.WriteLine(b.SequenceCompareTo(a));   // 1   (b > a)
+Console.WriteLine(a.SequenceCompareTo(c));   // 0   (equal)
+
+// SequenceEqual is faster when you only need equality
+Console.WriteLine(a.SequenceEqual(c));       // True`,
+    explanation: "`SequenceCompareTo` performs element-wise lexicographic comparison — the same semantics as `memcmp` — and is useful for sorting spans or implementing a `CompareTo` on types backed by span data.",
+  },
+  {
+    id: "cs-b16-b5-memorymarshal-getreference",
+    language: "csharp",
+    title: "MemoryMarshal.GetReference — pinning-free pointer",
+    tag: "types",
+    code: `using System;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+
+byte[] arr = [10, 20, 30, 40, 50];
+Span<byte> span = arr;
+
+// GetReference returns a ref to the first element — no pinning needed
+ref byte first = ref MemoryMarshal.GetReference(span);
+Console.WriteLine(first);   // 10
+
+// Advance via Unsafe.Add without fixed statement
+ref byte third = ref Unsafe.Add(ref first, 2);
+Console.WriteLine(third);   // 30
+
+// Modifying through the ref updates the original array
+third = 99;
+Console.WriteLine(arr[2]);  // 99`,
+    explanation: "`MemoryMarshal.GetReference` returns a managed reference to the first element of a span, enabling pointer-style offset arithmetic via `Unsafe.Add` without a `fixed` statement — the GC still tracks the object through the managed ref.",
+  },
+  {
+    id: "cs-b16-b5-vector128-create",
+    language: "csharp",
+    title: "Vector128 arithmetic operations",
+    tag: "snippet",
+    code: `using System;
+using System.Runtime.Intrinsics;
+
+// Broadcast a single value across all lanes
+var zeros = Vector128<float>.Zero;
+var ones  = Vector128.Create(1.0f);
+var data  = Vector128.Create(1.0f, 4.0f, 9.0f, 16.0f);
+
+// Element-wise square root
+var roots = Vector128.Sqrt(data);
+Console.WriteLine(roots[0]);   // 1
+Console.WriteLine(roots[1]);   // 2
+Console.WriteLine(roots[2]);   // 3
+Console.WriteLine(roots[3]);   // 4
+
+// Dot product (manual: multiply then horizontal sum)
+var products = ones * data;
+float dot = Vector128.Dot(ones, data);
+Console.WriteLine(dot);        // 30`,
+    explanation: "`Vector128<T>` supports element-wise arithmetic operators and utility methods like `Sqrt` and `Dot` that compile to SSE/NEON instructions; the 128-bit width is guaranteed to be supported on all x64 and ARM64 targets.",
+  },
+  {
+    id: "cs-b16-b5-iparsable-generic",
+    language: "csharp",
+    title: "Generic configuration reader with IParsable<T>",
+    tag: "classes",
+    code: `using System;
+using System.Collections.Generic;
+
+// Read typed config values generically — works with any IParsable<T>
+static T GetConfig<T>(Dictionary<string, string> cfg, string key)
+    where T : IParsable<T>
+{
+    if (!cfg.TryGetValue(key, out string? raw))
+        throw new KeyNotFoundException(key);
+    return T.Parse(raw, null);
+}
+
+var config = new Dictionary<string, string>
+{
+    ["Port"]    = "8080",
+    ["Timeout"] = "30.5",
+    ["Debug"]   = "True",
+};
+
+int    port    = GetConfig<int>(config, "Port");
+double timeout = GetConfig<double>(config, "Timeout");
+bool   debug   = GetConfig<bool>(config, "Debug");
+
+Console.WriteLine(\`port=\${port} timeout=\${timeout} debug=\${debug}\`);`,
+    explanation: "Constraining to `IParsable<T>` with a static abstract `Parse` member lets a single generic helper parse configuration strings into any primitive or custom type without reflection or a lookup table of converters.",
+  },
+  {
+    id: "cs-b16-b5-bitoperations-rotate",
+    language: "csharp",
+    title: "BitOperations.RotateLeft and RotateRight",
+    tag: "snippet",
+    code: `using System;
+using System.Numerics;
+
+uint value = 0b_1000_0000_0000_0000_0000_0000_0000_0001u;  // MSB and LSB set
+
+// Rotate left by 1 — MSB wraps to LSB position
+uint rotL = BitOperations.RotateLeft(value, 1);
+Console.WriteLine(rotL.ToString("B32"));
+// 00000000000000000000000000000011  (both bits moved left)
+
+// Rotate right by 1
+uint rotR = BitOperations.RotateRight(value, 1);
+Console.WriteLine(rotR.ToString("B32"));
+// 11000000000000000000000000000000`,
+    explanation: "`BitOperations.RotateLeft/Right` emit the `rol`/`ror` hardware instruction on x64 via JIT intrinsics, making them far faster than the classic two-shift workaround `(v << n) | (v >> (32 - n))` which also has undefined behaviour for n=0.",
+  },
 ];
+

@@ -83,6 +83,8 @@ import { pythonSnippets20260516B2 } from "./python-2026-05-16-b2";
 import { csharpSnippets20260516B2 } from "./csharp-2026-05-16-b2";
 import { pythonSnippets20260516B3 } from "./python-2026-05-16-b3";
 import { csharpSnippets20260516B3 } from "./csharp-2026-05-16-b3";
+import { pythonSnippets20260516B4 } from "./python-2026-05-16-b4";
+import { csharpSnippets20260516B4 } from "./csharp-2026-05-16-b4";
 
 import type { Snippet } from "./types";
 
@@ -182,6 +184,8 @@ const allSnippets: Snippet[] = [
   ...csharpSnippets20260516B2,
   ...pythonSnippets20260516B3,
   ...csharpSnippets20260516B3,
+  ...pythonSnippets20260516B4,
+  ...csharpSnippets20260516B4,
 ];
 
 export const snippets: Snippet[] = dedupeById(allSnippets);

@@ -53,6 +53,16 @@ const navItems = [
     ),
   },
   {
+    label: "Grind",
+    href: ROUTES.GRIND,
+    icon: (active: boolean) => (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M6 3v3M18 3v3M3 9h18M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z" fill={active ? "currentColor" : "none"} fillOpacity={active ? "0.15" : "0"} />
+        <path d="M9 14l2 2 4-4" />
+      </svg>
+    ),
+  },
+  {
     label: "Profile",
     href: ROUTES.PROFILE,
     icon: (active: boolean) => (

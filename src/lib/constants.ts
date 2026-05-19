@@ -298,6 +298,7 @@ export const ROUTES = {
   REVIEW: "/review",
   CHALLENGES: "/challenges",
   SCROLL: "/scroll",
+  GRIND: "/grind",
   PROFILE: "/profile",
   SETTINGS: "/settings",
 } as const;

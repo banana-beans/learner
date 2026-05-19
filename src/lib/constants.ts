@@ -166,6 +166,13 @@ export const BRANCH_META: Record<BranchId, {
     iconSlug: "csharp",
     description: ".NET ecosystem and object-oriented design",
   },
+  cpp: {
+    title: "C++ / Quant",
+    color: "pink",
+    colorHex: "#ec4899",
+    iconSlug: "cpp",
+    description: "Modern C++ and quantitative finance fundamentals",
+  },
   dsa: {
     title: "DS&A",
     color: "orange",

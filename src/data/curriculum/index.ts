@@ -64,6 +64,7 @@ export const branches: Branch[] = [
   makeBranch("typescript", typescriptNodes),
   makeBranch("react", reactNodes),
   makeBranch("csharp", csharpNodes),
+  makeBranch("cpp", []),
   makeBranch("dsa", dsaNodes),
   makeBranch("databases", databasesNodes),
   makeBranch("systems-design", systemsDesignNodes),

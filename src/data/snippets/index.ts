@@ -8,6 +8,8 @@
 import { pythonSnippets } from "./python";
 import { typescriptSnippets } from "./typescript";
 import { csharpSnippets } from "./csharp";
+import { cppSnippets } from "./cpp";
+import { pythonFinanceSnippets } from "./python-finance";
 import { reactSnippets } from "./react";
 import { dsaSnippets } from "./dsa";
 import { databasesSnippets } from "./databases";
@@ -137,8 +139,10 @@ function dedupeById(arr: Snippet[]): Snippet[] {
 
 const allSnippets: Snippet[] = [
   ...pythonSnippets,
+  ...pythonFinanceSnippets,
   ...typescriptSnippets,
   ...csharpSnippets,
+  ...cppSnippets,
   ...reactSnippets,
   ...dsaSnippets,
   ...databasesSnippets,

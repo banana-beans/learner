@@ -12,6 +12,7 @@ type Filter = "all" | SnippetLanguage;
 // build the filter chips.
 const LANG_KEYS: SnippetLanguage[] = [
   "python",
+  "cpp",
   "typescript",
   "csharp",
   "react",
@@ -27,6 +28,7 @@ const LANG_KEYS: SnippetLanguage[] = [
 // languages we don't have a special abbreviation for.
 const LANG_LABEL: Partial<Record<SnippetLanguage, string>> = {
   python: "Python",
+  cpp: "C++/Quant",
   typescript: "TS",
   csharp: "C#",
   react: "React",

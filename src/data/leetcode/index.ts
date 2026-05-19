@@ -7,6 +7,7 @@
 // ============================================================
 
 import { seedProblems } from "./seed";
+import { financeProblems } from "./finance";
 
 export type Difficulty = "easy" | "medium" | "hard";
 
@@ -26,4 +27,7 @@ export type LeetCodeProblem = {
   leetcodeNumber?: number;
 };
 
-export const leetcodeProblems: LeetCodeProblem[] = [...seedProblems];
+export const leetcodeProblems: LeetCodeProblem[] = [
+  ...seedProblems,
+  ...financeProblems,
+];

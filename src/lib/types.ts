@@ -11,6 +11,7 @@ export type BranchId =
   | "typescript"
   | "react"
   | "csharp"
+  | "cpp"
   | "dsa"
   | "databases"
   | "systems-design"

@@ -249,7 +249,7 @@ print(by_age)  # [('Bob', 25), ('Alice', 30), ('Carol', 35)]`,
     tag: "snippet",
     code: `from string import Template
 
-# $name or ${name} substitution
+# $name or \${name} substitution
 t = Template("Hello, $name! You have $count messages.")
 result = t.substitute(name="Alice", count=5)
 print(result)  # Hello, Alice! You have 5 messages.

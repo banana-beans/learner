@@ -8,6 +8,7 @@
 
 import { seedProblems } from "./seed";
 import { financeProblems } from "./finance";
+import { financeProblems20260519B1 } from "./finance-2026-05-19-b1";
 
 export type Difficulty = "easy" | "medium" | "hard";
 
@@ -30,4 +31,5 @@ export type LeetCodeProblem = {
 export const leetcodeProblems: LeetCodeProblem[] = [
   ...seedProblems,
   ...financeProblems,
+  ...financeProblems20260519B1,
 ];

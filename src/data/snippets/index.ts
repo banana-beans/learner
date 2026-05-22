@@ -125,6 +125,8 @@ import { cppSnippets20260520B1 } from "./cpp-2026-05-20-b1";
 import { pythonFinanceSnippets20260520B1 } from "./python-finance-2026-05-20-b1";
 import { cppSnippets20260521B1 } from "./cpp-2026-05-21-b1";
 import { pythonFinanceSnippets20260521B1 } from "./python-finance-2026-05-21-b1";
+import { cppSnippets20260522B1 } from "./cpp-2026-05-22-b1";
+import { pythonFinanceSnippets20260522B1 } from "./python-finance-2026-05-22-b1";
 import { pythonSnippets20260521B1 } from "./python-2026-05-21-b1";
 import { csharpSnippets20260521B1 } from "./csharp-2026-05-21-b1";
 import { pythonSnippets20260521B2 } from "./python-2026-05-21-b2";
@@ -272,6 +274,8 @@ const allSnippets: Snippet[] = [
   ...pythonFinanceSnippets20260520B1,
   ...cppSnippets20260521B1,
   ...pythonFinanceSnippets20260521B1,
+  ...cppSnippets20260522B1,
+  ...pythonFinanceSnippets20260522B1,
   ...pythonSnippets20260521B1,
   ...csharpSnippets20260521B1,
   ...pythonSnippets20260521B2,

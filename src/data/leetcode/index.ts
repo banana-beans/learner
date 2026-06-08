@@ -28,6 +28,7 @@ import { financeProblems20260604B1 } from "./finance-2026-06-04-b1";
 import { financeProblems20260605B1 } from "./finance-2026-06-05-b1";
 import { financeProblems20260606B1 } from "./finance-2026-06-06-b1";
 import { financeProblems20260607B1 } from "./finance-2026-06-07-b1";
+import { financeProblems20260608B1 } from "./finance-2026-06-08-b1";
 
 export type Difficulty = "easy" | "medium" | "hard";
 
@@ -70,4 +71,5 @@ export const leetcodeProblems: LeetCodeProblem[] = [
   ...financeProblems20260605B1,
   ...financeProblems20260606B1,
   ...financeProblems20260607B1,
+  ...financeProblems20260608B1,
 ];

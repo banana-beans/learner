@@ -263,6 +263,8 @@ import { cppSnippets20260725B1 } from "./cpp-2026-07-25-b1";
 import { pythonFinanceSnippets20260725B1 } from "./python-finance-2026-07-25-b1";
 import { cppSnippets20260726B1 } from "./cpp-2026-07-26-b1";
 import { pythonFinanceSnippets20260726B1 } from "./python-finance-2026-07-26-b1";
+import { cppSnippets20260727B1 } from "./cpp-2026-07-27-b1";
+import { pythonFinanceSnippets20260727B1 } from "./python-finance-2026-07-27-b1";
 
 import type { Snippet } from "./types";
 
@@ -542,6 +544,8 @@ const allSnippets: Snippet[] = [
   ...pythonFinanceSnippets20260725B1,
   ...cppSnippets20260726B1,
   ...pythonFinanceSnippets20260726B1,
+  ...cppSnippets20260727B1,
+  ...pythonFinanceSnippets20260727B1,
 ];
 
 export const snippets: Snippet[] = dedupeById(allSnippets);
